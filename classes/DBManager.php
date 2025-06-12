@@ -160,12 +160,11 @@ class DBManager
         $classes = PodsWrapper::factory('Class', ['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
         $result = [];
 
-        while ($classes->fetch()) {
-            $row = $classes->row();
-            $result[] = [
-                'id' => $row["ID"],
-                'title' => $row["post_title"]
-            ];
+        foreach ($classes->results() as $row) {
+          $result[] = [
+              'id' => $row->ID,
+              'title' => $row->post_title
+          ];
         }
 
         return $result;
@@ -215,12 +214,12 @@ class DBManager
 
     public function getCourseModules($courseId)
     {
-        return pods("module", ["where" => "course.id = " . $courseId, "orderby" => "order.meta_value ASC", "limit" => -1]);
+        return PodsWrapper::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "order.meta_value ASC", "limit" => -1]);
     }
 
     public function getModuleLessons($moduleId)
     {
-        return pods("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "lesson_number.meta_value ASC", "limit" => -1]);
+        return PodsWrapper::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "lesson_number.meta_value ASC", "limit" => -1]);
     }
 
     public static function getClassStudents($courseId, $classId, $search = null, $month = null, $year = null)

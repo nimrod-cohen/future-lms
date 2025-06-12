@@ -2,6 +2,8 @@
 
 namespace FutureLMS\classes;
 
+use Exception;
+
 class Courses {
   private static $instance;
 
@@ -161,7 +163,7 @@ class Courses {
     update_post_meta($lessonId, 'additional_files', '');
     update_post_meta($lessonId, 'homework', '');
 //    update_post_meta($lessonId, 'module', $moduleId);
-    $lesson = pods('lesson', $lessonId);
+    $lesson = PodsWrapper::factory('lesson', $lessonId);
     $lesson->save('module', $moduleId);
 
     echo json_encode(['error' => false]);
@@ -404,7 +406,7 @@ class Courses {
   }
 
   public static function course_has_tag($courseId, $tag): bool {
-    $tags = pods_field('course', $courseId, 'tags', true) ?? '';
+    $tags = PodsWrapper::get_field('course', $courseId, 'tags', true) ?? '';
     $tags = explode(",", $tags);
     $tags = array_map('trim', $tags);
     return in_array($tag, $tags);
