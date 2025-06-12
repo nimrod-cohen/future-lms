@@ -10,6 +10,7 @@ function register_lesson_post_type() {
         'menu_position' => 25, // Below Classes
         'menu_icon' => 'dashicons-video-alt3',
         'has_archive' => true,
+        'show_ui' => false
     );
     register_post_type('lesson', $args);
 }

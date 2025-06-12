@@ -9,6 +9,7 @@ function register_class_post_type() {
         'supports' => array('title', 'editor'),
         'menu_position' => 20,
         'menu_icon' => 'dashicons-groups',
+        'show_ui' => false
     );
     register_post_type('class', $args);
 }

@@ -9,6 +9,7 @@ function register_module_post_type() {
         'supports' => array('title', 'editor'),
         'menu_position' => 15, // Below Classes
         'menu_icon' => 'dashicons-category',
+        'show_ui' => false
     );
     register_post_type('module', $args);
 }

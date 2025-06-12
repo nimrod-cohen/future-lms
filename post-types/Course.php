@@ -9,6 +9,7 @@ function register_course_post_type()
         'supports' => array('title', 'editor', 'thumbnail'),
         'menu_icon' => 'dashicons-book-alt',
         'has_archive' => true,
+        'show_ui' => false
     );
     register_post_type('course', $args);
 }
