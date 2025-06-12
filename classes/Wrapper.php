@@ -3,7 +3,8 @@
 /**
  * Wrapper - A lightweight Pods-like implementation
  */
-class Wrapper {
+class Wrapper
+{
     private $pod_name;
     private $pod_id;
     private $data = [];
@@ -18,7 +19,8 @@ class Wrapper {
      * @param string $pod_name Pod/Post type name
      * @param mixed $id_or_params ID or query parameters
      */
-    public function __construct($pod_name, $id_or_params = null) {
+    public function __construct($pod_name, $id_or_params = null)
+    {
         $this->pod_name = $pod_name;
 
         // Load pod configuration
@@ -40,14 +42,16 @@ class Wrapper {
     /**
      * Factory method
      */
-    public static function factory($pod_name, $id_or_params = null) {
+    public static function factory($pod_name, $id_or_params = null)
+    {
         return new self($pod_name, $id_or_params);
     }
 
     /**
      * Load pod configuration
      */
-    private function load_pod_config() {
+    private function load_pod_config()
+    {
         // In a real implementation, you might load this from options or a custom table
         $this->pod_config = [
             'type' => 'post_type', // post_type, taxonomy, settings, etc.
@@ -58,7 +62,8 @@ class Wrapper {
     /**
      * Load a single item
      */
-    private function load($id) {
+    private function load($id)
+    {
         $this->pod_id = $id;
         $this->is_collection = false;
 
@@ -74,21 +79,24 @@ class Wrapper {
     /**
      * Check if this pod is a post type
      */
-    private function is_post_type() {
+    private function is_post_type()
+    {
         return $this->pod_config['type'] === 'post_type' || post_type_exists($this->pod_name);
     }
 
     /**
      * Check if this pod is a taxonomy
      */
-    private function is_taxonomy() {
+    private function is_taxonomy()
+    {
         return $this->pod_config['type'] === 'taxonomy' || taxonomy_exists($this->pod_name);
     }
 
     /**
      * Load post data
      */
-    private function load_post($id) {
+    private function load_post($id)
+    {
         $post = get_post($id);
 
         if ($post && ($post->post_type === $this->pod_name || $this->pod_config['type'] === 'post_type')) {
@@ -109,7 +117,8 @@ class Wrapper {
     /**
      * Query items
      */
-    public function query($params = []) {
+    public function query($params = [])
+    {
         $this->is_collection = true;
         $this->query_args = $params;
 
@@ -126,7 +135,8 @@ class Wrapper {
     /**
      * Query posts
      */
-    private function query_posts($params) {
+    private function query_posts($params)
+    {
         $defaults = [
             'post_type' => $this->pod_name,
             'posts_per_page' => -1,
@@ -145,7 +155,8 @@ class Wrapper {
     /**
      * Convert query arguments
      */
-    private function convert_query_args($params) {
+    private function convert_query_args($params)
+    {
         $converted = [];
 
         // Map Pods-like params to WP_Query params
@@ -176,7 +187,8 @@ class Wrapper {
     /**
      * Parse where string
      */
-    private function parse_where_string($where) {
+    private function parse_where_string($where)
+    {
         $conditions = explode(' AND ', $where);
         $meta_query = ['relation' => 'AND'];
 
@@ -196,7 +208,8 @@ class Wrapper {
     /**
      * Magic getter
      */
-    public function __get($name) {
+    public function __get($name)
+    {
         // First check fields
         if (isset($this->fields[$name])) {
             return $this->fields[$name];
@@ -213,7 +226,8 @@ class Wrapper {
     /**
      * Field access
      */
-    public function field($name, $value = null, $options = null) {
+    public function field($name, $value = null, $options = null)
+    {
         if (func_num_args() > 1) {
             // Setter
             $this->fields[$name] = $value;
@@ -234,7 +248,8 @@ class Wrapper {
     /**
      * Display field
      */
-    public function display($name) {
+    public function display($name)
+    {
         $value = $this->field($name);
         return apply_filters('wrapper_display', $value, $name, $this);
     }
@@ -242,7 +257,8 @@ class Wrapper {
     /**
      * Save item
      */
-    public function save() {
+    public function save()
+    {
         if ($this->is_collection) {
             return false;
         }
@@ -258,7 +274,8 @@ class Wrapper {
     /**
      * Save post
      */
-    private function save_post() {
+    private function save_post()
+    {
         $post_data = (array)$this->data;
 
         if ($this->pod_id) {
@@ -288,30 +305,36 @@ class Wrapper {
     /**
      * Collection methods
      */
-    public function total() {
+    public function total()
+    {
         return $this->is_collection ? count($this->collection) : 0;
     }
 
-    public function count() {
+    public function count()
+    {
         return $this->total();
     }
 
-    public function results() {
+    public function results()
+    {
         return $this->collection;
     }
 
-    public function first() {
+    public function first()
+    {
         return !empty($this->collection) ? $this->collection[0] : null;
     }
 
-    public function fetch() {
+    public function fetch()
+    {
         return $this->first();
     }
 
     /**
      * Relationship support
      */
-    public function related($field_name, $params = []) {
+    public function related($field_name, $params = [])
+    {
         $related_ids = $this->field($field_name);
         if (empty($related_ids)) return null;
 
@@ -332,14 +355,88 @@ class Wrapper {
         }
     }
 
-    private function get_related_pod_type($field_name) {
+    private function get_related_pod_type($field_name)
+    {
         // In a real implementation, you'd check your field configuration
         // This is a simplified version
         $relationship_fields = [
             'author' => 'author',
-            'category' => 'category'
+            'category' => 'category',
+            'course' => 'course',
         ];
 
         return $relationship_fields[$field_name] ?? null;
+    }
+
+    public function raw($field_name) {
+        if (!$this->is_relationship_field($field_name)) {
+            return $this->field($field_name);
+        }
+
+        $related_pod_type = $this->get_related_pod_type($field_name);
+        if (!$related_pod_type) return null;
+
+        $raw_value = get_post_meta($this->pod_id, '_pods_' . $field_name, true);
+        $raw_value = is_serialized($raw_value) ? maybe_unserialize($raw_value) : $raw_value;
+
+        // Handle single relationship
+        if (is_numeric($raw_value)) {
+            return $this->get_relationship_data($related_pod_type, $raw_value);
+        }
+
+        // Handle array of IDs
+        if (is_array($raw_value)) {
+            $results = [];
+            foreach ($raw_value as $id) {
+                if (is_numeric($id)) {
+                    $results[] = $this->get_relationship_data($related_pod_type, $id);
+                }
+            }
+            return !empty($results) ? (count($results) === 1 ? $results[0] : $results) : null;
+        }
+
+        // Fallback to simple field value
+        $field_value = $this->field($field_name);
+        return is_numeric($field_value) ? $this->get_relationship_data($related_pod_type, $field_value) : null;
+    }
+
+    /**
+     * Get complete relationship data as array
+     */
+    private function get_relationship_data($pod_type, $id) {
+        $item = new self($pod_type, $id);
+        if (!$item->exists()) return null;
+
+        $data = [];
+
+        // Add core post fields
+        foreach (get_object_vars($item->data) as $key => $value) {
+            $data[$key] = $value;
+        }
+
+        // Add meta fields
+        foreach ($item->fields as $key => $value) {
+            $data[$key] = $value;
+        }
+
+        // Add special fields
+        $data['ID'] = $item->pod_id;
+        $data['post_type'] = $pod_type;
+
+        return $data;
+    }
+
+    /**
+     * Check if a field is a relationship
+     */
+    private function is_relationship_field($field_name) {
+        // Check for Pods relationship meta
+        if (metadata_exists('post', $this->pod_id, '_pods_' . $field_name)) {
+            return true;
+        }
+
+        // Check if field value looks like a relationship ID
+        $value = $this->field($field_name);
+        return is_numeric($value) && $value > 0;
     }
 }

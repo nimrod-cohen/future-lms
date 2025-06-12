@@ -1263,11 +1263,11 @@ class FutureLMS {
     }
 }
 
-//if (!function_exists('pods')) {
-//    function pods($pod_name, $id_or_params = null) {
-//        return Wrapper::factory($pod_name, $id_or_params);
-//    }
-//}
+if (!function_exists('pods')) {
+    function pods($pod_name, $id_or_params = null) {
+        return Wrapper::factory($pod_name, $id_or_params);
+    }
+}
 
 $directory = __DIR__ . '/classes';
 $files = glob($directory . '/*.php');
