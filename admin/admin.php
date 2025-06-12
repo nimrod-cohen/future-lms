@@ -15,7 +15,7 @@
     <a class="item" data-tab="partner-coupons">Partner coupons</a>
     <a class="item" data-tab="settings">Settings</a>
     <div>Future LMS
-        <span class="version"><?php echo get_option(FutureLMS::VALUE_SCHOOL_VERSION, 0); ?></span>
+        <span class="version"><?php echo get_option(FutureLMSVersionManager::SCHOOL_VERSION, 0); ?></span>
     </div>
 </div>
 <div class="ui bottom attached tab segment active" data-tab="students">

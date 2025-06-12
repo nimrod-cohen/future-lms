@@ -1,4 +1,7 @@
 <?php
+
+namespace FutureLMS\classes;
+
 class Courses {
   private static $instance;
 

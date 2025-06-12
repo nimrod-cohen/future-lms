@@ -1,4 +1,6 @@
 <?php
+namespace FutureLMS\classes;
+
 class Coupons {
   private static $instance;
 

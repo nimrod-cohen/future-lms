@@ -1,9 +1,10 @@
 <?php
 
+namespace FutureLMS\classes;
 /**
  * Wrapper - A lightweight Pods-like implementation
  */
-class Wrapper
+class PodsWrapper
 {
     private $pod_name;
     private $pod_id;

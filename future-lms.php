@@ -30,15 +30,26 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+namespace FutureLMS;
+
+use Exception;
+use WP_User;
+use WP_Query;
+use WP_User_Query;
+use NumberFormatter;
+use FutureLMS\classes\DBManager;
+use FutureLMS\classes\VersionManager;
+use FutureLMS\classes\Courses;
+use FutureLMS\classes\PodsWrapper;
+
 class FutureLMS {
-    const VALUE_SCHOOL_VERSION = 'valschool_version';
     const CIO_ADMIN_NOTIFICATIONS_BROADCAST = 44;
     const CIO_ADMINS_SEGMENT = 34;
 
     public $coupons = null;
 
     function __construct() {
-        FutureLMSQuery::installVersion();
+        VersionManager::installVersion();
 
        // $this->coupons = Coupons::get_instance();
 
@@ -383,8 +394,8 @@ class FutureLMS {
         // Decode Base64 to JSON string
         $userIdField = urldecode(base64_decode($userIdField));
 
-        ValueSchool::log('payment user details are:');
-        ValueSchool::log($userIdField);
+        FutureLMS::log('payment user details are:');
+        FutureLMS::log($userIdField);
 
         //try strip slashes first and decode json
         $userData = json_decode(stripslashes($userIdField), true);
@@ -420,11 +431,15 @@ class FutureLMS {
     }
 
     public function paymentNotifications() {
-        if (isset($_REQUEST["processor"]) && isset($_REQUEST["action"])) {
-            $transactionId = null;
+        if (!isset($_REQUEST["processor"]) || !isset($_REQUEST["action"])) {
+          return;
+        }
+
+        $paymentMethod = "credit card"; //notifications are for credit card payments only
+        $transactionId = null;
 
             try {
-                ValueSchool::log($_REQUEST); //log the request as soon as possible
+                FutureLMS::log($_REQUEST); //log the request as soon as possible
 
                 $action = $_REQUEST["action"];
                 $transactionId = isset($_REQUEST["Tempref"]) ? $_REQUEST["Tempref"] : "unknown";
@@ -477,7 +492,7 @@ class FutureLMS {
                     $body = 'User ' . $userId . ' paid ' . $sum . ', while the price of course ' . $courseId . ' is ' . $price;
                 }
 
-                ValueSchool::notifyAdmins($subject, $body); //email to admins
+                FutureLMS::notifyAdmins($subject, $body); //email to admins
 
                 //check if user exists in system, if not, add him
                 $user = get_user_by(isset($userData["id"]) ? 'id' : 'email', $userId);
@@ -512,7 +527,7 @@ class FutureLMS {
                     update_user_meta($userId, 'user_phone', self::cleanup_phone($userData["phone"]));
                 }
 
-                $query = new ValueSchoolQuery(intval($userId));
+                $query = new DBManager(intval($userId));
 
                 if ($query->isAttending($courseId)) {
                     throw new Exception("User " . $userId . " already attending course " . $courseId);
@@ -535,27 +550,28 @@ class FutureLMS {
 
                 $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $_REQUEST["processor"], $coupon ? 'Using coupon ' . $coupon['code'] : '');
 
-                if (class_exists('AffiliatesManagement')) {
-                    AffiliatesManagement::logPayment($userId, $sum, $transactionId, ["product_id" => $courseId]);
-                }
+        $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, "");
 
-                //report to customer io
-                $this->addStudentToCustomerIO([
-                    "id" => $userId,
-                    "email" => $user->user_email,
-                    "name" => $userData["name"],
-                    "phone" => $userData["phone"]
-                ], $courseId, $sum, $paymentId);
+        //do actions after payment futurelms/payment_notification
+        do_action('futurelms/payment_notification', [
+            "course_id" => $courseId,
+            "student_id" => $userId,
+            "class_id" => $classId,
+            "sum" => $sum,
+            "transaction_id" => $transactionId,
+            "payment_id" => $paymentId,
+            "payment_method" => $paymentMethod,
+            "comment" => ""
+        ]);
 
             } catch (Exception $ex) {
                 $subject = '[ValueInvesting] Error occurred during payment processing';
                 $body = $ex->getMessage() . " [Transaction ID: " . $transactionId . "]";
-                ValueSchool::notifyAdmins($subject, $body);
+                FutureLMS::notifyAdmins($subject, $body);
                 die($body);
             }
 
             die;
-        }
     }
 
     public function showTagsFilter() {
@@ -701,7 +717,7 @@ class FutureLMS {
             update_user_meta($studentId, 'user_phone', $phone);
         }
 
-        $query = new ValueSchoolQuery($studentId);
+        $query = new DBManager($studentId);
 
         $class = $query->getClass($courseId);
 
@@ -713,61 +729,42 @@ class FutureLMS {
         }
 
         //add payment record
-        $query = new ValueSchoolQuery(intval($studentId));
+        $query = new DBManager(intval($studentId));
 
         $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
 
-        if (class_exists('AffiliatesManagement')) { //report to affiliates
-            AffiliatesManagement::logPayment($studentId, $sum, $transactionId, ["product_id" => $courseId]);
-        }
-
-        //report to customer io
-        $this->addStudentToCustomerIO([
-            "id" => $studentId,
-            "email" => $email,
-            "name" => $name,
-            "phone" => $phone
-        ], $courseId, $sum, $paymentId);
+        //do actions after payment futurelms/payment_notification
+        do_action('futurelms/payment_notification', [
+            "course_id" => $courseId,
+            "student_id" => $studentId,
+            "class_id" => $classId,
+            "sum" => $sum,
+            "transaction_id" => $transactionId,
+            "payment_id" => $paymentId,
+            "payment_method" => $paymentMethod,
+            "comment" => $comment
+        ]);
 
         echo json_encode([]);
         die();
     }
 
-    private function addStudentToCustomerIO($user, $courseId, $sum, $paymentId) {
-        $customerio = new CustomerIO();
-        if (!$customerio->isEnabled() || wp_get_environment_type() !== "production") {
-            return;
-        }
-        $course = pods("course", $courseId);
-
-        //create customer if not exists
-        $exists = $customerio->customerExists($user["email"]);
-        if (!$exists) {
-            $user["created_at"] = time();
-            $user["domain"] = "valueinvesting.co.il";
-            $customerio->createCustomer($user["email"], $user["name"], $user);
-            $customerio->sendEvent("lead", $user["email"], $user);
-        }
-
-        $customerio->sendEvent("student", $user["email"],
-            ["course" => $course->display("short_name"),
-                "course_name" => $course->field("title"),
-                "sum" => $sum,
-                "payment_id" => $paymentId,
-                "user_id" => $user["id"]
-            ]);
-    }
-
     public function removePayment() {
         $paymentId = $_REQUEST["payment_id"];
 
-        $payment = ValueSchoolQuery::getPayment($paymentId);
+        $payment = DBManager::getPayment($paymentId);
 
-        ValueSchoolQuery::deletePayment($paymentId);
+        DBManager::deletePayment($paymentId);
 
-        if (class_exists('AffiliatesManagement')) {
-            AffiliatesManagement::logRefund($payment["student_id"], $payment["transaction_ref"], $payment["affiliate_id"]);
-        }
+        do_action('futurelms/payment_removed', [
+            "course_id" => $payment["course_id"],
+            "student_id" => $payment["student_id"],
+            "class_id" => $payment["class_id"],
+            "sum" => $payment["sum"],
+            "transaction_id" => $payment["transaction_ref"],
+            "payment_method" => $payment["method"],
+            "comment" => $payment["comment"]
+        ]);
 
         echo json_encode([]);
         die();
@@ -778,7 +775,7 @@ class FutureLMS {
         $studentId = $_REQUEST["student_id"];
         $classId = $_REQUEST["class_id"];
 
-        $query = new ValueSchoolQuery($studentId);
+        $query = new DBManager($studentId);
 
         $class = $query->getClass($courseId);
 
@@ -796,7 +793,7 @@ class FutureLMS {
         $courseId = $_REQUEST["course_id"];
         $studentId = $_REQUEST["student_id"];
 
-        $query = new ValueSchoolQuery($studentId);
+        $query = new DBManager($studentId);
 
         $classes = pods("class", ["where" => "course.id = " . $courseId], -1);
 
@@ -827,7 +824,7 @@ class FutureLMS {
             $month = intval($_REQUEST["month"]);
             $year = intval($_REQUEST["year"]);
 
-            $result = ValueSchoolQuery::getClassStudents($courseId, $classId, $search, $month, $year);
+            $result = DBManager::getClassStudents($courseId, $classId, $search, $month, $year);
 
             echo json_encode($result);
             die();
@@ -846,7 +843,7 @@ class FutureLMS {
         $percent = intval($_POST["percent"]);
         $seconds = intval($_POST["seconds"]);
 
-        $valueQuery = new ValueSchoolQuery(get_current_user_id());
+        $valueQuery = new DBManager(get_current_user_id());
         $data = $valueQuery->getStudentProgress();
 
         if (!isset($data["courses"])) {
@@ -906,7 +903,7 @@ class FutureLMS {
                 $studentId = $_POST["student_id"];
             }
 
-            $valueQuery = new ValueSchoolQuery($studentId);
+            $valueQuery = new DBManager($studentId);
             $courses = $valueQuery->getStudentCourses();
             $courses = array_reduce($courses, function ($carry, $item) {
                 //make sure just new students are participating
@@ -934,7 +931,7 @@ class FutureLMS {
             $lessonId = intval($_POST["lesson_id"]);
             $notes = $_POST["notes"];
 
-            $valueQuery = new ValueSchoolQuery(get_current_user_id());
+            $valueQuery = new DBManager(get_current_user_id());
 
             $valueQuery->setStudentNotes($lessonId, $notes);
 
@@ -955,7 +952,7 @@ class FutureLMS {
 
             //check if course exists
             $course = pods("course", $courseId);
-            $valueQuery = new ValueSchoolQuery(get_current_user_id());
+            $valueQuery = new DBManager(get_current_user_id());
 
             //course id not found or student not listed
             if (!$course->exists()
@@ -997,13 +994,10 @@ class FutureLMS {
             return;
         }
 
-        $customerio = new CustomerIO();
-        $customerio->sendBroadcast(ValueSchool::CIO_ADMIN_NOTIFICATIONS_BROADCAST, [
-            "subject" => $title,
-            "content" => $message
-        ],
-            [], ValueSchool::CIO_ADMINS_SEGMENT
-        );
+        do_action('futurelms/admin_notification', [
+            "title" => $title,
+            "message" => $message
+        ]);
     }
 
     public function getLessons() {
@@ -1072,7 +1066,7 @@ class FutureLMS {
 
         $users = [];
         if (!$test) {
-            $users = ValueSchoolQuery::getClassStudents($courseId, $classId, null);
+            $users = DBManager::getClassStudents($courseId, $classId, null);
         } else {
             $admins = get_users('role=administrator');
             foreach ($admins as $user) {
@@ -1148,7 +1142,7 @@ class FutureLMS {
     public function getAllPayments() {
         $month = intval($_REQUEST["month"]);
         $year = intval($_REQUEST["year"]);
-        $results = FutureLMSQuery::getPayments($year, $month);
+        $results = DBManager::getPayments($year, $month);
         echo json_encode($results);
         die();
     }
@@ -1173,7 +1167,7 @@ class FutureLMS {
             $search = isset($_REQUEST['search']) ? $_REQUEST['search'] : false;
             $courseId = $_REQUEST['course_id'];
 
-            $result = ValueSchoolQuery::getCourseClasses($courseId, $search);
+            $result = DBManager::getCourseClasses($courseId, $search);
 
             $result = array_map(function ($item) {
                 return [
@@ -1202,7 +1196,7 @@ class FutureLMS {
 
         $existing = [];
         if (isset($_REQUEST["class_id"])) {
-            $existing = FutureLMSQuery::getClassStudents(null, $_REQUEST["class_id"]);
+            $existing = DBManager::getClassStudents(null, $_REQUEST["class_id"]);
         }
 
         $query = new WP_User_Query([
@@ -1265,7 +1259,7 @@ class FutureLMS {
 
 if (!function_exists('pods')) {
     function pods($pod_name, $id_or_params = null) {
-        return Wrapper::factory($pod_name, $id_or_params);
+        return PodsWrapper::factory($pod_name, $id_or_params);
     }
 }
 
