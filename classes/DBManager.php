@@ -157,7 +157,7 @@ class DBManager
         if ($search) {
             $where .= " AND t.post_title like '%" . $search . "%'";
         }
-        $classes = pods('Class', ['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
+        $classes = PodsWrapper::factory('Class', ['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
         $result = [];
 
         while ($classes->fetch()) {

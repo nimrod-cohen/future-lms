@@ -11,7 +11,7 @@ class PodsWrapper
 {
     private $pod_name;
     private $pod_id;
-    private $data = [];
+    private $data = null;
     private $fields = [];
     private $is_collection = false;
     private $collection = [];
@@ -73,10 +73,6 @@ class PodsWrapper
 
         if ($this->is_post_type()) {
             $this->load_post($id);
-        } elseif ($this->is_taxonomy()) {
-            $this->load_term($id);
-        } else {
-            $this->load_custom($id);
         }
     }
 
@@ -119,6 +115,28 @@ class PodsWrapper
     }
 
     /**
+     * Load post object
+     */
+    private function load_from_object($post)
+    {
+        if ($post && ($post->post_type === $this->pod_name || $this->pod_config['type'] === 'post_type')) {
+            $this->data = $post;
+            $this->fields = get_post_meta($post->ID);
+
+            // Flatten single meta values
+            foreach ($this->fields as $key => $value) {
+                if (is_array($value) && count($value) === 1) {
+                    $this->fields[$key] = maybe_unserialize($value[0]);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    
+
+    /**
      * Query items
      */
     public function query($params = [])
@@ -128,10 +146,6 @@ class PodsWrapper
 
         if ($this->is_post_type()) {
             $this->query_posts($params);
-        } elseif ($this->is_taxonomy()) {
-            $this->query_terms($params);
-        } else {
-            $this->query_custom($params);
         }
         return $this;
     }
@@ -220,11 +234,7 @@ class PodsWrapper
         }
 
         // Then check post object properties
-        if (isset($this->data->$name)) {
-            return $this->data->$name;
-        }
-
-        return null;
+        return $this->data->$name ?? null;
     }
 
     /**
