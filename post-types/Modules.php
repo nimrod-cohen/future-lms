@@ -95,3 +95,14 @@ add_action('save_post_module', function($post_id) {
     // Save checkbox
     update_post_meta($post_id, 'count_progress', isset($_POST['count_progress']) ? 1 : 0);
 });
+
+
+// Improved column display
+add_action('manage_module_posts_custom_column', function($column, $post_id) {
+    switch ($column) {
+        case 'order':
+            $order = get_post_meta($post_id, 'order', true);
+            echo $order !== '' ? (int)$order : '—'; // Explicitly handle empty values
+            break;
+    }
+}, 10, 2);

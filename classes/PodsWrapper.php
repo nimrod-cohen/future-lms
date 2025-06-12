@@ -440,4 +440,8 @@ class PodsWrapper
         $value = $this->field($field_name);
         return is_numeric($value) && $value > 0;
     }
+
+    public function exists() {
+        return !empty($this->data);
+    }
 }
