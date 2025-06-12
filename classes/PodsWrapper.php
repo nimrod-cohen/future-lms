@@ -1,6 +1,9 @@
 <?php
 
 namespace FutureLMS\classes;
+
+use WP_Query;
+
 /**
  * Wrapper - A lightweight Pods-like implementation
  */
