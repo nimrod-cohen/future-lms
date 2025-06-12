@@ -162,9 +162,9 @@ class Courses {
     update_post_meta($lessonId, 'video_list', '');
     update_post_meta($lessonId, 'additional_files', '');
     update_post_meta($lessonId, 'homework', '');
-//    update_post_meta($lessonId, 'module', $moduleId);
     $lesson = PodsWrapper::factory('lesson', $lessonId);
-    $lesson->save('module', $moduleId);
+    $lesson->field('module', $moduleId);
+    $lesson->save();
 
     echo json_encode(['error' => false]);
     die();
