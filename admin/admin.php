@@ -1,3 +1,7 @@
+<?php
+use FutureLMS\classes\VersionManager;
+?>
+
 <div class="ui top attached tabular menu">
     <a class="item active" data-tab="students">Students</a>
     <a class="item" data-tab="courses">
@@ -15,7 +19,7 @@
     <a class="item" data-tab="partner-coupons">Partner coupons</a>
     <a class="item" data-tab="settings">Settings</a>
     <div>Future LMS
-        <span class="version"><?php echo get_option(FutureLMSVersionManager::SCHOOL_VERSION, 0); ?></span>
+        <span class="version"><?php echo get_option(VersionManager::SCHOOL_VERSION, 0); ?></span>
     </div>
 </div>
 <div class="ui bottom attached tab segment active" data-tab="students">
