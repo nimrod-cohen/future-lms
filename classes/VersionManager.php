@@ -1,6 +1,6 @@
 <?php 
-
 namespace FutureLMS\classes;
+use FutureLMS\FutureLMS;
 
 class VersionManager {
       const SCHOOL_VERSION = 'valschool_version';
