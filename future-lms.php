@@ -797,13 +797,12 @@ class FutureLMS {
 
         $classes = pods("class", ["where" => "course.id = " . $courseId], -1);
 
-        while ($classes->fetch()) {
-            $row = $classes->row();
+        foreach($classes->results() as $row) {
             $result[] = [
-                'id' => $row["ID"],
-                'title' => $row["post_title"],
-                'start_date' => strtotime($classes->field("start_date")),
-                'attending' => $query->isAttendingClass($courseId, $row["ID"])
+                'id' => $row->ID,
+                'title' => $row->post_title,
+                'start_date' => strtotime($row->field("start_date")),
+                'attending' => $query->isAttendingClass($courseId, $row->ID)
             ];
         }
 
