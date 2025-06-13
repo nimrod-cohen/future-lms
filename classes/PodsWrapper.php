@@ -17,6 +17,7 @@ class PodsWrapper
   private $collection = [];
   private $query_args = [];
   private $pod_config = [];
+  private $current_item = 0;
 
   /**
    * Constructor
@@ -134,7 +135,7 @@ class PodsWrapper
       return false;
   }
 
-  
+
 
   /**
    * Query items
@@ -373,9 +374,36 @@ class PodsWrapper
       return !empty($this->collection) ? $this->collection[0] : null;
   }
 
-  public function fetch()
-  {
-      return $this->first();
+  private $current_item_index = 0; // Renamed to avoid confusion with the actual item
+  private $current_item_data = null;
+
+  /**
+   * Fetch the next item in the collection
+   * @return PodsWrapper|false
+   */
+  public function fetch() {
+    if (!$this->is_collection || empty($this->collection)) {
+      $this->current_item_data = null; // Reset
+      return false;
+    }
+
+    if ($this->current_item_index < count($this->collection)) {
+      $this->current_item_data = $this->collection[$this->current_item_index];
+      $this->current_item_index++;
+      return $this->current_item_data; // Return true to indicate a successful fetch
+    }
+
+    // Reset for next iteration if needed
+    $this->current_item_index = 0;
+    $this->current_item_data = null;
+    return false;
+  }
+  /**
+   * Reset the collection pointer
+   */
+  public function reset() {
+    $this->current_item = 0;
+    return $this;
   }
 
   /**
@@ -416,36 +444,72 @@ class PodsWrapper
       return $relationship_fields[$field_name] ?? null;
   }
 
-  public function raw($field_name) {
-      if (!$this->is_relationship_field($field_name)) {
-          return $this->field($field_name);
-      }
+  public function raw($field_name)
+  {
 
-      $related_pod_type = $this->get_related_pod_type($field_name);
-      if (!$related_pod_type) return null;
+    // handle fetch iterations
+    if ($this->current_item_data !== null) {
+      if (is_object($this->current_item_data)) {
 
-      $raw_value = get_post_meta($this->pod_id, '_pods_' . $field_name, true);
-      $raw_value = is_serialized($raw_value) ? maybe_unserialize($raw_value) : $raw_value;
-
-      // Handle single relationship
-      if (is_numeric($raw_value)) {
-          return $this->get_relationship_data($related_pod_type, $raw_value);
-      }
-
-      // Handle array of IDs
-      if (is_array($raw_value)) {
-          $results = [];
-          foreach ($raw_value as $id) {
-              if (is_numeric($id)) {
-                  $results[] = $this->get_relationship_data($related_pod_type, $id);
-              }
+        // check if current_item_data has a data array and look for property
+        if (isset($this->current_item_data->data)) {
+          if (is_array($this->current_item_data->data) && array_key_exists($field_name, $this->current_item_data->data)) {
+            return $this->current_item_data->data[$field_name];
+          } elseif (is_object($this->current_item_data->data) && property_exists($this->current_item_data->data, $field_name)) {
+            return $this->current_item_data->data->$field_name;
           }
-          return !empty($results) ? (count($results) === 1 ? $results[0] : $results) : null;
-      }
+        }
 
-      // Fallback to simple field value
-      $field_value = $this->field($field_name);
-      return is_numeric($field_value) ? $this->get_relationship_data($related_pod_type, $field_value) : null;
+        // check if current_item_data has this property directly
+        if (property_exists($this->current_item_data, $field_name)) {
+          return $this->current_item_data->$field_name;
+        }
+      }
+    }
+
+
+    // Handle core fields
+    switch ($field_name) {
+      case 'ID':
+        return $this->pod_id;
+      case 'name':
+        return $this->data->post_title ?? null;
+      case 'title':
+        return $this->data->post_title ?? null;
+    }
+
+    if (!$this->is_relationship_field($field_name)) {
+      return $this->field($field_name);
+    }
+
+    // handle relations
+    $related_pod_type = $this->get_related_pod_type($field_name);
+    if (!$related_pod_type) {
+      return $this->field($field_name);
+    }
+
+    $raw_value = get_post_meta($this->pod_id, '_pods_' . $field_name, true);
+    $raw_value = is_serialized($raw_value) ? maybe_unserialize($raw_value) : $raw_value;
+
+    // Handle a single relationship
+    if (is_numeric($raw_value)) {
+      return $this->get_relationship_data($related_pod_type, $raw_value);
+    }
+
+    // Handle an array of IDs
+    if (is_array($raw_value)) {
+      $results = [];
+      foreach ($raw_value as $id) {
+        if (is_numeric($id)) {
+          $results[] = $this->get_relationship_data($related_pod_type, $id);
+        }
+      }
+      return !empty($results) ? (count($results) === 1 ? $results[0] : $results) : null;
+    }
+
+    // Fallback to simple field value
+    $field_value = $this->field($field_name);
+    return is_numeric($field_value) ? $this->get_relationship_data($related_pod_type, $field_value) : null;
   }
 
   /**
@@ -482,7 +546,6 @@ class PodsWrapper
       if (metadata_exists('post', $this->pod_id, '_pods_' . $field_name)) {
           return true;
       }
-
       // Check if field value looks like a relationship ID
       $value = $this->field($field_name);
       return is_numeric($value) && $value > 0;

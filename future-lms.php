@@ -1021,26 +1021,26 @@ class FutureLMS {
 
             $modules = PodsWrapper::factory("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
-            while ($modules->fetch()) {
-                $moduleId = $modules->raw('ID');
+            while ($module = $modules->fetch()) {
+                $moduleId = $module->raw('ID');
 
                 $lessons = PodsWrapper::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
-                while ($lessons->fetch()) {
+                while ($lesson = $lessons->fetch()) {
                     $open = false;
-                    $pos = array_search($lessons->raw("ID"), array_column($classLessons, 'id'));
+                    $pos = array_search($lesson->raw("ID"), array_column($classLessons, 'id'));
                     if (false !== $pos) {
                         $open = $classLessons[$pos]["open"];
                     }
 
                     $result[] = [
                         "module_id" => $moduleId,
-                        "module_title" => $modules->raw("name", true),
-                        "module_order" => $modules->raw("order", true),
-                        "intro_module" => $modules->raw("intro_module", true),
-                        "lesson_number" => $lessons->raw("lesson_number", true),
-                        "id" => $lessons->raw("ID", true),
-                        "title" => stripslashes($lessons->raw("title", true)),
+                        "module_title" => $module->raw("name", true),
+                        "module_order" => $module->raw("order", true),
+                        "intro_module" => $module->raw("intro_module", true),
+                        "lesson_number" => $lesson->raw("lesson_number", true),
+                        "id" => $lesson->raw("ID", true),
+                        "title" => stripslashes($lesson->raw("title", true)),
                         "open" => $open
                     ];
                 }

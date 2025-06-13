@@ -1,0 +1,857 @@
+@charset "UTF-8";
+:root {
+  --border-color: #ccd5db;
+  --border-emphasis-color: #777a7c;
+  --selected-color: #d0d7df;
+  --link-color: #176eb6;
+  --sidebar-module-background-color: #f2f4f5;
+  --header-height: 68px;
+  --footer-height: 20px;
+}
+
+body.school {
+  direction: rtl;
+}
+body.school * {
+  line-height: 2em;
+  font-family: Assistant, sans-serif;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+body.school ol,
+body.school ul {
+  list-style-position: inside;
+}
+body.school nav.navbar {
+  border: 0;
+  display: grid;
+  justify-content: center;
+  background: linear-gradient(#f7f7f9, #ebebed);
+}
+body.school nav.navbar .navbar-brand {
+  display: none;
+}
+body.school nav.navbar .container {
+  gap: 10px;
+}
+body.school nav.navbar .container .nav-lessons {
+  cursor: pointer;
+  background-color: white;
+  display: none;
+  width: 42px;
+  height: 42px;
+  border: solid 2px var(--lead-color);
+  border-radius: 3px;
+}
+body.school .row.page-content {
+  padding: 20px 0px;
+}
+body.school .school-container.classroom {
+  min-height: calc(100vh - var(--header-height) - var(--footer-height));
+  width: 100%;
+  display: grid;
+  grid-template-columns: 450px 1fr;
+}
+body.school .school-container.classroom label {
+  margin: 0;
+}
+body.school .school-container.classroom a {
+  color: var(--link-color);
+}
+body.school .school-container.classroom a:hover {
+  color: black;
+}
+body.school .school-container.classroom .school-sidebar {
+  height: calc(100vh - var(--header-height) - var(--footer-height));
+  overflow: scroll;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-header {
+  top: 0;
+  position: sticky;
+  z-index: 2;
+  background-color: white;
+  font-weight: bold;
+  padding: 0.8rem 0.8rem 0.8rem 1.6rem;
+  border: 1px solid var(--border-color);
+  border-right: 0;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-header .close-sidebar {
+  width: 20px;
+  height: 20px;
+  display: none;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module {
+  background: var(--sidebar-module-background-color);
+  border: 0;
+  border-left: 1px solid var(--border-color);
+  transition: height 0.1s ease-in-out;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-module-header {
+  padding: 1.6rem;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr 20px;
+  border-bottom: solid 1px var(--border-color);
+  align-items: center;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-module-header * {
+  cursor: pointer;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-module-header .opener {
+  font-size: 1.4rem;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease-in-out;
+  transform-origin: center center;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module:last-child .sidebar-lesson:last-child {
+  border-bottom: solid 1px var(--border-color);
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-lesson {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  grid-template-columns: 1fr 20px;
+  width: 100%;
+  padding: 0.8rem 1.6rem;
+  background: white;
+  cursor: pointer;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-lesson:hover, body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-lesson.selected {
+  background: var(--selected-color);
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-lesson * {
+  cursor: pointer;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module .sidebar-lesson > img.play-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module.open {
+  height: -moz-min-content;
+  height: min-content;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module.open .sidebar-lesson {
+  display: grid;
+  gap: 10px;
+}
+body.school .school-container.classroom .school-sidebar .sidebar-module.open .sidebar-module-header .opener {
+  transform: rotate(-90deg) translate(-4px, -5px);
+}
+body.school .school-container.classroom .lesson {
+  height: calc(100vh - var(--header-height) - var(--footer-height));
+  display: grid;
+  grid-template-rows: 450px 1fr;
+}
+body.school .school-container.classroom .lesson.no-videos {
+  grid-template-rows: 1fr;
+}
+body.school .school-container.classroom .lesson.no-videos .lesson-videos {
+  display: none;
+}
+body.school .school-container.classroom .lesson.no-videos .lesson-materials {
+  grid-template-rows: 58px 58px 1fr;
+}
+body.school .school-container.classroom .lesson.no-videos .lesson-materials .lesson-materials-nav {
+  height: 60px;
+  border: solid 1px var(--border-color);
+}
+body.school .school-container.classroom .lesson.no-videos .lesson-materials .current-lesson-title {
+  padding: 0.8rem;
+  border-top: solid 1px var(--border-color);
+  gap: 4px;
+  border-left: 0;
+  border-right: 0;
+  display: grid;
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: center;
+}
+body.school .school-container.classroom .lesson.no-videos .lesson-materials .current-lesson-title > * {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+body.school .school-container.classroom .lesson .lesson-videos {
+  padding: 0;
+  border-left: 0;
+  border-right: 0;
+}
+body.school .school-container.classroom .lesson .lesson-videos #current-lesson-title {
+  position: relative;
+  overflow: visible;
+}
+body.school .school-container.classroom .lesson .lesson-videos #current-lesson-title .multiple-video-indication {
+  font-size: 0.8em;
+  background: red;
+  text-align: center;
+  border-radius: 4px;
+  color: white;
+  width: -moz-max-content;
+  width: max-content;
+  padding-left: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 28px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='0,0,256,256' width='16px' height='16px' fill-rule='nonzero'%3E%3Cg fill='%23ffffff' fill-rule='nonzero' stroke='none' stroke-width='1' stroke-linecap='butt' stroke-linejoin='miter' stroke-miterlimit='10' stroke-dasharray='' stroke-dashoffset='0' font-family='none' font-weight='none' font-size='none' text-anchor='none' style='mix-blend-mode: normal'%3E%3Cg transform='scale(5.12,5.12)'%3E%3Cpath d='M25,2c-12.6907,0 -23,10.3093 -23,23c0,12.69071 10.3093,23 23,23c12.69071,0 23,-10.30929 23,-23c0,-12.6907 -10.30929,-23 -23,-23zM25,4c11.60982,0 21,9.39018 21,21c0,11.60982 -9.39018,21 -21,21c-11.60982,0 -21,-9.39018 -21,-21c0,-11.60982 9.39018,-21 21,-21zM25,11c-1.65685,0 -3,1.34315 -3,3c0,1.65685 1.34315,3 3,3c1.65685,0 3,-1.34315 3,-3c0,-1.65685 -1.34315,-3 -3,-3zM21,21v2h1h1v13h-1h-1v2h1h1h4h1h1v-2h-1h-1v-15h-1h-4z'%3E%3C/path%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  padding-right: 26px;
+}
+body.school .school-container.classroom .lesson .lesson-videos #current-lesson-title .multiple-video-indication.hidden {
+  display: none;
+}
+body.school .school-container.classroom .lesson .lesson-videos .lesson-videos-nav {
+  padding: 0.8rem;
+  border: solid 1px var(--border-color);
+  gap: 4px;
+  border-left: 0;
+  border-right: 0;
+  display: grid;
+  grid-auto-flow: column;
+  justify-content: space-between;
+}
+body.school .school-container.classroom .lesson .lesson-videos .lesson-videos-nav > * {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+body.school .school-container.classroom .lesson .lesson-videos .lesson-videos-nav a.hide {
+  visibility: hidden;
+}
+body.school .school-container.classroom .lesson .lesson-videos .video-container {
+  background: black;
+  display: grid;
+  justify-items: center;
+}
+body.school .school-container.classroom .lesson .lesson-videos .video-container.no-videos-available {
+  background-color: white;
+  color: black;
+}
+body.school .school-container.classroom .lesson .lesson-videos .video-container iframe {
+  height: 400px;
+  width: 752.94px;
+}
+body.school .school-container.classroom .lesson .lesson-videos .video-container video {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+body.school .school-container.classroom .lesson .lesson-materials {
+  display: grid;
+  grid-template-rows: 58px 1fr;
+  overflow: scroll;
+}
+body.school .school-container.classroom .lesson .lesson-materials .current-lesson-title {
+  display: none;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav {
+  list-style: none;
+  display: flex;
+  gap: 1.6rem;
+  padding: 0.8rem 0 0 0;
+  border-bottom: 2px solid var(--border-color);
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav li {
+  display: grid;
+  align-items: center;
+  line-height: 1rem;
+  padding: 0.8rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  cursor: pointer;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav li.selected {
+  font-weight: bold;
+  border-bottom: solid 2px var(--border-emphasis-color);
+  position: relative;
+  padding-bottom: 2px;
+  top: 2px;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav li:last-child {
+  margin-right: auto;
+  cursor: pointer;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav li:last-child img {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s ease-in-out;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav li:last-child.rotated img {
+  transform: rotate(180deg);
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer {
+  padding: 0.8rem;
+  height: 100%;
+  overflow: scroll;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer img {
+  max-width: 100%;
+  height: auto;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer .notebook-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow: auto;
+  border: 1px solid #ccc;
+  font-family: monospace;
+  font-size: 16px;
+  line-height: 24px;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer .notebook-container .notebook-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2000px; /* long enough */
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 0, 0.1019607843), rgba(255, 255, 0, 0.1019607843) 23px, #e0e0e0 24px);
+  pointer-events: none;
+  z-index: 0;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer .notebook-container .student-notes {
+  position: relative;
+  z-index: 1;
+  padding: 0 8px; /* no vertical padding */
+  min-height: 100%;
+  outline: none;
+  white-space: pre-wrap;
+  line-height: 24px;
+  font-size: 16px;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer .notebook-container .student-notes * {
+  line-height: 24px;
+  font-size: 16px;
+}
+body.school .school-container.classroom .lesson .lesson-materials .lesson-content-viewer .wp-block-table td {
+  border: solid 1px #656f74;
+  padding: 4px 6px;
+}
+body.school .personal-container {
+  padding: 20px 50px;
+}
+body.school .personal-container .class-header {
+  margin: 20px 0;
+}
+body.school .personal-container .class-header h1 {
+  font-size: 1.6rem;
+}
+body.school .personal-container .class-header h2 {
+  font-size: 1.3rem;
+}
+body.school .personal-container .school-content .message {
+  width: 100%;
+  border: solid 1px #59c359;
+  background: rgba(0, 128, 0, 0.18);
+  padding: 10px;
+}
+body.school .personal-container .school-content .form-content {
+  padding-top: 30px;
+}
+body.school .personal-container .school-content .form-content .row {
+  display: grid;
+  grid-gap: 10px;
+  padding: 10px;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+}
+body.school .personal-container .school-content .form-content .row label {
+  margin-bottom: 0;
+}
+body.school .personal-container .school-content .form-content .row input {
+  border: solid 1px #e0e0e0;
+  padding: 4px;
+}
+body.school .personal-container .school-content .form-content .row button {
+  color: #404040;
+  background: #fafafa;
+  border: solid 1px #808080;
+  cursor: pointer;
+}
+body.school .personal-container .school-content .form-content .row .description {
+  grid-column: 2;
+  font-size: 0.85em;
+}
+body.school .school-container.lobby {
+  min-height: calc(100vh - var(--header-height) - var(--footer-height));
+  margin: 0 auto;
+}
+body.school .school-container.lobby .school-header {
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+body.school .school-container.lobby .school-header .tabs {
+  display: flex;
+}
+body.school .school-container.lobby .school-header .tabs > a {
+  padding: 5px 10px;
+}
+body.school .school-container.lobby .school-header .tabs > a:hover {
+  text-decoration: none;
+  background-color: #e0e0e0;
+}
+body.school .school-container.lobby .school-header .tabs .divider {
+  width: 1px;
+  border-left: solid 1px #e0e0e0;
+}
+body.school .school-container.lobby .school-courses {
+  padding: 20px;
+  padding-top: 2px;
+  display: grid;
+  gap: 20px;
+}
+body.school .school-container.lobby .school-courses .welcome-back {
+  background-image: none;
+  background-size: cover;
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 20px 40px;
+  background: #fafafa;
+  border-radius: 10px;
+  display: grid;
+  grid-template-areas: "slogan" "about";
+  row-gap: 20px;
+  justify-content: start;
+}
+body.school .school-container.lobby .school-courses .welcome-back .welcome-about {
+  grid-area: about;
+  font-size: 1.2rem;
+  line-height: 1.6rem;
+  font-weight: bold;
+  color: black;
+  background: linear-gradient(90deg, transparent, white);
+  padding: 4px 8px;
+  display: inline-block;
+  border-radius: 20px;
+  height: -moz-fit-content;
+  height: fit-content;
+  align-self: end;
+  justify-self: end;
+}
+body.school .school-container.lobby .school-courses .welcome-back .welcome-slogan {
+  grid-area: slogan;
+  font-size: 3rem;
+  line-height: 1.6rem;
+  font-weight: bold;
+  color: black;
+  justify-self: end;
+  align-self: center;
+  height: -moz-fit-content;
+  height: fit-content;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5), -1px 1px 0 rgba(255, 255, 255, 0.5), 1px -1px 0 rgba(255, 255, 255, 0.5), -1px -1px 0 rgba(255, 255, 255, 0.5);
+}
+body.school .school-container.lobby .school-courses .courses-header {
+  padding: 5px 20px;
+  color: #494949;
+  background: #e6f1f9;
+  border-radius: 5px;
+}
+body.school .school-container.lobby .school-courses .course-list {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-gap: 10px;
+  overflow: hidden;
+}
+body.school .school-container.lobby .school-courses .course-list * {
+  box-sizing: border-box;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card {
+  width: 100%;
+  background: #f6f6f6;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  grid-template-rows: max-content 1fr;
+  position: relative;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card.featured {
+  border: solid 2px #b908b9;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card.featured::after {
+  content: "פופולרי";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #b908b9;
+  color: white;
+  font-weight: bold;
+  padding: 0px 6px;
+  border-radius: 4px;
+  box-shadow: 0px 0px 10px white;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-icon {
+  max-width: 100%; /* Make sure the image does not exceed the parent's width */
+  max-height: 100%; /* Make sure the image does not exceed the parent's height */
+  -o-object-fit: contain;
+     object-fit: contain; /* Ensure the image is contained within the box while keeping its aspect ratio */
+  width: auto;
+  height: auto;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details {
+  padding: 0 10px 10px 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details > * {
+  margin: 0;
+  line-height: 1.3rem;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-author {
+  font-weight: 100;
+  font-size: 0.9rem;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .read-more-indicator {
+  background: #186ff9;
+  cursor: pointer;
+  width: -moz-max-content;
+  width: max-content;
+  padding: 0 7px;
+  border-radius: 7px;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  margin: 0;
+  height: 16px;
+  display: flex;
+  align-items: end;
+  position: relative;
+  top: -7px;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details:has(.read-more-indicator:hover) .course-short-desc {
+  overflow: auto;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details:has(.read-more-indicator:hover) .course-short-desc .course-read-more {
+  display: block;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details:has(.read-more-indicator:hover) .course-short-desc .read-more-arrow {
+  display: block;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc {
+  margin: 10px 0;
+  font-size: 0.95rem;
+  max-height: 4.8rem;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc,
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc * {
+  line-height: 1.2rem;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc:has(.course-read-more:hover) {
+  overflow: auto;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc:has(.course-read-more:hover) .course-read-more {
+  display: block;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc:has(.course-read-more:hover) .read-more-arrow {
+  display: block;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc .course-read-more {
+  display: none; /* Hidden by default */
+  position: absolute;
+  bottom: 60px;
+  background-color: #fff;
+  color: #333;
+  padding: 10px;
+  width: calc(100% - 20px);
+  max-height: 18rem; /* Limit balloon height to 10 rows */
+  overflow-y: auto; /* Make it scrollable if the content is too long */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Drop shadow */
+  border-radius: 5px;
+  z-index: 9998;
+}
+body.school .school-container.lobby .school-courses .course-list > .course-card .course-details .course-short-desc .read-more-arrow {
+  display: none;
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  bottom: 55px;
+  left: 50%;
+  transform: translate(50%) rotate(45deg);
+  z-index: 9999;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details {
+  display: flex;
+  flex-direction: column;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details > * {
+  margin: 0;
+  line-height: 1.3rem;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details .course-icon {
+  width: 100%;
+  max-height: 200px;
+  -o-object-fit: cover;
+     object-fit: cover;
+  overflow: hidden;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details .course-name {
+  margin-top: 14px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details .course-author {
+  font-weight: 100;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details .course-short-desc {
+  background: #f8f8f8;
+  padding: 10px;
+  margin: 10px 0;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details .course-price {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+body.school .school-container.lobby .school-courses .course-details .course-details .buy-now {
+  border: 0;
+  cursor: pointer;
+  background: #b908b9;
+  color: white;
+  line-height: 2rem;
+  padding: 5px 10px;
+  font-weight: bold;
+  width: 100%;
+  max-width: 200px;
+  text-align: center;
+}
+body.school .school-container.lobby .school-courses .my-courses .course-card .course-details {
+  margin-top: 10px;
+}
+body.school .school-container.lobby .school-courses .my-courses .course-card .course-short-desc {
+  margin-bottom: 10px;
+}
+body.school .school-container.lobby .school-courses .my-courses .course-card .course-progress {
+  flex-grow: 1;
+  align-content: end;
+}
+body.school .school-container.lobby .school-courses .my-courses .course-card .course-progress .course-progress-bar {
+  line-height: 2rem;
+  border-radius: 1rem;
+  padding: 0 1rem;
+  margin-bottom: 10px;
+  border: solid 1px #46da9c;
+  display: block;
+  width: 100%;
+}
+body.school .school-container.lobby .school-courses .my-courses .course-card .enter-course {
+  border: 0;
+  cursor: pointer;
+  background: #b908b9;
+  color: white;
+  line-height: 2rem;
+  padding: 5px 10px;
+  font-weight: bold;
+  width: 100%;
+}
+body.school .school-container.lobby .school-courses .available-courses .course-card .course-details .course-price {
+  font-weight: bold;
+  flex-grow: 1;
+  align-content: end;
+}
+body.school .school-container.lobby .school-courses .available-courses .course-card .course-details .add-to-cart {
+  background-color: #b908b9;
+  border: 0;
+  line-height: 2rem;
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  padding: 5px 10px;
+  font-weight: bold;
+  margin-top: 10px;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 10px;
+}
+body.school .school-container.lobby .school-courses .available-courses .course-card .course-details .add-to-cart > img {
+  width: 20px;
+  height: 20px;
+}
+body.school .school-container.lobby .school-courses .available-courses .course-card .course-icon {
+  max-width: 100%; /* Make sure the image does not exceed the parent's width */
+  max-height: 100%; /* Make sure the image does not exceed the parent's height */
+  -o-object-fit: contain;
+     object-fit: contain; /* Ensure the image is contained within the box while keeping its aspect ratio */
+  width: auto;
+  height: auto;
+}
+body.school footer {
+  display: grid;
+  justify-items: center;
+  padding: 2px 0;
+}
+body.school footer * {
+  font-size: 0.8rem;
+  line-height: 1rem;
+}
+
+@media screen and (max-width: 1350px) {
+  body.school .school-container.classroom {
+    grid-template-columns: 300px 1fr;
+  }
+}
+@media screen and (max-width: 991px) {
+  body.school nav.navbar {
+    justify-content: flex-end;
+    padding: 8px;
+    min-height: 68px;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back {
+    row-gap: 10px;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-title {
+    height: 180px;
+    width: 180px;
+    font-size: 1.6rem;
+    line-height: 1.8rem;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-slogan {
+    font-size: 2.5rem;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-about {
+    font-size: 1rem;
+    font-weight: normal;
+  }
+}
+@media screen and (max-width: 900px) {
+  :root {
+    --header-height: 58px;
+  }
+  body.school nav.navbar {
+    min-height: unset;
+  }
+  body.school nav.navbar .container .nav-lessons {
+    display: block;
+    position: relative;
+  }
+  body.school nav.navbar .container .nav-lessons::before {
+    content: "לניווט בין שיעורים ←";
+    position: absolute;
+    right: -4px;
+    transform: translate(100%, 0);
+    width: -moz-max-content;
+    width: max-content;
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back {
+    padding: 6px 12px;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-title {
+    height: 120px;
+    width: 120px;
+    font-size: 1.3rem;
+    box-shadow: 8px 2px 0px #43aaff;
+    line-height: 1.4rem;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-slogan {
+    font-size: 1.8rem;
+    line-height: 1.8rem;
+    text-align: center;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-about {
+    font-size: 0.9rem;
+    font-weight: normal;
+  }
+  body.school .school-container.classroom {
+    grid-template-columns: 1fr;
+  }
+  body.school .school-container.classroom .school-sidebar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 2;
+  }
+  body.school .school-container.classroom .school-sidebar.show {
+    display: block;
+  }
+  body.school .school-container.classroom .school-sidebar .sidebar-header {
+    display: grid;
+    grid-template-columns: 1fr 20px;
+    align-items: center;
+  }
+  body.school .school-container.classroom .school-sidebar .sidebar-header .close-sidebar {
+    display: block;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+  }
+}
+@media screen and (max-width: 500px) {
+  body.school .personal-container .school-content .form-content .row {
+    grid-template-columns: 80px 1fr;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back {
+    padding: 6px 12px;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-title {
+    height: 100px;
+    width: 100px;
+    font-size: 0.95rem;
+    box-shadow: 6px 2px 0px #43aaff;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-slogan {
+    font-size: 2rem;
+    line-height: 1.8rem;
+  }
+  body.school .school-container.lobby .school-courses .welcome-back .welcome-about {
+    display: none;
+  }
+  body.school .school-container.lobby .school-courses .courses-header {
+    font-size: 1.4rem;
+    padding: 5px 20px;
+    color: #494949;
+    background: #e6f1f9;
+    border-radius: 40px;
+  }
+  body.school .school-container.classroom .lesson .lesson-videos .lesson-videos-nav {
+    font-size: 0.8rem;
+  }
+  body.school .school-container.classroom .lesson .lesson-materials .lesson-materials-nav {
+    gap: 0.2rem;
+    font-size: 0.8rem;
+  }
+  body.school .school-container.classroom .lesson textarea.student-notes {
+    font-size: 0.8rem;
+  }
+}
+@media screen and (max-height: 800px) {
+  body.school .school-container.classroom .lesson {
+    grid-template-rows: 350px 1fr;
+  }
+  body.school .school-container.classroom .lesson .lesson-videos .video-container iframe,
+  body.school .school-container.classroom .lesson .lesson-videos .video-container video {
+    height: 300px;
+  }
+}
+@media screen and (max-height: 580px) {
+  body.school .school-container.classroom .lesson {
+    grid-template-rows: 280px 1fr;
+  }
+  body.school .school-container.classroom .lesson .lesson-videos .video-container iframe,
+  body.school .school-container.classroom .lesson .lesson-videos .video-container video {
+    height: 240px;
+  }
+}/*# sourceMappingURL=school.css.map */
