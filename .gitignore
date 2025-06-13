@@ -1,5 +1,4 @@
 /.idea
-/front
 /elementor
 /pods
 /value-school
@@ -7,4 +6,3 @@
 
 /future-lms/.idea
 **/.DS_Store
-/front/
