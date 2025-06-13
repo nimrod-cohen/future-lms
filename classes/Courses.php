@@ -23,6 +23,7 @@ class Courses {
     add_action("wp_ajax_reorder_module", [$this, "reorderModule"]);
     add_action("wp_ajax_reorder_lesson", [$this, "reorderLesson"]);
     add_action("wp_ajax_add_lesson", [$this, "addLesson"]);
+    add_action("wp_ajax_edit_class", [$this, "editClass"]);
   }
 
   public static function getCoursesTree($courses = null, $enabledOnly = true) {
@@ -412,6 +413,37 @@ class Courses {
     return in_array($tag, $tags);
   }
 
+  public function editClass() {
+    try{
+      $classId = isset($_POST["class_id"]) ? $_POST["class_id"] : false;
+      $name = $_POST["name"];
+      $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
+      $startDate = isset($_POST['start_date']) ? $_POST['start_date'] : null;
+
+      if (empty($classId)) {
+        //create new course, a course is a wp_post with post_type = course
+        $classId = wp_insert_post([
+          'post_title' => $name,
+          'post_status' => 'draft',
+          'post_type' => 'class'
+        ]);
+      } else {
+        wp_update_post([
+          'ID' => $classId,
+          'post_title' => $name
+        ]);
+      }
+
+      update_post_meta($classId, 'course', $courseId);
+      update_post_meta($classId, 'start_date', $startDate);
+
+      echo json_encode(['error' => false]);
+      die();
+    } catch (Exception $e) {
+      echo json_encode(['error' => true, 'message' => $e->getMessage()]);
+      die();
+    }
+  }
   public function editCourse() {
     try {
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;

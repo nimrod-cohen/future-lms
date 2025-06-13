@@ -12,7 +12,14 @@ use FutureLMS\classes\VersionManager;
       </span>
     </span>
     </a>
-    <a class="item" data-tab="classes">Classes</a>
+    <a class="item" data-tab="classes">
+        <span>Classes</span>
+        <span class="action-bar">
+            <span data-tooltip="Add class" data-variation="mini" data-inverted="">
+                <i class='plus icon green square outline' data-action='add-class'></i>
+            </span>
+        </span>
+    </a>
     <a class="item" data-tab="mailer">Email</a>
     <a class="item" data-tab="billing">Billing</a>
     <a class="item" data-tab="coupons">Coupons</a>
