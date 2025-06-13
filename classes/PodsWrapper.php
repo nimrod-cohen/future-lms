@@ -141,13 +141,17 @@ class PodsWrapper
    */
   public function query($params = [])
   {
-      $this->is_collection = true;
-      $this->query_args = $params;
+    if (isset($params['where'])) {
+      $params['where'] = $this->convert_relationship_where($params['where']);
+    }
 
-      if ($this->is_post_type()) {
-          $this->query_posts($params);
-      }
-      return $this;
+    $this->is_collection = true;
+    $this->query_args = $params;
+
+    if ($this->is_post_type()) {
+      $this->query_posts($params);
+    }
+    return $this;
   }
 
   /**
@@ -221,6 +225,22 @@ class PodsWrapper
       }
 
       return $meta_query;
+  }
+
+  private function convert_relationship_where($where) {
+
+    if (preg_match_all('/(\w+)\.(\w+)/', $where, $matches)) {
+      foreach ($matches[0] as $key => $full_match) {
+        $relationship = $matches[1][$key];
+        $field = $matches[2][$key];
+
+        if ($field === 'id') {
+          $where = str_replace($full_match, $relationship, $where);
+        }
+
+      }
+    }
+    return $where;
   }
 
   /**
