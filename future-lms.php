@@ -185,7 +185,7 @@ class FutureLMS {
             return;
         }
 
-        $lesson = pods("lesson", $post_id);
+        $lesson = PodsWrapper::factory("lesson", $post_id);
         $videoList = $lesson->field("video_list");
         $videoList = empty($videoList) ? "[]" : $videoList;
         $videoList = json_decode($videoList, true);
@@ -213,7 +213,7 @@ class FutureLMS {
             return;
         }
 
-        $course = pods("course", $post_id);
+        $course = PodsWrapper::factory("course", $post_id);
         $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
         $price = $course->field($column);
         echo $fmt->formatCurrency($price, "ILS");
@@ -288,7 +288,7 @@ class FutureLMS {
             return "";
         }
 
-        $course = pods("course", $courseId);
+        $course = PodsWrapper::factory("course", $courseId);
 
         $fullPrice = floatval($course->field("full_price"));
 
@@ -315,11 +315,11 @@ class FutureLMS {
 
     public function addExtraModuleFieldsToListData($column_name, $module_id) {
         if ('course' == $column_name) {
-            $pod = pods("module", $module_id);
+            $pod = PodsWrapper::factory("module", $module_id);
             $course = $pod->raw("course");
             echo "<a href='" . site_url("/wp-admin/post.php?post=" . $course["ID"] . "&action=edit") . "'>" . $course["post_title"] . "</a>";
         } else if ("order" == $column_name) {
-            $pod = pods("module", $module_id);
+            $pod = PodsWrapper::factory("module", $module_id);
             echo $pod->raw("order");
         }
     }
@@ -460,7 +460,7 @@ class FutureLMS {
                 $courseId = intval($courseId);
 
                 //find course & price
-                $course = pods("course", $courseId);
+                $course = PodsWrapper::factory("course", $courseId);
 
                 if (!$course->exists()) {
                     throw new Exception("Cannot find course id " . $courseId);
@@ -795,7 +795,7 @@ class FutureLMS {
 
         $query = new DBManager($studentId);
 
-        $classes = pods("class", ["where" => "course.id = " . $courseId], -1);
+        $classes = PodsWrapper::factory("class", ["where" => "course.id = " . $courseId], -1);
 
         foreach($classes->results() as $row) {
             $result[] = [
@@ -950,7 +950,7 @@ class FutureLMS {
             $lessonId = intval($_POST["lesson_id"]);
 
             //check if course exists
-            $course = pods("course", $courseId);
+            $course = PodsWrapper::factory("course", $courseId);
             $valueQuery = new DBManager(get_current_user_id());
 
             //course id not found or student not listed
@@ -964,7 +964,7 @@ class FutureLMS {
 
             $class = $valueQuery->getClass($courseId);
 
-            $pod = pods('lesson', $lessonId);
+            $pod = PodsWrapper::factory('lesson', $lessonId);
 
             $result["presentation"] = $pod->display('presentation');
             $result["homework"] = $pod->display('homework');
@@ -1003,7 +1003,7 @@ class FutureLMS {
         try {
             $classId = $_REQUEST["class_id"];
 
-            $class = pods("class", $classId);
+            $class = PodsWrapper::factory("class", $classId);
 
             $result = [];
             if (!$class) {
@@ -1019,12 +1019,12 @@ class FutureLMS {
 
             $course = $class->raw("course");
 
-            $modules = pods("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
+            $modules = PodsWrapper::factory("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
             while ($modules->fetch()) {
                 $moduleId = $modules->raw('ID');
 
-                $lessons = pods("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
+                $lessons = PodsWrapper::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
                 while ($lessons->fetch()) {
                     $open = false;
@@ -1103,7 +1103,7 @@ class FutureLMS {
         $classId = $_REQUEST["class_id"];
         $lessonId = $_REQUEST["lesson_id"];
 
-        $class = pods("class", $classId);
+        $class = PodsWrapper::factory("class", $classId);
 
         if (!$class) {
             die();
@@ -1147,7 +1147,7 @@ class FutureLMS {
     }
 
     public function getCourseChargeUrl() {
-        $course = pods('Course', intval($_REQUEST["course_id"]));
+        $course = PodsWrapper::factory('Course', intval($_REQUEST["course_id"]));
         $chargeUrl = $course->field('charge_url');
         $fullPrice = $course->field('full_price');
         $chargeUrl = add_query_arg(['sum' => $fullPrice], $chargeUrl); //will replace if exists.
@@ -1253,12 +1253,6 @@ class FutureLMS {
         }
 
         return false; // If no media found for the tag
-    }
-}
-
-if (!function_exists('pods')) {
-    function pods($pod_name, $id_or_params = null) {
-        return PodsWrapper::factory($pod_name, $id_or_params);
     }
 }
 
