@@ -179,6 +179,7 @@ class CoursesTab {
             </span>
           </div>
           <div class="course-modules">
+          ${moduleIds.length === 0 ? '<p class="no-modules">No modules found</p>' : ''}
             ${moduleIds
               .map((mid, idx) => {
                 if (typeof course.modules[mid] !== 'object') return '';
@@ -216,7 +217,9 @@ class CoursesTab {
                       </span>
                       <i class="trash alternate outline icon red actionable" data-action='delete-module'></i>
                     </span>
-                    <div class='module-lessons'>${lessonIds
+                    <div class='module-lessons'>
+                     ${lessonIds.length === 0 ? '<p class="no-lessons">No lessons found</p>' : ''}
+                    ${lessonIds
                       .map((lessonId, idx2) => {
                         const lesson = module.lessons[lessonId];
                         if (typeof lesson !== 'object') return '';

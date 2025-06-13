@@ -96,8 +96,8 @@ div.error {
             grid-template-columns: 1fr;
             grid-template-rows: min-content 1fr;
             grid-template-areas:
-              'header'
-              'content';
+              "header"
+              "content";
 
             .tab-header {
               grid-area: header;
@@ -112,7 +112,7 @@ div.error {
             overflow: auto;
           }
 
-          &[data-tab='students'] {
+          &[data-tab="students"] {
             .students-search-form {
               display: grid;
               grid-template-columns: unset;
@@ -126,12 +126,12 @@ div.error {
             }
           }
 
-          &[data-tab='students'] .ui.grid,
-          &[data-tab='billing'] .ui.grid {
+          &[data-tab="students"] .ui.grid,
+          &[data-tab="billing"] .ui.grid {
             display: grid;
             grid-template-rows: min-content auto;
           }
-          &[data-tab='mailer'] .ui.grid {
+          &[data-tab="mailer"] .ui.grid {
             display: grid;
             grid-template-rows: repeat(4, min-content);
 
@@ -141,7 +141,7 @@ div.error {
             }
           }
 
-          &[data-tab='classes'] .ui.list.lessons {
+          &[data-tab="classes"] .ui.list.lessons {
             .item.lesson {
               display: flex;
               align-items: center;
@@ -238,8 +238,8 @@ div.error {
                 align-items: center;
                 grid-template-columns: max-content max-content 1fr;
                 grid-template-areas:
-                  'order name actions'
-                  'lessons lessons lessons';
+                  "order name actions"
+                  "lessons lessons lessons";
                 justify-content: start;
 
                 .module-order {
@@ -272,6 +272,8 @@ div.error {
                   align-items: center;
                   > i {
                     cursor: pointer;
+                    bottom: unset;
+                    position: relative;
                   }
                 }
 
@@ -329,6 +331,8 @@ div.error {
 
                         > i {
                           cursor: pointer;
+                          bottom: unset;
+                          position: relative;
                         }
                       }
                     }
@@ -377,15 +381,25 @@ table.coupons {
 }
 
 @media screen and (max-width: 1600px) {
-  #wpwrap #wpcontent #wpbody #wpbody-content .ui.tab[data-tab='coupons'] .ui.grid {
-    [class*='eight wide'].column {
+  #wpwrap
+    #wpcontent
+    #wpbody
+    #wpbody-content
+    .ui.tab[data-tab="coupons"]
+    .ui.grid {
+    [class*="eight wide"].column {
       width: 100% !important;
     }
   }
 }
 
 @media screen and (max-width: 1400px) {
-  #wpwrap #wpcontent #wpbody #wpbody-content .ui.tab[data-tab='students'] .students-search-form {
+  #wpwrap
+    #wpcontent
+    #wpbody
+    #wpbody-content
+    .ui.tab[data-tab="students"]
+    .students-search-form {
     grid-template-columns: 1fr 1fr 1fr;
     grid-auto-flow: unset;
   }
