@@ -1033,7 +1033,6 @@ class FutureLMS {
                         $open = $classLessons[$pos]["open"];
                     }
 
-                    $lt = stripslashes($module->raw("order", true));
                     $result[] = [
                         "module_id" => $moduleId,
                         "module_title" => $module->raw("name", true),
