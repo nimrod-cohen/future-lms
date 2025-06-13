@@ -484,7 +484,9 @@ class PodsWrapper
 
     // handle relations
     $related_pod_type = $this->get_related_pod_type($field_name);
-    if (!$related_pod_type) return null;
+    if (!$related_pod_type) {
+      return $this->field($field_name);
+    }
 
     $raw_value = get_post_meta($this->pod_id, '_pods_' . $field_name, true);
     $raw_value = is_serialized($raw_value) ? maybe_unserialize($raw_value) : $raw_value;
@@ -544,7 +546,9 @@ class PodsWrapper
       if (metadata_exists('post', $this->pod_id, '_pods_' . $field_name)) {
           return true;
       }
-      return false;
+      // Check if field value looks like a relationship ID
+      $value = $this->field($field_name);
+      return is_numeric($value) && $value > 0;
   }
 
   public function exists() {

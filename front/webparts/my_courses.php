@@ -13,7 +13,7 @@ $genericCourseIcon = FutureLMS::get_media_url_by_tag('generic-course-icon');
 foreach ($attendingCourses as $post) {
   $icon = get_post_meta($post->ID, 'course_icon', true);
   if (!empty($icon)) {
-    $icon = $icon;
+    $icon = wp_get_attachment_image_url( $icon, 'thumbnail' );
   } else {
     $icon = $genericCourseIcon;
   }
