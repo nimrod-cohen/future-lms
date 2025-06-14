@@ -25,15 +25,14 @@ class Courses {
     add_action("wp_ajax_add_lesson", [$this, "addLesson"]);
   }
 
-  public static function getCoursesTree($courses = null, $enabledOnly = true) {
+  public static function get_courses_tree($courses = null, $enabledOnly = true) {
     global $wpdb;
-    $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status, pmprice.meta_value AS full_price,
-    pmurl.meta_value AS course_page_url, pmcurl.meta_value AS charge_url, pmtags.meta_value AS tags
+    $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
+    pmprice.meta_value AS full_price, pmurl.meta_value AS course_page_url, pmcurl.meta_value AS charge_url
     FROM wp_posts pcourse
     INNER JOIN wp_postmeta pmprice ON pmprice.post_id = pcourse.id AND pmprice.meta_key = 'full_price'
     LEFT OUTER JOIN wp_postmeta pmurl ON pmurl.post_id = pcourse.id AND pmurl.meta_key = 'course_page_url'
     LEFT OUTER JOIN wp_postmeta pmcurl ON pmcurl.post_id = pcourse.id AND pmcurl.meta_key = 'charge_url'
-    LEFT OUTER JOIN wp_postmeta pmtags ON pmtags.post_id = pcourse.id AND pmtags.meta_key = 'tags'
     WHERE pcourse.post_type = 'course'
     AND pcourse.post_status <> 'trash' ";
 
@@ -50,17 +49,25 @@ class Courses {
     $result = [];
 
     foreach ($rows as $row) {
-      $courseId = $row["course_id"];
-      $result[$courseId] = [];
-      $result[$courseId]["total"] = 0;
-      $result[$courseId]["enabled"] = $row["post_status"] == "publish";
-      $result[$courseId]["name"] = $row["course_name"];
-      $result[$courseId]["price"] = $row["full_price"];
-      $result[$courseId]["course_page_url"] = $row["course_page_url"];
-      $result[$courseId]["charge_url"] = $row["charge_url"];
-      $result[$courseId]["tags"] = $row["tags"];
+      $course_id = $row["course_id"];
 
-      $course = &$result[$courseId];
+      //get all post id metas
+      $course_meta = get_post_meta($course_id);
+      //map all metas to a single array
+      $course_meta = array_map(function ($meta) {
+        return is_array($meta) ? $meta[0] : $meta;
+      }, $course_meta);
+
+      $result[$course_id] = $course_meta;
+      $result[$course_id]["total"] = 0;
+      $result[$course_id]["enabled"] = $row["post_status"] == "publish";
+      $result[$course_id]["name"] = $row["course_name"];
+      $result[$course_id]["price"] = $row["full_price"];
+      $result[$course_id]["course_page_url"] = empty($row["course_page_url"]) ? get_permalink($course_id) : $row["course_page_url"];
+      $result[$course_id]["charge_url"] = $row["charge_url"];
+      $result[$course_id]["course_image"] = !empty($course_meta["_thumbnail_id"]) ? wp_get_attachment_image_url($course_meta["_thumbnail_id"], 'full') : null;
+
+      $course = &$result[$course_id];
       $course["modules"] = [];
 
       $sql = "SELECT pmodule.post_title AS 'module_name', pmodule.ID AS 'module_id',
@@ -68,7 +75,7 @@ class Courses {
         case when pm5.meta_value = '1' then true else false end as count_progress,
         case when pm7.meta_value = '1' then true else false end as intro_module
         FROM wp_posts pmodule
-        INNER JOIN wp_postmeta pm2 ON pm2.post_id = pmodule.id AND pm2.meta_key = 'course' AND pm2.meta_value = $courseId
+        INNER JOIN wp_postmeta pm2 ON pm2.post_id = pmodule.id AND pm2.meta_key = 'course' AND pm2.meta_value = $course_id
         LEFT OUTER JOIN wp_postmeta pm5 ON pm5.post_id = pmodule.ID AND pm5.meta_key = 'count_progress'
         LEFT OUTER JOIN wp_postmeta pm6 ON pm6.post_id = pmodule.ID AND pm6.meta_key = 'order'
         LEFT OUTER JOIN wp_postmeta pm7 ON pm7.post_id = pmodule.ID AND pm7.meta_key = 'intro_module'

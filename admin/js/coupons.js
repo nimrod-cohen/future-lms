@@ -7,7 +7,7 @@ class CouponsTab {
     this.state.set('current_coupon', null);
     this.state.listen('current_coupon', this.render);
 
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_all_courses' }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
       const coursesNameValue = Object.keys(data.courses).map(cid => {
         let course = data.courses[cid];
         return { name: course.name, value: cid };
@@ -112,7 +112,7 @@ class CouponsTab {
 
       values.email = encodeURIComponent(values.email);
 
-      JSUtils.fetch(__valueSchool.ajax_url, {
+      JSUtils.fetch(__futurelms.ajax_url, {
         action: 'save_coupon',
         ...values
       }).then(data => {
@@ -135,7 +135,7 @@ class CouponsTab {
   }
 
   deleteCoupon = id => {
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'delete_coupon', coupon_id: id }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'delete_coupon', coupon_id: id }).then(data => {
       this.reloadCoupons();
     });
   };
@@ -181,7 +181,7 @@ class CouponsTab {
   };
 
   reloadCoupons = () => {
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_coupons' }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_coupons' }).then(data => {
       console.log('rendering coupons ');
       let table = this.tab.querySelector('table.coupons tbody');
       table.innerHTML = '';

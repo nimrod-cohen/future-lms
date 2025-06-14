@@ -11,7 +11,7 @@ class SettingsTab {
   getSettings = () => {
     console.log('getting settings');
 
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'value_get_settings'
     }).then(data => {
       this.tab.querySelector('#zoom_app_client_id').value = data.zoom_app_client_id;
@@ -39,7 +39,7 @@ class SettingsTab {
       whatsapp_019_phone: this.tab.querySelector('#whatsapp_019_phone').value
     };
 
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'value_set_settings',
       ...data
     }).then(data => {

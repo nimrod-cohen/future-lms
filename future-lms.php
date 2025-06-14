@@ -129,7 +129,7 @@ class FutureLMS {
         add_action('manage_edit-lesson_columns', [$this, 'addExtraLessonFieldsToList']);
         add_filter('manage_lesson_posts_custom_column', [$this, 'addExtraLessonFieldsToListData'], 10, 2);
         //fix phone format for proper texting and user retrieval
-        add_filter('wpotp/cleanup-phone', ["ValueSchool", 'cleanup_phone']);
+        add_filter('wpotp/cleanup-phone', ["FutureLMS", 'cleanup_phone']);
         //redirect after login
         add_filter('wpotp/redirect-successful-login', [$this, 'redirectAfterLogin'], 10, 2);
 
@@ -618,17 +618,12 @@ class FutureLMS {
     }
 
     public function enqueueSchoolScripts() {
-        wp_enqueue_script('valueinvesting_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
-        wp_enqueue_style('valueschool_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
-        wp_enqueue_script('valueschool_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['bootstrap', 'wpjsutils']);
+        wp_enqueue_script('futurelms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
+        wp_enqueue_style('futurelms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
+        wp_enqueue_script('futurelms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['bootstrap', 'wpjsutils']);
 
-        $videoUrl = get_pages(['post_type' => 'page', 'meta_key' => '_wp_page_template', 'meta_value' => 'video.php', 'hierarchical' => false]);
-        $videoUrl = get_page_link($videoUrl[0]);
-        $videoUrl = substr($videoUrl, 0, -1);
-
-        wp_localize_script('vi2018_script', 'school_info', [
+        wp_localize_script('futurelms_school_script', 'school_info', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'video_url' => $videoUrl,
             'theme_url' => plugin_dir_url(__FILE__)
         ]);
     }
@@ -658,7 +653,7 @@ class FutureLMS {
         wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js', 'future-lms-admin-partner-coupons-js']);
         wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css']);
 
-        wp_localize_script('future-lms-admin-js', '__valueSchool', ['ajax_url' => admin_url('admin-ajax.php')]);
+        wp_localize_script('future-lms-admin-js', '__futurelms', ['ajax_url' => admin_url('admin-ajax.php')]);
 
         wp_enqueue_script('trumbowyg-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/trumbowyg.min.js');
         wp_enqueue_script('trumbowyg-base64-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/plugins/base64/trumbowyg.base64.min.js', ['trumbowyg-js']);
@@ -915,7 +910,7 @@ class FutureLMS {
             }, []);
 
             $result["progress"] = $valueQuery->getStudentProgress();
-            $result["course_tree"] = Courses::getCoursesTree($courses);
+            $result["course_tree"] = Courses::get_courses_tree($courses);
 
             echo json_encode($result);
             die();
@@ -1157,7 +1152,7 @@ class FutureLMS {
     }
 
     public function getAllCourses() {
-        echo json_encode(["courses" => Courses::getCoursesTree(null, false)]);
+        echo json_encode(["courses" => Courses::get_courses_tree(null, false)]);
         die();
     }
 

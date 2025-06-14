@@ -8,7 +8,7 @@ class PartnerCouponsTab {
   }
 
   reloadCoupons = () => {
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_partner_coupons' }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_partner_coupons' }).then(data => {
       console.log('rendering partner coupons ');
       let table = this.tab.querySelector('table.partner-coupons tbody');
       table.innerHTML = '';

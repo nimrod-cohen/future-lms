@@ -10,7 +10,7 @@ class AdminManager {
 
   constructor() {
     console.log(this.currentTab);
-  console.log('constructor');
+    console.log('constructor');
     //binding
     this.wireTabs = this.wireTabs.bind(this);
     this.wireEvents = this.wireEvents.bind(this);
@@ -30,7 +30,6 @@ class AdminManager {
   //set up semantic ui tabs
   wireTabs() {
     jQuery('.menu .item').tab({
-
       onVisible: function (tab) {
         this.currentTab = tab;
         console.log(this.currentTab);
@@ -54,7 +53,7 @@ class AdminManager {
   }
 
   renderPayments(date) {
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'get_all_payments',
       month: date.getMonth() + 1,
       year: date.getFullYear()
@@ -129,7 +128,7 @@ class AdminManager {
 
   // the course id is required to ensure the student is not related to another class of this course.
   removePayment(paymentId) {
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'remove_payment',
       payment_id: paymentId
     }).then(data => {
@@ -145,7 +144,7 @@ class AdminManager {
    */
   wireMailerScreen() {
     const mailerTab = COMMON.getTab(COMMON.TABS.MAILER);
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_all_courses' }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
       const coursesNameValue = Object.keys(data.courses).map(cid => {
         let course = data.courses[cid];
         return { name: course.name, value: course.id };
@@ -163,7 +162,7 @@ class AdminManager {
             return;
           }
 
-          JSUtils.fetch(__valueSchool.ajax_url, {
+          JSUtils.fetch(__futurelms.ajax_url, {
             action: 'search_classes',
             course_id: item
           }).then(data => {
@@ -215,7 +214,7 @@ class AdminManager {
 
     mailerTab.querySelector('button.send').classList.add('disabled');
 
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'send_email',
       course_id: courseId,
       test: isTest ? 1 : 0,
@@ -233,7 +232,7 @@ class AdminManager {
    */
   wireClassesScreen() {
     let classesTab = COMMON.getTab(COMMON.TABS.CLASSES);
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_all_courses' }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
       const coursesNameValue = Object.keys(data.courses).map(cid => {
         let course = data.courses[cid];
         return { name: course.name, value: course.id };
@@ -255,7 +254,7 @@ class AdminManager {
       'search_classes',
       oClass => {
         this.currentClassName = oClass.title;
-        JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_lessons', class_id: oClass.id }).then(data => {
+        JSUtils.fetch(__futurelms.ajax_url, { action: 'get_lessons', class_id: oClass.id }).then(data => {
           this.renderLessons(data);
         });
       },
@@ -278,12 +277,12 @@ class AdminManager {
       e.currentTarget.removeChild(e.currentTarget.querySelector('i'));
       e.currentTarget.insertAdjacentHTML('afterbegin', "<span class='ui active tiny inline loader'></span>");
 
-      JSUtils.fetch(__valueSchool.ajax_url, {
+      JSUtils.fetch(__futurelms.ajax_url, {
         action: 'set_lesson',
         lesson_id: lessonId,
         class_id: classId
       }).then(() => {
-        JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_lessons', class_id: classId }).then(data => {
+        JSUtils.fetch(__futurelms.ajax_url, { action: 'get_lessons', class_id: classId }).then(data => {
           this.renderLessons(data);
         });
       });

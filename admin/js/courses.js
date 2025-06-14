@@ -96,7 +96,7 @@ class CoursesTab {
       direction: direction
     };
 
-    let result = await JSUtils.fetch(__valueSchool.ajax_url, data);
+    let result = await JSUtils.fetch(__futurelms.ajax_url, data);
     if (!result.error) {
       this.getCourses();
     }
@@ -124,14 +124,14 @@ class CoursesTab {
       direction: direction
     };
 
-    let result = await JSUtils.fetch(__valueSchool.ajax_url, data);
+    let result = await JSUtils.fetch(__futurelms.ajax_url, data);
     if (!result.error) {
       this.getCourses();
     }
   };
 
   getCourses = async () => {
-    const data = await JSUtils.fetch(__valueSchool.ajax_url, {
+    const data = await JSUtils.fetch(__futurelms.ajax_url, {
       action: 'get_all_courses'
     });
     this.state.set('courses', data.courses);
@@ -303,7 +303,7 @@ class CoursesTab {
           intro_module: vals.intro_module ? '1' : '0'
         };
 
-        let result = await JSUtils.fetch(__valueSchool.ajax_url, data);
+        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
           this.getCourses();
         }
@@ -363,7 +363,7 @@ class CoursesTab {
           name: vals.lesson_name
         };
 
-        let result = await JSUtils.fetch(__valueSchool.ajax_url, data);
+        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
           this.getCourses();
         }
@@ -392,7 +392,7 @@ class CoursesTab {
       type: remodaler.types.CONFIRM,
       confirmText: 'Yes',
       confirm: () => {
-        JSUtils.fetch(__valueSchool.ajax_url, {
+        JSUtils.fetch(__futurelms.ajax_url, {
           action: 'change_lesson_status',
           lesson_id: lessonId,
           module_id: moduleId,
@@ -417,7 +417,7 @@ class CoursesTab {
       type: remodaler.types.CONFIRM,
       confirmText: 'Yes',
       confirm: () => {
-        JSUtils.fetch(__valueSchool.ajax_url, {
+        JSUtils.fetch(__futurelms.ajax_url, {
           action: 'change_module_status',
           module_id: moduleId,
           course_id: courseId,
@@ -442,7 +442,7 @@ class CoursesTab {
       type: remodaler.types.CONFIRM,
       confirmText: 'Yes',
       confirm: () => {
-        JSUtils.fetch(__valueSchool.ajax_url, {
+        JSUtils.fetch(__futurelms.ajax_url, {
           action: 'change_course_status',
           course_id: courseId,
           status: status
@@ -501,7 +501,7 @@ class CoursesTab {
           charge_url: encodeURIComponent(vals.course_charge_url)
         };
 
-        let result = await JSUtils.fetch(__valueSchool.ajax_url, data);
+        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
           //show success notification
           window.notifications.show('Course saved successfully', 'success');
