@@ -43,9 +43,6 @@ use FutureLMS\classes\Courses;
 use FutureLMS\classes\PodsWrapper;
 
 class FutureLMS {
-    const CIO_ADMIN_NOTIFICATIONS_BROADCAST = 44;
-    const CIO_ADMINS_SEGMENT = 34;
-
     public $coupons = null;
 
     function __construct() {
@@ -57,9 +54,9 @@ class FutureLMS {
         add_action('init', [$this, 'paymentNotifications']);
         add_filter('locale', [$this, 'force_hebrew']);
 
-        add_shortcode('course_price', [$this, "getCoursePrice"]);
-        add_shortcode('school_lobby', [$this, 'showSchoolLobby']);
-        add_shortcode('school_course', [$this, 'showSchoolCourse']);
+        add_shortcode('flms_course_price', ['FutureLMS\classes\Courses', 'get_course_price_box']);
+        add_shortcode('flms_school_lobby', [$this, 'showSchoolLobby']);
+        add_shortcode('flms_school_course', [$this, 'showSchoolCourse']);
 
         add_filter('manage_course_posts_columns', [$this, 'addCoursesColumns']);
         add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
@@ -204,12 +201,13 @@ class FutureLMS {
 
     public function addCoursesColumns($columns) {
         $columns["full_price"] = "Full Price";
+        $columns["discount_price"] = "Discount Price";
 
         return $columns;
     }
 
     public function fillCoursesColumns($column, $post_id) {
-        if (!in_array($column, ['full_price'])) {
+        if (!in_array($column, ['full_price','discount_price'])) {
             return;
         }
 
@@ -277,28 +275,6 @@ class FutureLMS {
             ABSPATH . DIRECTORY_SEPARATOR . "logs" . DIRECTORY_SEPARATOR . "debug-$date.log",
             "$datetime | $msg\r\n",
             FILE_APPEND);
-    }
-
-    public function getCoursePrice($args) {
-        $format = isset($args) && isset($args["format"]) ? $args["format"] :
-            "<span style='text-decoration:line-through; margin:0 8px;'>{full_price}</span><span style='font-weight:bold'>{discounted}</span>";
-        $courseId = isset($args) && isset($args["course_id"]) ? $args["course_id"] : false;
-
-        if (!$courseId) {
-            return "";
-        }
-
-        $course = PodsWrapper::factory("course", $courseId);
-
-        $fullPrice = floatval($course->field("full_price"));
-
-        $payments = isset($args["payments"]) ? intval($args["payments"]) : 12;
-
-        $result = preg_replace("/{full_price}/", number_format($fullPrice), $format);
-        $result = preg_replace("/{discounted}/", number_format($fullPrice), $result);
-        $result = preg_replace("/{discounted_payments}/", number_format(ceil($fullPrice / $payments)), $result);
-
-        return $result;
     }
 
     public function addExtraUserFieldsToListData($value, $column_name, $user_id) {

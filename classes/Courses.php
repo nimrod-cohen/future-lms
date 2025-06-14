@@ -3,9 +3,11 @@
 namespace FutureLMS\classes;
 
 use Exception;
+use NumberFormatter;
 
 class Courses {
   private static $instance;
+  private $formatter = null;
 
   public static function get_instance() {
     if (!isset(self::$instance)) {
@@ -23,7 +25,47 @@ class Courses {
     add_action("wp_ajax_reorder_module", [$this, "reorderModule"]);
     add_action("wp_ajax_reorder_lesson", [$this, "reorderLesson"]);
     add_action("wp_ajax_add_lesson", [$this, "addLesson"]);
+
+    $this->formatter = new NumberFormatter(get_locale(), NumberFormatter::CURRENCY);
+    $this->formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
   }
+
+  public static function get_course_price_box($args) {
+
+    $format = isset($args) && isset($args["format"]) ? $args["format"] :
+        "<span class='course-price'>
+          <span style='text-decoration:line-through; margin:0 8px;'>{full_price}</span>
+          <span style='font-weight:bold'>{discount_price}</span>
+        </span>";
+    $course_id = isset($args) && isset($args["course_id"]) ? $args["course_id"] : false;
+
+    if (!$course_id) {
+        return "";
+    }
+
+    $course = PodsWrapper::factory("course", $course_id);
+
+    $self = self::get_instance();
+    $full_price = floatval($course->field("full_price"));
+    $full_price_txt = $self->formatter->formatCurrency($full_price, get_option('futurelms_currency', 'ILS'));
+    $discount_price = floatval($course->field("discount_price"));
+    $discount_price_txt = $self->formatter->formatCurrency($discount_price, get_option('futurelms_currency', 'ILS'));
+
+    if(!empty($discount_price)) {
+      $discount_price = floatval($discount_price);
+    }
+
+    $payments = isset($args["payments"]) ? intval($args["payments"]) : 1;
+
+    $result = preg_replace("/{full_price}/", $full_price_txt, $format);
+    $result = preg_replace("/{discount_price}/", $discount_price_txt, $result);
+    $result = preg_replace("/{payment_price}/", number_format(ceil($discount_price / $payments)), $result);
+    $result = preg_replace("/{payments}/", $payments, $result);
+    $result = preg_replace("/{discount_pct}/", $discount_price > 0 ? (round((1 - ($discount_price / $full_price)) * 100))."%" : "", $result);
+
+    return $result;
+  }
+
 
   public static function get_courses_tree($courses = null, $enabledOnly = true) {
     global $wpdb;
@@ -60,6 +102,7 @@ class Courses {
 
       $result[$course_id] = $course_meta;
       $result[$course_id]["total"] = 0;
+      $result[$course_id]["ID"] = $course_id;
       $result[$course_id]["enabled"] = $row["post_status"] == "publish";
       $result[$course_id]["name"] = $row["course_name"];
       $result[$course_id]["price"] = $row["full_price"];
@@ -80,7 +123,8 @@ class Courses {
         LEFT OUTER JOIN wp_postmeta pm6 ON pm6.post_id = pmodule.ID AND pm6.meta_key = 'order'
         LEFT OUTER JOIN wp_postmeta pm7 ON pm7.post_id = pmodule.ID AND pm7.meta_key = 'intro_module'
         WHERE pmodule.post_type = 'module'
-        AND pmodule.post_status <> 'trash' ";
+        AND pmodule.post_status <> 'trash' 
+        ";
 
       if ($enabledOnly) {
         $sql .= " AND pmodule.post_status = 'publish'";

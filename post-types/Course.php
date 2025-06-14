@@ -82,6 +82,11 @@ function render_course_meta_box($post)
             <label class="future-lms-meta-box-label"><strong>Full Price:</strong></label>
             <input type="text" name="full_price" value="<?= esc_attr($meta['full_price'][0] ?? '') ?>">
         </p>
+        <!-- Discount Price -->
+        <p>
+            <label class="future-lms-meta-box-label"><strong>Discount Price:</strong></label>
+            <input type="text" name="discount_price" value="<?= esc_attr($meta['discount_price'][0] ?? '') ?>">
+        </p>
         <!-- Third Party Reference -->
         <p>
             <label><strong>Third Party Reference:</strong></label>
@@ -177,6 +182,7 @@ add_action('save_post_course', function ($post_id) {
 
     $fields = [
         'full_price',
+        'discount_price',
         'currency',
         'third_party_reference',
         'course_page_url',
