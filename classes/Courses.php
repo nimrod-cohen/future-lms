@@ -116,12 +116,14 @@ class Courses {
       $sql = "SELECT pmodule.post_title AS 'module_name', pmodule.ID AS 'module_id',
         pm6.meta_value AS module_order, pmodule.post_status,
         case when pm5.meta_value = '1' then true else false end as count_progress,
-        case when pm7.meta_value = '1' then true else false end as intro_module
+        case when pm7.meta_value = '1' then true else false end as intro_module,
+        pm8.meta_value AS teaser
         FROM wp_posts pmodule
         INNER JOIN wp_postmeta pm2 ON pm2.post_id = pmodule.id AND pm2.meta_key = 'course' AND pm2.meta_value = $course_id
         LEFT OUTER JOIN wp_postmeta pm5 ON pm5.post_id = pmodule.ID AND pm5.meta_key = 'count_progress'
         LEFT OUTER JOIN wp_postmeta pm6 ON pm6.post_id = pmodule.ID AND pm6.meta_key = 'order'
         LEFT OUTER JOIN wp_postmeta pm7 ON pm7.post_id = pmodule.ID AND pm7.meta_key = 'intro_module'
+        LEFT OUTER JOIN wp_postmeta pm8 ON pm8.post_id = pmodule.ID AND pm8.meta_key = 'teaser'
         WHERE pmodule.post_type = 'module'
         AND pmodule.post_status <> 'trash' 
         ";
@@ -142,16 +144,18 @@ class Courses {
         $module["count_progress"] = $moduleRow["count_progress"] == "1";
         $module["intro_module"] = $moduleRow["intro_module"] == "1";
         $module["order"] = $moduleRow["module_order"];
+        $module["teaser"] = $moduleRow["teaser"] ?? '';
         $module["enabled"] = $moduleRow["post_status"] == "publish";
 
         $module["lessons"] = [];
 
-        $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm4.meta_value AS video_list,
-          pm7.meta_value AS lesson_number, plesson.post_status
+        $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm2.meta_value AS video_list,
+          pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser
           FROM wp_posts plesson
-          INNER JOIN wp_postmeta pm3 ON pm3.post_id = plesson.id AND pm3.meta_key = 'module' AND pm3.meta_value = $moduleId
-          LEFT OUTER JOIN wp_postmeta pm4 ON pm4.post_id = plesson.id AND pm4.meta_key = 'video_list'
-          LEFT OUTER JOIN wp_postmeta pm7 ON pm7.post_id = plesson.ID AND pm7.meta_key = 'lesson_number'
+          INNER JOIN wp_postmeta pm1 ON pm1.post_id = plesson.id AND pm1.meta_key = 'module' AND pm1.meta_value = $moduleId
+          LEFT OUTER JOIN wp_postmeta pm2 ON pm2.post_id = plesson.id AND pm2.meta_key = 'video_list'
+          LEFT OUTER JOIN wp_postmeta pm3 ON pm3.post_id = plesson.ID AND pm3.meta_key = 'lesson_number'
+          LEFT OUTER JOIN wp_postmeta pm4 ON pm4.post_id = plesson.ID AND pm4.meta_key = 'teaser'
           WHERE plesson.post_type = 'lesson'
           AND plesson.post_status <> 'trash' ";
 
@@ -169,6 +173,7 @@ class Courses {
           $lesson["name"] = $lessonRow["lesson_name"];
           $lesson["order"] = $lessonRow["lesson_number"];
           $lesson["enabled"] = $lessonRow["post_status"] == "publish";
+          $lesson["teaser"] = $lessonRow["teaser"] ?? '';
 
           $videos = $lessonRow["video_list"];
           $videos = json_decode(empty($videos) ? "[]" : $videos, true);
@@ -382,6 +387,7 @@ class Courses {
     $courseId = $_POST["course_id"];
     $moduleId = isset($_POST["module_id"]) ? $_POST["module_id"] : false;
     $name = $_POST["name"];
+    $teaser = $_POST["teaser"] ?? '';
     $count_progress = $_POST["count_progress"] ?? '1';
     $intro_module = $_POST["intro_module"] ?? '0';
 
@@ -410,6 +416,7 @@ class Courses {
 
     update_post_meta($moduleId, 'count_progress', $count_progress);
     update_post_meta($moduleId, 'intro_module', $intro_module);
+    update_post_meta($moduleId, 'teaser', sanitize_text_field($teaser));
 
     echo json_encode(['error' => false]);
     die();

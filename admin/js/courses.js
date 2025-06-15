@@ -281,6 +281,12 @@ class CoursesTab {
         </label>
       </div>
       <div class='remodal-form-line'>
+        <label class='remodal-form-line-title' for='teaser'>
+          <input type='text' id='teaser' name='teaser' value='${module?.teaser}'/>
+          A less revealing teaser text for course pages
+        </label>
+      </div>
+      <div class='remodal-form-line'>
         <label class='remodal-form-line-title' for='intro_module'>
           <input type='checkbox' id='intro_module' name='intro_module' ${module?.intro_module ? 'checked' : ''}/>
           Intro module (will not be numbered)
@@ -299,6 +305,7 @@ class CoursesTab {
           course_id: courseId,
           module_id: moduleId || '',
           name: vals.module_name,
+          teaser: vals.teaser || '',
           count_progress: vals.count_progress ? '1' : '0',
           intro_module: vals.intro_module ? '1' : '0'
         };

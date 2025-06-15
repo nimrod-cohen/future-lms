@@ -9,7 +9,7 @@ function register_module_post_type() {
         'supports' => array('title', 'editor'),
         'menu_position' => 15, // Below Classes
         'menu_icon' => 'dashicons-category',
-        'show_ui' => false
+        'show_ui' => true
     );
     register_post_type('module', $args);
 }
@@ -60,6 +60,14 @@ function render_module_meta_box($post) {
 
         <!-- Right Column -->
         <div>
+            <!-- Teaser name -->
+            <p>
+                <label><strong>Teaser name:</strong><br>
+                    <input type="text" name="teaser" value="<?= esc_attr($meta['teaser'][0] ?? '') ?>">
+                    <small class="description">If you wish to display a less revealing name.</small>
+                </label>
+            </p>
+
             <!-- Order -->
             <p>
                 <label><strong>Order:</strong><br>
@@ -91,6 +99,10 @@ add_action('save_post_module', function($post_id) {
     // Save order
     if (isset($_POST['order'])) {
         update_post_meta($post_id, 'order', intval($_POST['order']));
+    }
+    // Save teaser name
+    if (isset($_POST['teaser'])) {
+        update_post_meta($post_id, 'teaser', sanitize_text_field($_POST['teaser']));
     }
 
     // Save checkbox

@@ -74,6 +74,13 @@ function render_lesson_meta_box($post) {
                     <button type="button" class="button" id="upload_presentation">Select File</button>
                 </label>
             </p>
+            <!-- Teaser -->
+            <p>
+                <label><strong>Teaser:</strong><br>
+                    <input type="text" name="teaser" value="<?= esc_attr($meta['teaser'][0] ?? '') ?>">
+                    <small class="description">If you wish to display a less revealing name.</small>
+                </label>
+            </p>
         </div>
 
         <!-- Right Column -->
@@ -146,25 +153,22 @@ add_action('save_post_lesson', function($post_id) {
 
     $fields = [
         'module',
+        'teaser',
         'lesson_number',
         'presentation',
+        'video_list',
         'homework',
-        'additional_files',
-        'video_list' // Keep original names
+        'additional_files'
     ];
 
     foreach ($fields as $field) {
         if (isset($_POST[$field])) {
+          if(in_array($field, ['homework', 'additional_files'])) {
+              // For WYSIWYG fields, sanitize with wp_kses_post
+              update_post_meta($post_id, $field, wp_kses_post($_POST[$field]));
+          } else {
             update_post_meta($post_id, $field, $_POST[$field]);
+          }
         }
-    }
-
-    // Save WYSIWYG fields
-    if (isset($_POST['homework'])) {
-        update_post_meta($post_id, 'homework', wp_kses_post($_POST['homework']));
-    }
-
-    if (isset($_POST['additional_files'])) {
-        update_post_meta($post_id, 'additional_files', wp_kses_post($_POST['additional_files']));
     }
 });
