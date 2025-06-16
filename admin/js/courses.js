@@ -282,10 +282,9 @@ class CoursesTab {
         </label>
       </div>
       <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='teaser'>
-          <input type='text' id='teaser' name='teaser' value='${module?.teaser}'/>
-          A less revealing teaser text for course pages
-        </label>
+        <label class='remodal-form-line-title' for='teaser'>Teaser</label>
+        <input type='text' id='teaser' name='teaser' value='${module?.teaser}'/>
+        <small class='desc' style='font-size:0.8rem;'>A less revealing teaser text for course pages</small>
       </div>
       <div class='remodal-form-line'>
         <label class='remodal-form-line-title' for='intro_module'>
@@ -385,7 +384,7 @@ class CoursesTab {
 
   addClass = () => {
     this.editClass(null);
-  }
+  };
 
   updateCourse = e => {
     const course = e.target.closest('.course');
@@ -523,10 +522,10 @@ class CoursesTab {
     });
   };
 
-  editClass = async (classId) => {
+  editClass = async classId => {
     const selectedClass = classId ? this.state.get('classes')[classId] : null;
 
-    const formatDateTimeForInput = (dateString) => {
+    const formatDateTimeForInput = dateString => {
       if (!dateString) return '';
       try {
         const date = new Date(dateString);
@@ -534,7 +533,9 @@ class CoursesTab {
         if (isNaN(date.getTime())) return '';
 
         const pad = num => num.toString().padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
+          date.getMinutes()
+        )}`;
       } catch (e) {
         return '';
       }
@@ -569,7 +570,6 @@ class CoursesTab {
       type: remodaler.types.FORM,
       confirmText: classId ? 'Update' : 'Create',
       confirm: async vals => {
-
         var data = {
           action: 'edit_class',
           class_id: classId || '',
@@ -598,11 +598,14 @@ class CoursesTab {
     if (select) {
       select.innerHTML = `
                 <option value="">-- Select a Course --</option>
-                    ${coursesArray.map(course =>
-          `<option value="${course.id}" ${selectedClass?.id === course.id ? 'selected' : ''}>
+                    ${coursesArray
+                      .map(
+                        course =>
+                          `<option value="${course.id}" ${selectedClass?.id === course.id ? 'selected' : ''}>
                         ${course.name}
                 </option>`
-      ).join('')}`;
+                      )
+                      .join('')}`;
       select.disabled = false;
     }
   };
