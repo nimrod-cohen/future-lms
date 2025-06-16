@@ -31,52 +31,45 @@ function render_class_meta_box($post) {
     $meta = get_post_meta($post->ID);
     ?>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <!-- Left Column -->
-        <div>
-            <!-- Course Relationship -->
-            <p>
-                <label><strong>Course:</strong><br>
-                    <?php
-                    $courses = get_posts(array(
-                        'post_type' => 'course',
-                        'posts_per_page' => -1,
-                        'orderby' => 'title',
-                        'order' => 'ASC'
-                    ));
-                    $current_course = $meta['course'][0] ?? '';
-                    ?>
-                    <select name="course" style="width:100%">
-                        <option value="">Select Course</option>
-                        <?php foreach ($courses as $course) : ?>
-                            <option value="<?= $course->ID ?>" <?= selected($current_course, $course->ID) ?>>
-                                <?= esc_html($course->post_title) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-            </p>
+    <div style="display: flex; flex-direction: column;">
+        <!-- Course Relationship -->
+        <p>
+            <label><strong>Course:</strong><br>
+              <?php
+              $courses = get_posts(array(
+                'post_type' => 'course',
+                'posts_per_page' => -1,
+                'orderby' => 'title',
+                'order' => 'ASC'
+              ));
+              $current_course = $meta['course'][0] ?? '';
+              ?>
+                <select name="course" style="width:100%">
+                    <option value="">Select Course</option>
+                  <?php foreach ($courses as $course) : ?>
+                      <option value="<?= $course->ID ?>" <?= selected($current_course, $course->ID) ?>>
+                        <?= esc_html($course->post_title) ?>
+                      </option>
+                  <?php endforeach; ?>
+                </select>
+            </label>
+        </p>
 
-            <!-- Start Date -->
-            <p>
-                <label><strong>Start Date:</strong><br>
-                    <input type="datetime-local"
-                           name="start_date"
-                           value="<?= esc_attr($meta['start_date'][0] ?? '') ?>">
-                </label>
-            </p>
-        </div>
-
-        <!-- Right Column -->
-        <div>
-            <!-- Lessons -->
-            <p>
-                <label><strong>Lessons (one per line):</strong><br>
-                    <textarea name="lessons"
-                              style="width:100%; height:120px;"><?= esc_textarea($meta['lessons'][0] ?? '') ?></textarea>
-                </label>
-            </p>
-        </div>
+        <!-- Start Date -->
+        <p>
+            <label><strong>Start Date:</strong><br>
+                <input type="datetime-local"
+                       name="start_date"
+                       value="<?= esc_attr($meta['start_date'][0] ?? '') ?>">
+            </label>
+        </p>
+        <!-- Lessons -->
+        <p>
+            <label><strong>Lessons (one per line):</strong><br>
+                <textarea name="lessons"
+                          style="width:100%; height:120px;"><?= esc_textarea($meta['lessons'][0] ?? '') ?></textarea>
+            </label>
+        </p>
     </div>
     <?php
 }

@@ -473,10 +473,11 @@ class Courses {
 
   public function editClass() {
     try{
-      $classId = isset($_POST["class_id"]) ? $_POST["class_id"] : false;
+      $classId = isset($_POST["class_id"]) ? $_POST["class_id"] : "";
       $name = $_POST["name"];
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
       $startDate = isset($_POST['start_date']) ? $_POST['start_date'] : null;
+      $lessons = isset($_POST['lessons']) ? $_POST['lessons'] : "[]";
 
       if (empty($classId)) {
         //create new course, a course is a wp_post with post_type = course
@@ -494,6 +495,7 @@ class Courses {
 
       update_post_meta($classId, 'course', $courseId);
       update_post_meta($classId, 'start_date', $startDate);
+      update_post_meta($classId, 'lessons', stripslashes($lessons));
 
       echo json_encode(['error' => false]);
       die();

@@ -570,25 +570,16 @@ class CoursesTab {
       confirmText: classId ? 'Update' : 'Create',
       confirm: async vals => {
 
-        if (vals.class_start_date) {
-          const selectedDate = new Date(vals.class_start_date);
-          const now = new Date();
-
-          if (selectedDate < now) {
-            notifications.show('Start date/time cannot be in the past', 'error');
-            return false;
-          }
-        }
-
         var data = {
           action: 'edit_class',
           class_id: classId || '',
           course_id: vals.class_course_id,
           name: vals.class_name,
-          start_date: vals.class_start_date
+          start_date: vals.class_start_date,
+          lessons: vals.class_lessons
         };
 
-        let result = await JSUtils.fetch(__valueSchool.ajax_url, data);
+        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
           //show success notification
           window.notifications.show('Class saved successfully', 'success');
@@ -596,34 +587,23 @@ class CoursesTab {
       }
     });
 
-    try {
-      const response = await JSUtils.fetch(__valueSchool.ajax_url, {
-        action: 'get_all_courses'
-      });
+    const courses = this.state.get('courses');
 
-      const coursesArray = Object.keys(response.courses).map(id => ({
-        id: id,
-        ...response.courses[id]
-      }));
+    const coursesArray = Object.keys(courses).map(id => ({
+      id: id,
+      ...courses[id]
+    }));
 
-      const select = document.querySelector('.remodal-form-select[name="class_course_id"]');
-      if (select) {
-        select.innerHTML = `
+    const select = document.querySelector('.remodal-form-select[name="class_course_id"]');
+    if (select) {
+      select.innerHTML = `
                 <option value="">-- Select a Course --</option>
                     ${coursesArray.map(course =>
-                `<option value="${course.id}" ${selectedClass?.id === course.id ? 'selected' : ''}>
+          `<option value="${course.id}" ${selectedClass?.id === course.id ? 'selected' : ''}>
                         ${course.name}
                 </option>`
-        ).join('')}`;
-        select.disabled = false;
-      }
-
-    } catch (error) {
-      console.error('Error loading courses:', error);
-      const select = document.querySelector('.remodal-form-select[name="course_id"]');
-      if (select) {
-        select.innerHTML = '<option value="">Error loading courses</option>';
-      }
+      ).join('')}`;
+      select.disabled = false;
     }
   };
 }
