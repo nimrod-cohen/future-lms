@@ -26,7 +26,7 @@ $sortedCourses = array_merge($sortedCourses['featured'], $sortedCourses['regular
 foreach ($sortedCourses as $course) {
   $icon = get_post_meta($course->ID, 'course_icon', true);
   if (!empty($icon)) {
-    $icon = $icon["guid"];
+    $icon = $icon;
   } else {
     $icon = $genericCourseIcon;
   }
@@ -53,7 +53,7 @@ foreach ($sortedCourses as $course) {
   <div class="course-card <?php echo $featured ? 'featured' : ''; ?>" data-course-id="<?php echo $course->ID; ?>" data-featured='<?php echo $featured ? 'featured' : ''; ?>'>
     <img class='course-icon' src='<?php echo $icon; ?>'></img>
     <div class="course-details">
-      <span class='course-name'><?php echo $course["name"]; ?></span>
+      <span class='course-name'><?php echo $course->post_title; ?></span>
       <span class='course-author'><?php echo $author; ?></span>
       <?php include "short_description.php"; ?>
       <span class='course-price'><?php echo $fmt->formatCurrency($price, "ILS"); ?></span>
