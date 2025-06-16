@@ -310,12 +310,12 @@ class FutureLMS {
         global $wpdb;
 
         if ('module' == $column_name) {
-            $module_id = $wpdb->get_var("select meta_value from wp_postmeta where post_id = $lesson_id and meta_key = 'module'");
-            $module_order = $wpdb->get_var("select meta_value from wp_postmeta where post_id = $module_id and meta_key = 'order'");
-            $module_name = $wpdb->get_var("select post_title from wp_posts where id = $module_id");
-            echo "<a href='" . site_url("/wp-admin/post.php?post=" . $module_id . "&action=edit") . "'>" . $module_name . "(" . $module_order . ")</a>";
+            $module_id = $wpdb->get_var("select meta_value from ".$wpdb->prefix."postmeta where post_id = $lesson_id and meta_key = 'module'");
+            $module_order = $wpdb->get_var("select meta_value from ".$wpdb->prefix."postmeta where post_id = $module_id and meta_key = 'order'");
+            $module_name = $wpdb->get_var("select post_title from ".$wpdb->prefix."posts where id = $module_id");
+            echo "<a href='" . site_url("/wp-admin/post.php?post=" . $module_id . "&action=edit")."'>".$module_name."(".$module_order.")</a>";
         } else if ('lesson_number' == $column_name) {
-            $lesson_number = $wpdb->get_var("select meta_value from wp_postmeta where post_id = $lesson_id and meta_key = 'lesson_number'");
+            $lesson_number = $wpdb->get_var("select meta_value from ".$wpdb->prefix."postmeta where post_id = $lesson_id and meta_key = 'lesson_number'");
             echo $lesson_number;
         }
     }
@@ -328,15 +328,14 @@ class FutureLMS {
 
     public function extraUserFields($user) {?>
         <h3><?php _e("Extra profile information", "blank"); ?></h3>
-
         <table class="form-table">
-            <tr>
-                <th><label for="phone"><?php _e("Phone"); ?></label></th>
-                <td>
-                    <input type="text" name="phone" id="phone" value="<?php echo esc_attr(get_user_meta($user->ID, 'user_phone', true)); ?>" class="regular-text" /><br />
-                    <span class="description"><?php _e("Please enter user phone."); ?></span>
-                </td>
-            </tr>
+          <tr>
+            <th><label for="phone"><?php _e("Phone"); ?></label></th>
+            <td>
+              <input type="text" name="phone" id="phone" value="<?php echo esc_attr(get_user_meta($user->ID, 'user_phone', true)); ?>" class="regular-text" /><br />
+              <span class="description"><?php _e("Please enter user phone."); ?></span>
+            </td>
+          </tr>
         </table>
     <?php }
 
@@ -624,9 +623,8 @@ class FutureLMS {
         wp_enqueue_script('future-lms-admin-students-js', plugin_dir_url(__FILE__) . 'admin/js/students.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
         wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
         wp_enqueue_script('future-lms-admin-coupons-js', plugin_dir_url(__FILE__) . 'admin/js/coupons.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
-        wp_enqueue_script('future-lms-admin-partner-coupons-js', plugin_dir_url(__FILE__) . 'admin/js/partner-coupons.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
         wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
-        wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js', 'future-lms-admin-partner-coupons-js']);
+        wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js']);
         wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css']);
 
         wp_localize_script('future-lms-admin-js', '__futurelms', ['ajax_url' => admin_url('admin-ajax.php')]);

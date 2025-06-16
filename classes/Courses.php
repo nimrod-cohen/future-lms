@@ -70,12 +70,14 @@ class Courses {
 
   public static function get_courses_tree($courses = null, $enabledOnly = true) {
     global $wpdb;
+    $prefix = DBManager::TABLE_PREFIX();
+
     $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
     pmprice.meta_value AS full_price, pmurl.meta_value AS course_page_url, pmcurl.meta_value AS charge_url
-    FROM wp_posts pcourse
-    INNER JOIN wp_postmeta pmprice ON pmprice.post_id = pcourse.id AND pmprice.meta_key = 'full_price'
-    LEFT OUTER JOIN wp_postmeta pmurl ON pmurl.post_id = pcourse.id AND pmurl.meta_key = 'course_page_url'
-    LEFT OUTER JOIN wp_postmeta pmcurl ON pmcurl.post_id = pcourse.id AND pmcurl.meta_key = 'charge_url'
+    FROM ".$wpdb->prefix."posts pcourse
+    INNER JOIN ".$wpdb->prefix."postmeta pmprice ON pmprice.post_id = pcourse.id AND pmprice.meta_key = 'full_price'
+    LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmurl ON pmurl.post_id = pcourse.id AND pmurl.meta_key = 'course_page_url'
+    LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmcurl ON pmcurl.post_id = pcourse.id AND pmcurl.meta_key = 'charge_url'
     WHERE pcourse.post_type = 'course'
     AND pcourse.post_status <> 'trash' ";
 
@@ -119,12 +121,12 @@ class Courses {
         case when pm5.meta_value = '1' then true else false end as count_progress,
         case when pm7.meta_value = '1' then true else false end as intro_module,
         pm8.meta_value AS teaser
-        FROM wp_posts pmodule
-        INNER JOIN wp_postmeta pm2 ON pm2.post_id = pmodule.id AND pm2.meta_key = 'course' AND pm2.meta_value = $course_id
-        LEFT OUTER JOIN wp_postmeta pm5 ON pm5.post_id = pmodule.ID AND pm5.meta_key = 'count_progress'
-        LEFT OUTER JOIN wp_postmeta pm6 ON pm6.post_id = pmodule.ID AND pm6.meta_key = 'order'
-        LEFT OUTER JOIN wp_postmeta pm7 ON pm7.post_id = pmodule.ID AND pm7.meta_key = 'intro_module'
-        LEFT OUTER JOIN wp_postmeta pm8 ON pm8.post_id = pmodule.ID AND pm8.meta_key = 'teaser'
+        FROM ".$wpdb->prefix."posts pmodule
+        INNER JOIN ".$wpdb->prefix."postmeta pm2 ON pm2.post_id = pmodule.id AND pm2.meta_key = 'course' AND pm2.meta_value = $course_id
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm5 ON pm5.post_id = pmodule.ID AND pm5.meta_key = 'count_progress'
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm6 ON pm6.post_id = pmodule.ID AND pm6.meta_key = 'order'
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm7 ON pm7.post_id = pmodule.ID AND pm7.meta_key = 'intro_module'
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm8 ON pm8.post_id = pmodule.ID AND pm8.meta_key = 'teaser'
         WHERE pmodule.post_type = 'module'
         AND pmodule.post_status <> 'trash' 
         ";
@@ -152,11 +154,11 @@ class Courses {
 
         $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm2.meta_value AS video_list,
           pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser
-          FROM wp_posts plesson
-          INNER JOIN wp_postmeta pm1 ON pm1.post_id = plesson.id AND pm1.meta_key = 'module' AND pm1.meta_value = $moduleId
-          LEFT OUTER JOIN wp_postmeta pm2 ON pm2.post_id = plesson.id AND pm2.meta_key = 'video_list'
-          LEFT OUTER JOIN wp_postmeta pm3 ON pm3.post_id = plesson.ID AND pm3.meta_key = 'lesson_number'
-          LEFT OUTER JOIN wp_postmeta pm4 ON pm4.post_id = plesson.ID AND pm4.meta_key = 'teaser'
+          FROM ".$wpdb->prefix."posts plesson
+          INNER JOIN ".$wpdb->prefix."postmeta pm1 ON pm1.post_id = plesson.id AND pm1.meta_key = 'module' AND pm1.meta_value = $moduleId
+          LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm2 ON pm2.post_id = plesson.id AND pm2.meta_key = 'video_list'
+          LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm3 ON pm3.post_id = plesson.ID AND pm3.meta_key = 'lesson_number'
+          LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm4 ON pm4.post_id = plesson.ID AND pm4.meta_key = 'teaser'
           WHERE plesson.post_type = 'lesson'
           AND plesson.post_status <> 'trash' ";
 
@@ -202,7 +204,7 @@ class Courses {
     $moduleId = intval($_POST["module_id"]);
     $name = stripslashes($_POST["name"]);
 
-    $wpdb->insert("wp_posts", [
+    $wpdb->insert($wpdb->prefix."posts", [
       "post_title" => $name,
       "post_status" => "draft",
       "post_type" => "lesson",
@@ -211,8 +213,8 @@ class Courses {
 
     $lessonId = $wpdb->insert_id;
     $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned int)),0)
-    from wp_postmeta pm1
-    inner join wp_postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $moduleId
+    from ".$wpdb->prefix."postmeta pm1
+    inner join ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $moduleId
     where pm1.meta_key = 'lesson_number'
     and pm2.post_id = pm1.post_id");
     update_post_meta($lessonId, 'lesson_number', intval($order) + 1);
@@ -237,9 +239,9 @@ class Courses {
 
     //get all modules of this course ordered by order, and update their order
     $sql = "SELECT posts.ID as lesson_id, pm2.meta_value as 'lesson_number'
-      FROM wp_postmeta pm1
-      INNER JOIN wp_posts posts on posts.ID = pm1.post_id
-      INNER JOIN wp_postmeta pm2 on pm2.meta_key = 'lesson_number' and pm2.post_id = pm1.post_id
+      FROM ".$wpdb->prefix."postmeta pm1
+      INNER JOIN ".$wpdb->prefix."posts posts on posts.ID = pm1.post_id
+      INNER JOIN ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'lesson_number' and pm2.post_id = pm1.post_id
       WHERE posts.post_status <> 'trash'
       AND pm1.meta_key = 'module' and pm1.post_id = posts.ID and pm1.meta_value = $moduleId
       ORDER BY CAST(pm2.meta_value as UNSIGNED)";
@@ -294,9 +296,9 @@ class Courses {
 
     //get all modules of this course ordered by order, and update their order
     $sql = "SELECT posts.ID as module_id, pm2.meta_value as 'order'
-      FROM wp_postmeta pm1
-      INNER JOIN wp_posts posts on posts.ID = pm1.post_id
-      INNER JOIN wp_postmeta pm2 on pm2.meta_key = 'order' and pm2.post_id = pm1.post_id
+      FROM ".$wpdb->prefix."postmeta pm1
+      INNER JOIN ".$wpdb->prefix."posts posts on posts.ID = pm1.post_id
+      INNER JOIN ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'order' and pm2.post_id = pm1.post_id
       WHERE posts.post_status <> 'trash'
       AND pm1.meta_key = 'course' and pm1.post_id = posts.ID and pm1.meta_value = $courseId
       ORDER BY CAST(pm2.meta_value as UNSIGNED)";
@@ -347,9 +349,9 @@ class Courses {
 
     //get all modules of this course ordered by order, and update their order
     $sql = "SELECT posts.ID as lesson_id, pm2.meta_value as 'lesson_number'
-      FROM wp_postmeta pm1
-      INNER JOIN wp_posts posts on posts.ID = pm1.post_id
-      INNER JOIN wp_postmeta pm2 on pm2.meta_key = 'lesson_number' and pm2.post_id = pm1.post_id
+      FROM ".$wpdb->prefix."postmeta pm1
+      INNER JOIN ".$wpdb->prefix."posts posts on posts.ID = pm1.post_id
+      INNER JOIN ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'lesson_number' and pm2.post_id = pm1.post_id
       WHERE posts.post_status <> 'trash'
       AND pm1.meta_key = 'module' and pm1.post_id = posts.ID and pm1.meta_value = $moduleId
       ORDER BY CAST(pm2.meta_value as UNSIGNED)";
@@ -367,9 +369,9 @@ class Courses {
 
     //get all modules of this course ordered by order, and update their order
     $sql = "SELECT posts.ID as module_id, pm2.meta_value as 'order'
-      FROM wp_postmeta pm1
-      INNER JOIN wp_posts posts on posts.ID = pm1.post_id
-      INNER JOIN wp_postmeta pm2 on pm2.meta_key = 'order' and pm2.post_id = pm1.post_id
+      FROM ".$wpdb->prefix."postmeta pm1
+      INNER JOIN ".$wpdb->prefix."posts posts on posts.ID = pm1.post_id
+      INNER JOIN ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'order' and pm2.post_id = pm1.post_id
       WHERE posts.post_status <> 'trash'
       AND pm1.meta_key = 'course' and pm1.post_id = posts.ID and pm1.meta_value = $courseId
       ORDER BY CAST(pm2.meta_value as UNSIGNED)";
@@ -393,7 +395,7 @@ class Courses {
     $intro_module = $_POST["intro_module"] ?? '0';
 
     if (!$moduleId) {
-      $wpdb->insert("wp_posts", [
+      $wpdb->insert($wpdb->prefix."posts", [
         "post_title" => $name,
         "post_status" => "draft",
         "post_type" => "module",
@@ -402,8 +404,8 @@ class Courses {
 
       $moduleId = $wpdb->insert_id;
       $order = $wpdb->get_var("select ifnull(max(pm1.meta_value),0)
-      from wp_postmeta pm1
-      inner join wp_postmeta pm2 on pm2.meta_key = 'course' and pm2.meta_value = $courseId
+      from ".$wpdb->prefix."postmeta pm1
+      inner join ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'course' and pm2.meta_value = $courseId
       where pm1.meta_key = 'order'
       and pm2.post_id = pm1.post_id");
       update_post_meta($moduleId, 'order', intval($order) + 1);
@@ -430,7 +432,7 @@ class Courses {
     $moduleId = $_POST["module_id"];
     $status = $_POST["status"];
 
-    $wpdb->update("wp_posts", ["post_status" => $status], ["ID" => $lessonId]);
+    $wpdb->update($wpdb->prefix."posts", ["post_status" => $status], ["ID" => $lessonId]);
     $this->fixLessonsOrder($moduleId);
 
     echo json_encode(['error' => false]);
@@ -444,7 +446,7 @@ class Courses {
     $moduleId = $_POST["module_id"];
     $status = $_POST["status"];
 
-    $wpdb->update("wp_posts", ["post_status" => $status], ["ID" => $moduleId]);
+    $wpdb->update($wpdb->prefix."posts", ["post_status" => $status], ["ID" => $moduleId]);
 
     $this->fixModulesOrder($courseId);
 
@@ -458,7 +460,7 @@ class Courses {
     $courseId = $_POST["course_id"];
     $status = $_POST["status"];
 
-    $wpdb->update("wp_posts", ["post_status" => $status], ["ID" => $courseId]);
+    $wpdb->update($wpdb->prefix."posts", ["post_status" => $status], ["ID" => $courseId]);
 
     echo json_encode(['error' => false]);
     die();

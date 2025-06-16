@@ -4,7 +4,6 @@ class AdminManager {
   state = window.StateManagerFactory();
   studentsTab = new StudentsTab();
   couponsTab = new CouponsTab();
-  partnerCouponsTab = new PartnerCouponsTab();
   settingsTab = new SettingsTab();
   coursesTab = new CoursesTab();
 

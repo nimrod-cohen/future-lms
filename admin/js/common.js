@@ -6,7 +6,6 @@ const COMMON = {
     MAILER: 'mailer',
     BILLING: 'billing',
     COUPONS: 'coupons',
-    PARTNER_COUPONS: 'partner-coupons',
     SETTNGS: 'settings'
   },
 
