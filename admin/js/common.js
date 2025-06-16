@@ -56,7 +56,7 @@ const COMMON = {
         onSelect(item);
       },
       apiSettings: {
-        url: __valueSchool.ajax_url,
+        url: __futurelms.ajax_url,
         method: 'POST',
         beforeSend: function (settings) {
           if (cbCancel && cbCancel()) return false;

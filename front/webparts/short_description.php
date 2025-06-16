@@ -1,11 +1,11 @@
 <?php
-$shopDesc = get_post_meta($post->ID, "shop_description", true);
+$short_desc = get_post_meta($post->ID, "short_description", true);
 ?>
-<?php if (!empty($shopDesc)) {?>
+<?php if (!empty($$short_desc)) {?>
   <span class='course-short-desc'>
-    <?php echo $shopDesc; ?>
+    <?php echo $short_desc; ?>
     <span class='course-read-more'>
-      <?php echo $shopDesc; ?>
+      <?php echo $short_desc; ?>
     </span>
     <span class='read-more-arrow'></span>
   </span>

@@ -37,7 +37,7 @@ class StudentsTab {
       this.fetchStudents();
     });
 
-    JSUtils.fetch(__valueSchool.ajax_url, { action: 'get_all_courses' }).then(data => {
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
       var coursesNameValue = Object.keys(data.courses).map(cid => {
         let course = data.courses[cid];
         return { name: course.name, value: cid };
@@ -58,7 +58,7 @@ class StudentsTab {
             return;
           }
 
-          JSUtils.fetch(__valueSchool.ajax_url, {
+          JSUtils.fetch(__futurelms.ajax_url, {
             action: 'search_classes',
             course_id: item
           }).then(data => {
@@ -348,7 +348,7 @@ class StudentsTab {
       };
 
       const showProgressClick = e => {
-        JSUtils.fetch(__valueSchool.ajax_url, {
+        JSUtils.fetch(__futurelms.ajax_url, {
           action: 'get_student_progress',
           student_id: student.id
         }).then(data => {
@@ -393,7 +393,7 @@ class StudentsTab {
       year = dt.getFullYear();
     }
 
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'get_students',
       course_id: tab.querySelector('.dropdown.courses').getAttribute('data-id'),
       class_id: tab.querySelector('.dropdown.classes').getAttribute('data-id'),
@@ -406,7 +406,7 @@ class StudentsTab {
   }
 
   addStudentToClass(courseId, userData, sum) {
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'add_class',
       student_id: userData.id,
       name: userData.name,
@@ -426,7 +426,7 @@ class StudentsTab {
 
   // the course id is required to ensure the student is not related to another class of this course.
   removeStudentFromClass(studentId, classId, courseId) {
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'remove_class',
       student_id: studentId,
       course_id: courseId,
@@ -440,7 +440,7 @@ class StudentsTab {
   // we still dont select a specific class,
   // it will be automatically selected to the newest)
   registerStudentToClass(courseId, userData, sum) {
-    JSUtils.fetch(__valueSchool.ajax_url, {
+    JSUtils.fetch(__futurelms.ajax_url, {
       action: 'get_course_charge_url',
       course_id: courseId
     }).then(data => {

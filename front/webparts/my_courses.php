@@ -34,7 +34,7 @@ foreach ($attendingCourses as $post) {
           <div class="course-details">
             <span class='course-name'><?php echo $post->post_title; ?></span>
             <span class='course-author'><?php echo $author; ?></span>
-            <?php include "shop_description.php";?>
+            <?php include "short_description.php";?>
             <span class='course-progress'>
               <span class='course-progress-bar'></span>
             </span>

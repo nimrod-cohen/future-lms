@@ -1,11 +1,14 @@
 <?php
+
+use FutureLMS\FutureLMS;
+
 $courseId = $_POST["course_id"];
-$genericCourseIcon = ValueSchool::get_media_url_by_tag('generic-course-icon');
+$genericCourseIcon = FutureLMS::get_media_url_by_tag('generic-course-icon');
 
 // Get course details and present them as a sales page
 $course = get_post($courseId);
 $courseTitle = $course->post_title;
-$courseDescription = get_post_meta($courseId, "shop_description", true);
+$courseDescription = get_post_meta($courseId, "short_description", true);
 $coursePrice = get_post_meta($courseId, "full_price", true);
 $chargeUrl = get_post_meta($courseId, "charge_url", true);
 $chargeUrl = add_query_arg(['sum' => $coursePrice], $chargeUrl); //will replace if exists.

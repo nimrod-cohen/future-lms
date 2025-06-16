@@ -43,9 +43,6 @@ use FutureLMS\classes\Courses;
 use FutureLMS\classes\PodsWrapper;
 
 class FutureLMS {
-    const CIO_ADMIN_NOTIFICATIONS_BROADCAST = 44;
-    const CIO_ADMINS_SEGMENT = 34;
-
     public $coupons = null;
 
     function __construct() {
@@ -57,9 +54,9 @@ class FutureLMS {
         add_action('init', [$this, 'paymentNotifications']);
         add_filter('locale', [$this, 'force_hebrew']);
 
-        add_shortcode('course_price', [$this, "getCoursePrice"]);
-        add_shortcode('school_lobby', [$this, 'showSchoolLobby']);
-        add_shortcode('school_course', [$this, 'showSchoolCourse']);
+        add_shortcode('flms_course_price', ['FutureLMS\classes\Courses', 'get_course_price_box']);
+        add_shortcode('flms_school_lobby', [$this, 'showSchoolLobby']);
+        add_shortcode('flms_school_course', [$this, 'showSchoolCourse']);
 
         add_filter('manage_course_posts_columns', [$this, 'addCoursesColumns']);
         add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
@@ -129,7 +126,7 @@ class FutureLMS {
         add_action('manage_edit-lesson_columns', [$this, 'addExtraLessonFieldsToList']);
         add_filter('manage_lesson_posts_custom_column', [$this, 'addExtraLessonFieldsToListData'], 10, 2);
         //fix phone format for proper texting and user retrieval
-        add_filter('wpotp/cleanup-phone', ["ValueSchool", 'cleanup_phone']);
+        add_filter('wpotp/cleanup-phone', ["FutureLMS", 'cleanup_phone']);
         //redirect after login
         add_filter('wpotp/redirect-successful-login', [$this, 'redirectAfterLogin'], 10, 2);
 
@@ -204,12 +201,13 @@ class FutureLMS {
 
     public function addCoursesColumns($columns) {
         $columns["full_price"] = "Full Price";
+        $columns["discount_price"] = "Discount Price";
 
         return $columns;
     }
 
     public function fillCoursesColumns($column, $post_id) {
-        if (!in_array($column, ['full_price'])) {
+        if (!in_array($column, ['full_price','discount_price'])) {
             return;
         }
 
@@ -277,28 +275,6 @@ class FutureLMS {
             ABSPATH . DIRECTORY_SEPARATOR . "logs" . DIRECTORY_SEPARATOR . "debug-$date.log",
             "$datetime | $msg\r\n",
             FILE_APPEND);
-    }
-
-    public function getCoursePrice($args) {
-        $format = isset($args) && isset($args["format"]) ? $args["format"] :
-            "<span style='text-decoration:line-through; margin:0 8px;'>{full_price}</span><span style='font-weight:bold'>{discounted}</span>";
-        $courseId = isset($args) && isset($args["course_id"]) ? $args["course_id"] : false;
-
-        if (!$courseId) {
-            return "";
-        }
-
-        $course = PodsWrapper::factory("course", $courseId);
-
-        $fullPrice = floatval($course->field("full_price"));
-
-        $payments = isset($args["payments"]) ? intval($args["payments"]) : 12;
-
-        $result = preg_replace("/{full_price}/", number_format($fullPrice), $format);
-        $result = preg_replace("/{discounted}/", number_format($fullPrice), $result);
-        $result = preg_replace("/{discounted_payments}/", number_format(ceil($fullPrice / $payments)), $result);
-
-        return $result;
     }
 
     public function addExtraUserFieldsToListData($value, $column_name, $user_id) {
@@ -618,17 +594,12 @@ class FutureLMS {
     }
 
     public function enqueueSchoolScripts() {
-        wp_enqueue_script('valueinvesting_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
-        wp_enqueue_style('valueschool_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
-        wp_enqueue_script('valueschool_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['bootstrap', 'wpjsutils']);
+        wp_enqueue_script('futurelms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
+        wp_enqueue_style('futurelms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
+        wp_enqueue_script('futurelms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['bootstrap', 'wpjsutils']);
 
-        $videoUrl = get_pages(['post_type' => 'page', 'meta_key' => '_wp_page_template', 'meta_value' => 'video.php', 'hierarchical' => false]);
-        $videoUrl = get_page_link($videoUrl[0]);
-        $videoUrl = substr($videoUrl, 0, -1);
-
-        wp_localize_script('vi2018_script', 'school_info', [
+        wp_localize_script('futurelms_school_script', 'school_info', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'video_url' => $videoUrl,
             'theme_url' => plugin_dir_url(__FILE__)
         ]);
     }
@@ -658,7 +629,7 @@ class FutureLMS {
         wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js', 'future-lms-admin-partner-coupons-js']);
         wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css']);
 
-        wp_localize_script('future-lms-admin-js', '__valueSchool', ['ajax_url' => admin_url('admin-ajax.php')]);
+        wp_localize_script('future-lms-admin-js', '__futurelms', ['ajax_url' => admin_url('admin-ajax.php')]);
 
         wp_enqueue_script('trumbowyg-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/trumbowyg.min.js');
         wp_enqueue_script('trumbowyg-base64-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/plugins/base64/trumbowyg.base64.min.js', ['trumbowyg-js']);
@@ -915,7 +886,7 @@ class FutureLMS {
             }, []);
 
             $result["progress"] = $valueQuery->getStudentProgress();
-            $result["course_tree"] = Courses::getCoursesTree($courses);
+            $result["course_tree"] = Courses::get_courses_tree($courses);
 
             echo json_encode($result);
             die();
@@ -1157,7 +1128,7 @@ class FutureLMS {
     }
 
     public function getAllCourses() {
-        echo json_encode(["courses" => Courses::getCoursesTree(null, false)]);
+        echo json_encode(["courses" => Courses::get_courses_tree(null, false)]);
         die();
     }
 
