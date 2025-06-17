@@ -21,7 +21,12 @@ $lesson = PodsWrapper::factory("lesson", $lessonId);
   course-id="<?php echo $courseId; ?>"
   class-id="<?php echo $_POST["class_id"]; ?>"
   lesson-id="<?php echo $_POST["lesson_id"]; ?>">
-<?php get_sidebar('school', ["course" => $course]); ?>
+  <div class="school-sidebar">
+    <div class="sidebar-header">
+      <?php echo $course->field("name"); ?>
+      <img class="close-sidebar" src="<?php echo plugin_dir_url(__DIR__); ?>assets/images/close.svg" />
+    </div>
+  </div>
   <div class="lesson">
     <div class="lesson-videos">
       <div class="lesson-videos-nav">
@@ -43,7 +48,7 @@ $lesson = PodsWrapper::factory("lesson", $lessonId);
         <li tab-id="additional">חומרים ועזרים נלווים</li>
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
-        <li class="toggle-videos"><img src="<?php echo plugin_dir_url(__FILE__); ?>/front/assets/image/toggle-up.svg" /></li>
+        <li class="toggle-videos"><img src="<?php echo plugin_dir_url(__DIR__); ?>assets/images/toggle-up.svg" /></li>
       </ul>
       <div class="lesson-content-viewer"></div>
     </div>

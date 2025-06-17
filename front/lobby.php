@@ -29,11 +29,11 @@ $urls = [
 		<div class="row page-content">
 			<div class="col-lg-12 main-content">
         <div class="school-header">
-          <span class="hello">היי <?php echo $user->data->display_name; ?></span>
+          <span class="hello"><?php echo __('Hey ','future-lms'). $user->data->display_name; ?></span>
           <span class="tabs">
-            <a href="<?php echo $urls["my_courses"]; ?>">הקורסים שלי</a>
+            <a href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
             <span class="divider">&nbsp;</span>
-            <a href="<?php echo $urls["available_courses"]; ?>">חנות הקורסים</a>
+            <a href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course shop','future-lms');?></a>
           </span>
         </div>
         <div class="school-courses">

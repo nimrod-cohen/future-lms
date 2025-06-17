@@ -9,7 +9,7 @@ if (count($attendingCourses) == 0) {
 }
 
 foreach ($attendingCourses as $post) {
-  $$image = FutureLMS::get_course_image($post->ID);
+  $image = FutureLMS::get_course_image($post->ID, 'full');
 
   $courseUrl = $courses->meta("course_page_url");
   $author = get_the_author_meta('display_name', $post->post_author);

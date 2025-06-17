@@ -16,7 +16,7 @@ $sortedCourses = array_merge($sortedCourses['featured'], $sortedCourses['regular
 
 foreach ($sortedCourses as $course) {
   //get post thumbnail
-  $courseImage = FutureLMS::get_course_image($course->ID);
+  $courseImage = FutureLMS::get_course_image($course->ID,'full');
   $courseUrl = get_post_meta($course->ID, "course_page_url", true);
 
   if (!$courseUrl) {

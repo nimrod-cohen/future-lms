@@ -27,13 +27,13 @@ class DBManager
         global $wpdb;
 
         $sql = $wpdb->prepare("SELECT p.id as id, p2.post_title as `course_name`, pm4.meta_value as shortname, pm.meta_value as course_id, pm2.meta_value as start_date, cts.registration_date, pm3.meta_value as lessons
-          from " . self::TABLE_PREFIX() . "posts p
+          from " . $wpdb->prefix . "posts p
           inner join " .   self::TABLE_PREFIX() . "class_to_students cts on cts.class_id = p.id
-          inner join " .   self::TABLE_PREFIX() . "postmeta pm on pm.meta_key = 'course' and pm.post_id = p.id
-          INNER JOIN " .   self::TABLE_PREFIX() . "posts p2 on p2.id = pm.meta_value
-          left outer join " .   self::TABLE_PREFIX() . "postmeta pm2 on pm2.meta_key = 'start_date' and pm2.post_id = p.id
-          left outer join " .   self::TABLE_PREFIX() . "postmeta pm3 on pm3.meta_key = 'lessons' and pm3.post_id = p.id
-          left outer join " .   self::TABLE_PREFIX() . "postmeta pm4 on pm4.meta_key = 'short_name' and pm4.post_id = p2.id
+          inner join " .   $wpdb->prefix . "postmeta pm on pm.meta_key = 'course' and pm.post_id = p.id
+          INNER JOIN " .   $wpdb->prefix . "posts p2 on p2.id = pm.meta_value
+          left outer join " .   $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'start_date' and pm2.post_id = p.id
+          left outer join " .   $wpdb->prefix . "postmeta pm3 on pm3.meta_key = 'lessons' and pm3.post_id = p.id
+          left outer join " .   $wpdb->prefix . "postmeta pm4 on pm4.meta_key = 'short_name' and pm4.post_id = p2.id
           WHERE p.post_type = 'class'
           AND p.post_status = 'publish'
           AND cts.student_id = %d", $this->_studentId);

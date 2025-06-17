@@ -54,6 +54,7 @@ class FutureLMS {
 
         add_shortcode('flms_course_price', ['FutureLMS\classes\Courses', 'get_course_price_box']);
         add_shortcode('flms_school_lobby', [$this, 'showSchoolLobby']);
+        add_filter('body_class', [$this,'add_school_class_to_body']);
 
         add_filter('manage_course_posts_columns', [$this, 'addCoursesColumns']);
         add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
@@ -66,10 +67,27 @@ class FutureLMS {
         return $plugin_data['Version'];
     }
 
+    public function add_school_class_to_body($classes) {
+      if (is_singular()) {
+        global $post;
+        if (has_shortcode($post->post_content, 'flms_school_lobby')) {
+            $classes[] = 'school';
+        }
+      }
+      return $classes;
+    }
+
     public function showSchoolLobby() {
-      if(!is_admin()) {
+      if(is_admin() || !is_user_logged_in() || !current_user_can('student')) {
+        return;
+      }
+      //if request is POST and course_id is set, redirect to course page
+      if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['course_id'])) {
+        require_once plugin_dir_path(__FILE__) . 'front/course.php';
+      } else {
         require_once plugin_dir_path(__FILE__) . 'front/lobby.php';
       }
+
     }
 
     public function initHooks() {
