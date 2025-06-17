@@ -51,18 +51,14 @@ class FutureLMS {
        // $this->coupons = Coupons::get_instance();
 
         add_action('init', [$this, 'initHooks']);
-        add_action('init', [$this, 'paymentNotifications']);
-        add_filter('locale', [$this, 'force_hebrew']);
 
         add_shortcode('flms_course_price', ['FutureLMS\classes\Courses', 'get_course_price_box']);
         add_shortcode('flms_school_lobby', [$this, 'showSchoolLobby']);
-        add_shortcode('flms_school_course', [$this, 'showSchoolCourse']);
 
         add_filter('manage_course_posts_columns', [$this, 'addCoursesColumns']);
         add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
         add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
         add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
-        add_action('wpotp/otp-sms-error', [$this, 'log_otp_error'], 10, 3);
     }
 
     public static function version() {
@@ -70,25 +66,10 @@ class FutureLMS {
         return $plugin_data['Version'];
     }
 
-    function log_otp_error($userId, $phone, $message) {
-        FutureLMS::notifyAdmins(
-            'ValueInesting - sending SMS failed',
-            sprintf('Failed to send SMS to user %d, phone %s, error: %s', $userId, $phone, $message));
-    }
-
-    function force_hebrew($locale) {
-        if (!is_admin() || (defined('DOING_AJAX') && DOING_AJAX)) {
-            return 'he_IL';
-        }
-
-        return $locale;
-    }
-
     public function showSchoolLobby() {
+      if(!is_admin()) {
         require_once plugin_dir_path(__FILE__) . 'front/lobby.php';
-    }
-    public function showSchoolCourse() {
-        require_once plugin_dir_path(__FILE__) . 'front/course.php';
+      }
     }
 
     public function initHooks() {
@@ -125,50 +106,19 @@ class FutureLMS {
         add_filter('manage_module_posts_custom_column', [$this, 'addExtraModuleFieldsToListData'], 10, 2);
         add_action('manage_edit-lesson_columns', [$this, 'addExtraLessonFieldsToList']);
         add_filter('manage_lesson_posts_custom_column', [$this, 'addExtraLessonFieldsToListData'], 10, 2);
-        //fix phone format for proper texting and user retrieval
-        add_filter('wpotp/cleanup-phone', ["FutureLMS", 'cleanup_phone']);
-        //redirect after login
-        add_filter('wpotp/redirect-successful-login', [$this, 'redirectAfterLogin'], 10, 2);
-
         //restrict access to lessons:
-        add_action('template_redirect', [$this, 'restrictLessonAccess']);
+        add_action('template_redirect', [$this, 'restrictSchoolAccess']);
 
     }
 
-    public function redirectAfterLogin($url, $userId) {
-
-        $user = get_user_by('id', $userId);
-        if (!$user) {
-            return $url;
+    public function restrictSchoolAccess() {
+      if (is_single()) {
+        global $post;
+        // Check if the post type is lesson, module, class or course
+        if (in_array($post->post_type,['lesson','module','class']) && !current_user_can('student')) {
+          wp_redirect(wp_login_url());
         }
-
-        // Check if user has administrator role
-        if (in_array('administrator', (array) $user->roles)) {
-            return admin_url();
-        }
-
-        // Check if user has student role
-        if ($user && in_array('student', (array) $user->roles)) {
-            return site_url('איזור-תלמידים/?pg=mycourses');
-        }
-
-        return $url;
-    }
-
-    public function restrictLessonAccess() {
-        if (is_single()) {
-            global $post;
-
-            // Check if the post type is 'lessons'
-            if ($post->post_type === 'lesson') {
-                // Check if the user has the 'student' role
-                if (current_user_can('student')) {
-                    return; // Allow access for students
-                } else {
-                    wp_redirect('/login');
-                }
-            }
-        }
+      }
     }
 
     public function addLessonsColumns($columns) {
@@ -339,26 +289,6 @@ class FutureLMS {
         </table>
     <?php }
 
-    public static function cleanup_phone($phone) {
-        $temp = preg_replace('/[^\d]/', '', $phone); //removing any non digit
-        $temp = preg_replace('/^(?:0*)?972/', '', $temp); //removing leading 0 and country code
-        $temp = preg_replace('/^(?:0*)?/', '', $temp); //removing leading 0 of area code
-        $temp = "+972" . $temp; //adding country code
-        if (strlen($temp) === 13) { //should be 4 digits for + and country code, 2 digits for area code, and 7 digits for phone
-            return $temp;
-        }
-
-        return $phone;
-    }
-
-    public function saveExtraUserFields($user_id) {
-        if (!current_user_can('edit_user', $user_id)) {
-            return false;
-        }
-        $phone = self::cleanup_phone($_POST["phone"]);
-        update_user_meta($user_id, 'user_phone', $phone);
-    }
-
     private function parseUserData() {
         if (!isset($_REQUEST["user_id"])) {
             throw new Exception("Field user_id is not set in transaction details");
@@ -403,150 +333,6 @@ class FutureLMS {
         }
 
         throw new Exception("Mising user data for this transaction");
-    }
-
-    public function paymentNotifications() {
-        if (!isset($_REQUEST["processor"]) || !isset($_REQUEST["action"])) {
-          return;
-        }
-
-        $paymentMethod = "credit card"; //notifications are for credit card payments only
-        $transactionId = null;
-
-            try {
-                FutureLMS::log($_REQUEST); //log the request as soon as possible
-
-                $action = $_REQUEST["action"];
-                $transactionId = isset($_REQUEST["Tempref"]) ? $_REQUEST["Tempref"] : "unknown";
-
-                $success = $_REQUEST["Response"] == "000" && $action == "success_charge";
-                if (!$success) {
-                    throw new Exception("Failed charge");
-                }
-
-                $sum = floatval($_REQUEST["sum"]);
-                $userData = $this->parseUserData();
-
-                $courseId = isset($_REQUEST["product_id"]) ? $_REQUEST["product_id"] : false;
-                if (!$courseId) {
-                    throw new Exception("missing course info");
-                }
-
-                $courseId = intval($courseId);
-
-                //find course & price
-                $course = PodsWrapper::factory("course", $courseId);
-
-                if (!$course->exists()) {
-                    throw new Exception("Cannot find course id " . $courseId);
-                }
-
-                //check price, might be a promotion
-                $price = $course->field('full_price');
-                $coupon = false;
-                if (isset($userData["promocode"])) {
-                    $coupon = $this->coupons->byCode($userData["promocode"]);
-                    if ($coupon && ($coupon["global"] || $coupon["email"] == $userData["email"])) {
-                        $price = $coupon["price"];
-                    } else {
-                        $coupon = false;
-                    }
-                }
-
-                $userId = isset($userData["id"]) ? $userData["id"] : $userData["email"];
-
-                //send email about new reg, and compare price
-                $subject = '[ValueInvesting] New user subscription';
-                $body = 'User ' . $userId . ' paid ' . $sum . '. for course ' . $courseId;
-                if ($coupon) {
-                    $body .= " using coupon " . $coupon["code"];
-                }
-
-                if (floatval($price) !== floatval($sum)) {
-                    $subject = '[ValueInvesting] Price difference between listed and paid';
-                    $body = 'User ' . $userId . ' paid ' . $sum . ', while the price of course ' . $courseId . ' is ' . $price;
-                }
-
-                FutureLMS::notifyAdmins($subject, $body); //email to admins
-
-                //check if user exists in system, if not, add him
-                $user = get_user_by(isset($userData["id"]) ? 'id' : 'email', $userId);
-                if (!$user) {
-                    if (!isset($userData["email"])) {
-                        throw new Exception("Failed to identify user " . $userId . " for transaction " . $transactionId);
-                    }
-
-                    $password = wp_generate_password(12, true);
-                    $userId = wp_create_user($userData["email"], $password, $userData["email"]);
-
-                    if (is_wp_error($userId)) {
-                        throw new Exception("Failed to create user " . $userData);
-                    }
-
-                    $user = new WP_User($userId);
-                    $user->remove_role('subscriber');
-                    $user->add_role('student');
-                } else {
-                    $userId = $user->ID;
-                }
-
-                if (isset($userData["name"]) && strlen($userData["name"]) > 0) {
-                    //this causes db lock!!!
-                    //wp_update_user( ['ID' => $userId, 'display_name' => $userData["name"]]);
-                    global $wpdb;
-                    $sql = $wpdb->prepare("update " . $wpdb->prefix . "users set display_name = '%s' where ID = %d", $userData["name"], $userId);
-                    $wpdb->query($sql);
-                }
-
-                if (isset($userData["phone"]) && strlen($userData["phone"]) > 0) {
-                    update_user_meta($userId, 'user_phone', self::cleanup_phone($userData["phone"]));
-                }
-
-                $query = new DBManager(intval($userId));
-
-                if ($query->isAttending($courseId)) {
-                    throw new Exception("User " . $userId . " already attending course " . $courseId);
-                }
-
-                $classId = null;
-                if (isset($userData["class_id"])) {
-                    $classId = $userData["class_id"];
-                } else {
-                    $classes = $query->getCourseClasses($courseId, false);
-
-                    if (empty($classes)) {
-                        throw new Exception("No classes found for course id " . $courseId);
-                    }
-
-                    $classId = $classes[0]["id"];
-                }
-
-                $query->subscribeToClass($classId, true);
-
-                $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $_REQUEST["processor"], $coupon ? 'Using coupon ' . $coupon['code'] : '');
-
-        $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, "");
-
-        //do actions after payment futurelms/payment_notification
-        do_action('futurelms/payment_notification', [
-            "course_id" => $courseId,
-            "student_id" => $userId,
-            "class_id" => $classId,
-            "sum" => $sum,
-            "transaction_id" => $transactionId,
-            "payment_id" => $paymentId,
-            "payment_method" => $paymentMethod,
-            "comment" => ""
-        ]);
-
-            } catch (Exception $ex) {
-                $subject = '[ValueInvesting] Error occurred during payment processing';
-                $body = $ex->getMessage() . " [Transaction ID: " . $transactionId . "]";
-                FutureLMS::notifyAdmins($subject, $body);
-                die($body);
-            }
-
-            die;
     }
 
     public function showTagsFilter() {
@@ -651,7 +437,6 @@ class FutureLMS {
         $classId = $_REQUEST["class_id"];
         $name = $_REQUEST["name"];
         $phone = $_REQUEST["phone"];
-        $phone = self::cleanup_phone($phone);
         $email = $_REQUEST["email"];
         $sum = $_REQUEST["sum"];
         $comment = $_REQUEST["comment"];
@@ -676,6 +461,10 @@ class FutureLMS {
         } else {
             $studentId = $student->ID;
         }
+
+        //filter email and phone as some systems may want it in a specific format
+        $email = apply_filters('future-lms/student_email', $email);
+        $phone = apply_filters('future-lms/student_phone', $phone);
 
         if (!empty($name)) {
             $arr = ["ID" => $studentId];
@@ -702,8 +491,8 @@ class FutureLMS {
 
         $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
 
-        //do actions after payment futurelms/payment_notification
-        do_action('futurelms/payment_notification', [
+        //do actions after payment future-lms/payment_notification
+        do_action('future-lms/payment_notification', [
             "course_id" => $courseId,
             "student_id" => $studentId,
             "class_id" => $classId,
@@ -725,7 +514,7 @@ class FutureLMS {
 
         DBManager::deletePayment($paymentId);
 
-        do_action('futurelms/payment_removed', [
+        do_action('future-lms/payment_removed', [
             "course_id" => $payment["course_id"],
             "student_id" => $payment["student_id"],
             "class_id" => $payment["class_id"],
@@ -962,7 +751,7 @@ class FutureLMS {
             return;
         }
 
-        do_action('futurelms/admin_notification', [
+        do_action('future-lms/admin_notification', [
             "title" => $title,
             "message" => $message
         ]);
@@ -1199,29 +988,26 @@ class FutureLMS {
         die();
     }
 
-    public static function get_media_url_by_tag($tag_slug) {
-        $args = [
-            'post_type' => 'attachment',
-            'post_status' => 'inherit',
-            'posts_per_page' => 1, // Adjust the number of results if necessary
-            'tax_query' => [
-                [
-                    'taxonomy' => 'post_tag',
-                    'field' => 'slug',
-                    'terms' => $tag_slug
-                ]
-            ]
-        ];
-
-        $query = new WP_Query($args);
-
-        if ($query->have_posts()) {
-            $post = $query->posts[0];
-            $media_url = wp_get_attachment_url($post->ID);
-            return $media_url;
+    public static function get_course_image($course_id, $size = 'thumbnail') {
+      $course = PodsWrapper::factory('Course', $course_id);
+      $image = $course->field('_thumbnail_id');
+      $genericImage = plugin_dir_url(__FILE__) . 'assets/images/generic-course-placeholder.png';
+      $found = true;
+      //check if image exists
+      if(empty($image) || !is_numeric($image)) {
+        $found = false;
+        $image = $genericImage;
+      } else {
+        $image = wp_get_attachment_image_src($image, $size);
+        if (empty($image) || !is_array($image)) {
+          $found = false;
+          $image = $genericImage;
+        } else {
+          $image = $image[0]; //get the URL
         }
+      }
 
-        return false; // If no media found for the tag
+      return apply_filters('future-lms/course_image', $image, $found, $course_id, $size);
     }
 }
 

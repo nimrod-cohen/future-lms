@@ -9,7 +9,7 @@ use FutureLMS\classes\DBManager;
 $post = get_post();
 
 $courseWorkspacePage = get_pages(['child_of' => $post->ID, 'meta_key' => '_wp_page_template', 'meta_value' => 'course.php']);
-$courseWorkspacePage = get_page_link($courseWorkspacePage[0]);
+$courseWorkspacePage = get_page_link($courseWorkspacePage[0] ?? null);
 
 $user = wp_get_current_user();
 

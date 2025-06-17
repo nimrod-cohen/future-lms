@@ -3,7 +3,6 @@
 use FutureLMS\FutureLMS;
 
 $courseId = $_POST["course_id"];
-$genericCourseIcon = FutureLMS::get_media_url_by_tag('generic-course-icon');
 
 // Get course details and present them as a sales page
 $course = get_post($courseId);
@@ -17,13 +16,13 @@ $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
 $coursePrice = $fmt->formatCurrency($coursePrice, "ILS");
 
 $author = get_the_author_meta('display_name', $course->post_author);
-$courseIcon = get_post_meta($courseId, 'course_icon', true);
-$courseIconUrl = !empty($courseIcon) ? $courseIcon["guid"] : $genericCourseIcon;
+$courseImage = FutureLMS::get_course_image($courseId);
+
 $user = wp_get_current_user();
 ?>
 <div class="course-details">
   <div class="course-details">
-    <img class='course-icon' src='<?php echo $courseIconUrl; ?>'></img>
+    <img class='course-image' src='<?php echo $courseImage; ?>'></img>
     <span class='course-name'><?php echo $courseTitle; ?></span>
     <span class='course-author'><?php echo $author; ?></span>
     <span class='course-short-desc'>

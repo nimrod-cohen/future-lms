@@ -43,7 +43,7 @@ $lesson = PodsWrapper::factory("lesson", $lessonId);
         <li tab-id="additional">חומרים ועזרים נלווים</li>
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
-        <li class="toggle-videos"><img src="/wp-content/themes/valueinvesting_2018/img/toggle-up.svg" /></li>
+        <li class="toggle-videos"><img src="<?php echo plugin_dir_url(__FILE__); ?>/front/assets/image/toggle-up.svg" /></li>
       </ul>
       <div class="lesson-content-viewer"></div>
     </div>

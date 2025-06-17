@@ -1,0 +1,7 @@
+1. why icon is "Array"
+2. turn all the hebrew into text domain __ / _e(...,"future-lms")
+3. support theme structure php replacement to front/webparts school webparts
+4. call /course.php from lobby (course.php shortcode eliminated)
+6. fix lobby course thumbnail - full width in box
+7. add setting for school currency
+8. add function to print course price

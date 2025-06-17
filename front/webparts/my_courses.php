@@ -5,18 +5,11 @@
 use FutureLMS\FutureLMS;
 
 if (count($attendingCourses) == 0) {
-  echo "<div class='no-courses'>אינך רשום לאף קורס</div>";
+  echo "<div class='no-courses'>".__("You are not registered to any course", "future-lms")."</div>";
 }
 
-$genericCourseIcon = FutureLMS::get_media_url_by_tag('generic-course-icon');
-
 foreach ($attendingCourses as $post) {
-  $icon = get_post_meta($post->ID, 'course_icon', true);
-  if (!empty($icon)) {
-    $icon = wp_get_attachment_image_url( $icon, 'thumbnail' );
-  } else {
-    $icon = $genericCourseIcon;
-  }
+  $$image = FutureLMS::get_course_image($post->ID);
 
   $courseUrl = $courses->meta("course_page_url");
   $author = get_the_author_meta('display_name', $post->post_author);
@@ -30,7 +23,7 @@ foreach ($attendingCourses as $post) {
   }
   ?>
     <div class="course-card" data-course-id='<?php echo $post->ID; ?>'>
-          <img class='course-icon' src='<?php echo $icon ?>'></img>
+          <img class='course-image' src='<?php echo $image ?>'></img>
           <div class="course-details">
             <span class='course-name'><?php echo $post->post_title; ?></span>
             <span class='course-author'><?php echo $author; ?></span>
