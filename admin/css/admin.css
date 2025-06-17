@@ -359,6 +359,127 @@ div.error {
             }
           }
         }
+
+        #classes-list {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+
+        //fomantic icons are positioned absolute for some reason, and casts a rotated shadow in a weird position
+        .action-bar {
+          position: relative;
+          i.actionable {
+            position: static;
+            &::after {
+              content: none;
+            }
+          }
+        }
+
+          .class {
+            border: solid 1px rgb(239, 238, 238);
+            background-color: rgb(246, 251, 255);
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: grid;
+            grid-auto-flow: row;
+            justify-content: stretch;
+            width: 100%;
+            cursor: pointer;
+
+            > .class-header {
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              padding: 12px 10px;
+
+              .class-id {
+                font-weight: 100;
+                color: var(--disabled-color);
+                font-size: 0.8rem;
+              }
+
+              .class-name {
+                margin: 0;
+                direction: ltr;
+                &.disabled {
+                  color: var(--disabled-color);
+                }
+              }
+              .class-actions {
+                display:none;
+              }
+
+              &:hover {
+                .class-actions {
+                  display: flex;
+                  margin-left: auto;
+                  justify-content: end;
+                  align-items: center;
+                }
+              }
+
+
+            }
+
+            > .class-lessons {
+              border: solid 1px rgb(239, 238, 238);
+              padding: 5px 10px;
+              border-radius: 4px;
+
+              .class-lesson {
+                display: flex;
+                background: rgb(249, 248, 248);
+                &:hover {
+                  background: rgb(240, 239, 238);
+                }
+                padding: 4px 8px;
+                border-radius: 3px;
+                gap: 10px;
+                flex-direction: row;
+                align-items: center;
+
+                .lesson-order {
+                  grid-area: order;
+                  display: grid;
+                  justify-content: center;
+                  align-items: center;
+                  width: 24px;
+                  height: 24px;
+                  border-radius: 50%;
+                  background-color: rgb(225, 247, 254);
+                  font-weight: bold;
+                }
+
+                &:hover {
+                  .lesson-actions {
+                    display: grid;
+                    grid-auto-flow: column;
+                    justify-content: end;
+                    flex-grow: 1;
+
+                    > i {
+                      cursor: pointer;
+                      bottom: unset;
+                      position: relative;
+                    }
+                  }
+                }
+
+                .lesson-name {
+                  &.disabled {
+                    color: var(--disabled-color);
+                  }
+                }
+
+                .lesson-actions {
+                  display: none;
+                  flex-direction: row;
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

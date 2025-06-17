@@ -198,6 +198,120 @@ class Courses {
     return $result;
   }
 
+  public static function get_classes_tree($classes = null, $enabledOnly = true)
+  {
+    global $wpdb;
+    $prefix = DBManager::TABLE_PREFIX();
+
+    $sql = "SELECT pclass.id AS class_id, pclass.post_title AS class_name, pclass.post_status
+    FROM " . $wpdb->prefix . "posts pclass
+    WHERE pclass.post_type = 'class'
+    AND pclass.post_status <> 'trash' ";
+
+    if ($enabledOnly) {
+      $sql .= "AND pclass.post_status = 'publish'";
+    }
+    if ($classes) {
+      $sql .= " AND pclass.id IN (" . implode(",", $classes) . ")";
+    }
+
+    $sql .= " ORDER BY pclass.post_title";
+
+    $rows = $wpdb->get_results($sql, ARRAY_A);
+    $result = [];
+
+    foreach ($rows as $row) {
+      $class_id = $row["class_id"];
+
+      //get all post id metas
+      $class_meta = get_post_meta($class_id);
+      //map all metas to a single array
+      $class_meta = array_map(function ($meta) {
+        return is_array($meta) ? $meta[0] : $meta;
+      }, $class_meta);
+
+      $result[$class_id] = $class_meta;
+      $result[$class_id]["total"] = 0;
+      $result[$class_id]["ID"] = $class_id;
+      $result[$class_id]["enabled"] = $row["post_status"] == "publish";
+      $result[$class_id]["name"] = $row["class_name"];
+      $result[$class_id]["course"] = $class_meta["course"];
+
+      $class = &$result[$class_id];
+      $courseId = $class["course"];
+      $class["modules"] = [];
+      $class["lessons"] = [];
+
+      $sql = "SELECT pmodule.post_title AS 'module_name', pmodule.ID AS 'module_id',
+        pm6.meta_value AS module_order, pmodule.post_status,
+        case when pm5.meta_value = '1' then true else false end as count_progress,
+        case when pm7.meta_value = '1' then true else false end as intro_module,
+        pm8.meta_value AS teaser
+        FROM ".$wpdb->prefix."posts pmodule
+       INNER JOIN wp_postmeta pm_course ON pm_course.post_id = pmodule.ID AND pm_course.meta_key = 'course' AND pm_course.meta_value = $courseId
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm5 ON pm5.post_id = pmodule.ID AND pm5.meta_key = 'count_progress'
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm6 ON pm6.post_id = pmodule.ID AND pm6.meta_key = 'order'
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm7 ON pm7.post_id = pmodule.ID AND pm7.meta_key = 'intro_module'
+        LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm8 ON pm8.post_id = pmodule.ID AND pm8.meta_key = 'teaser'
+        WHERE pmodule.post_type = 'module'
+        AND pmodule.post_status <> 'trash' 
+        ";
+
+      if ($enabledOnly) {
+        $sql .= " AND pmodule.post_status = 'publish'";
+      }
+
+      $sql .= " ORDER BY module_order";
+
+      $moduleRows = $wpdb->get_results($sql, ARRAY_A);
+
+      foreach ($moduleRows as $moduleRow) {
+        $moduleId = $moduleRow["module_id"];
+
+        $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm2.meta_value AS video_list,
+          pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser
+          FROM " . $wpdb->prefix . "posts plesson
+          INNER JOIN " . $wpdb->prefix . "postmeta pm1 ON pm1.post_id = plesson.id AND pm1.meta_key = 'module' AND pm1.meta_value = $moduleId
+          LEFT OUTER JOIN " . $wpdb->prefix . "postmeta pm2 ON pm2.post_id = plesson.id AND pm2.meta_key = 'video_list'
+          LEFT OUTER JOIN " . $wpdb->prefix . "postmeta pm3 ON pm3.post_id = plesson.ID AND pm3.meta_key = 'lesson_number'
+          LEFT OUTER JOIN " . $wpdb->prefix . "postmeta pm4 ON pm4.post_id = plesson.ID AND pm4.meta_key = 'teaser'
+          WHERE plesson.post_type = 'lesson'
+          AND plesson.post_status <> 'trash' ";
+
+        if ($enabledOnly) {
+          $sql .= " AND plesson.post_status = 'publish'";
+        }
+        $sql .= " ORDER BY lesson_number";
+
+        $lessonRows = $wpdb->get_results($sql, ARRAY_A);
+
+        foreach ($lessonRows as $lessonRow) {
+          $lessonId = $lessonRow["lesson_id"];
+          $class["lessons"][$lessonId] = [];
+          $lesson = &$class["lessons"][$lessonId];
+          $lesson["name"] = $lessonRow["lesson_name"];
+          $lesson["order"] = $lessonRow["lesson_number"];
+          $lesson["enabled"] = $lessonRow["post_status"] == "publish";
+          $lesson["teaser"] = $lessonRow["teaser"] ?? '';
+          $videos = $lessonRow["video_list"];
+          $videos = json_decode(empty($videos) ? "[]" : $videos, true);
+
+          $lesson["videos"] = [];
+          if (empty($videos)) {
+            $lesson["videos"] = ["text"];
+
+          } else {
+            foreach ($videos as $video) {
+              $lesson["videos"][] = $video["video_id"];
+            }
+          }
+        }
+      }
+      }
+
+    return $result;
+  }
+
   public function addLesson() {
     global $wpdb;
 

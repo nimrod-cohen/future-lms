@@ -6,6 +6,7 @@ class AdminManager {
   couponsTab = new CouponsTab();
   settingsTab = new SettingsTab();
   coursesTab = new CoursesTab();
+  classesTab = new ClassesTab();
 
   constructor() {
     console.log(this.currentTab);
@@ -19,7 +20,6 @@ class AdminManager {
     //tabs
     this.wireMailerScreen = this.wireMailerScreen.bind(this);
     this.wireBillingScreen = this.wireBillingScreen.bind(this);
-    this.wireClassesScreen = this.wireClassesScreen.bind(this);
 
     //wire events
     this.wireTabs();
@@ -226,67 +226,6 @@ class AdminManager {
     });
   }
 
-  /*
-   * CLASSES TAB
-   */
-  wireClassesScreen() {
-    let classesTab = COMMON.getTab(COMMON.TABS.CLASSES);
-    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
-      const coursesNameValue = Object.keys(data.courses).map(cid => {
-        let course = data.courses[cid];
-        return { name: course.name, value: course.id };
-      });
-
-      COMMON.wireDropdown(
-        classesTab.querySelector('.ui.search.courses'),
-        coursesNameValue,
-        item => {
-          let classes = jQuery(`${COMMON.getTabSelector(COMMON.TABS.CLASSES)} .ui.search.classes`);
-          classes.search('set value', '');
-        },
-        'Select course'
-      );
-    });
-
-    COMMON.wireSearch(
-      `${COMMON.getTabSelector(COMMON.TABS.CLASSES)} .ui.search.classes`,
-      'search_classes',
-      oClass => {
-        this.currentClassName = oClass.title;
-        JSUtils.fetch(__futurelms.ajax_url, { action: 'get_lessons', class_id: oClass.id }).then(data => {
-          this.renderLessons(data);
-        });
-      },
-      () => {
-        return {
-          course_id: classesTab.querySelector('.ui.search.courses').getAttribute('data-id')
-        };
-      },
-      () => {
-        //check if i need to cancel
-        let courseId = classesTab.querySelector('.ui.search.courses').getAttribute('data-id');
-        return !courseId || courseId.length === 0;
-      }
-    );
-
-    jQuery(document).on('click', `${COMMON.getTabSelector(COMMON.TABS.CLASSES)} .item.lesson`, e => {
-      const lessonId = e.currentTarget.getAttribute('data-id');
-      let classId = COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.search.classes').getAttribute('data-id');
-
-      e.currentTarget.removeChild(e.currentTarget.querySelector('i'));
-      e.currentTarget.insertAdjacentHTML('afterbegin', "<span class='ui active tiny inline loader'></span>");
-
-      JSUtils.fetch(__futurelms.ajax_url, {
-        action: 'set_lesson',
-        lesson_id: lessonId,
-        class_id: classId
-      }).then(() => {
-        JSUtils.fetch(__futurelms.ajax_url, { action: 'get_lessons', class_id: classId }).then(data => {
-          this.renderLessons(data);
-        });
-      });
-    });
-  }
 
   renderLessons(data) {
     let lessons = COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.ui.list.lessons');
@@ -307,7 +246,6 @@ class AdminManager {
   }
 
   wireEvents() {
-    this.wireClassesScreen();
     this.wireMailerScreen();
     this.wireBillingScreen();
   }
