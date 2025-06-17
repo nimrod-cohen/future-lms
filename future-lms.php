@@ -399,7 +399,7 @@ class FutureLMS {
     public function enqueueSchoolScripts() {
         wp_enqueue_script('futurelms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
         wp_enqueue_style('futurelms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
-        wp_enqueue_script('futurelms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['bootstrap', 'wpjsutils']);
+        wp_enqueue_script('futurelms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
 
         wp_localize_script('futurelms_school_script', 'school_info', [
             'ajax_url' => admin_url('admin-ajax.php'),

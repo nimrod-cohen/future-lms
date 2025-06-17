@@ -15,6 +15,8 @@ $lessonId = $_POST["lesson_id"];
 $course = PodsWrapper::factory("course", $courseId);
 $lesson = PodsWrapper::factory("lesson", $lessonId);
 
+$images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
+
 ?>
 <div
   class="school-container classroom"
@@ -23,8 +25,11 @@ $lesson = PodsWrapper::factory("lesson", $lessonId);
   lesson-id="<?php echo $_POST["lesson_id"]; ?>">
   <div class="school-sidebar">
     <div class="sidebar-header">
+      <button class="nav-lessons" type="button" aria-label="Choose Lesson">
+        <img src="<?php echo $images_dir_url; ?>/index.svg" />
+      </button>
       <?php echo $course->field("name"); ?>
-      <img class="close-sidebar" src="<?php echo plugin_dir_url(__DIR__); ?>assets/images/close.svg" />
+      <img class="close-sidebar" src="<?php echo $images_dir_url; ?>/close.svg" />
     </div>
   </div>
   <div class="lesson">
@@ -48,7 +53,7 @@ $lesson = PodsWrapper::factory("lesson", $lessonId);
         <li tab-id="additional">חומרים ועזרים נלווים</li>
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
-        <li class="toggle-videos"><img src="<?php echo plugin_dir_url(__DIR__); ?>assets/images/toggle-up.svg" /></li>
+        <li class="toggle-videos"><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
       </ul>
       <div class="lesson-content-viewer"></div>
     </div>

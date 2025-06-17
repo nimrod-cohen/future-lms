@@ -1,3 +1,5 @@
+console.log('school.js loaded');
+
 const callServer = async params => {
   try {
     let result = await JSUtils.fetch(window.school_info.ajax_url, params);
