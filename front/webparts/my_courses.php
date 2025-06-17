@@ -36,7 +36,7 @@ foreach ($attendingCourses as $post) {
                 <input type="hidden" name="course_id" value="<?php echo $post->ID; ?>">
                 <input type="hidden" name="class_id" value="<?php echo $class["id"]; ?>">
                 <input type="hidden" name="lesson_id" value="<?php echo $nextLessson; ?>">
-                <button type='submit' class='enter-course'>המשך לקורס</button>
+                <button type='submit' class='enter-course'><?php _e("Enter course", "future-lms"); ?></button>
               </form>
             </span>
           </div>

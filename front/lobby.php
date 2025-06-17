@@ -33,7 +33,7 @@ $urls = [
           <span class="tabs">
             <a href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
             <span class="divider">&nbsp;</span>
-            <a href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course shop','future-lms');?></a>
+            <a href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course store','future-lms');?></a>
           </span>
         </div>
         <div class="school-courses">

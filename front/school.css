@@ -558,7 +558,7 @@ body.school {
             border: solid 2px #b908b9;
 
             &::after {
-              content: 'פופולרי';
+              content: 'Popular';
               position: absolute;
               top: 10px;
               left: 10px;
