@@ -11,6 +11,8 @@
 }
 
 body.school {
+  font-size: 16px;
+
   nav.navbar {
     border: 0;
     display: grid;
@@ -84,7 +86,7 @@ body.school {
         z-index: 2;
         background-color: white;
         font-weight: bold;
-        padding: 0.8rem 0.8rem 0.8rem 1.6rem;
+        padding: 0.8rem;
         border: 1px solid var(--border-color);
         border-right: 0;
 
@@ -219,7 +221,7 @@ body.school {
           overflow: visible;
 
           .multiple-video-indication {
-            font-size: 0.8em;
+            font-size: 0.8rem;
             background: red;
             text-align: center;
             border-radius: 4px;
@@ -353,7 +355,7 @@ body.school {
             overflow: auto;
             border: 1px solid #ccc;
             font-family: monospace;
-            font-size: 16px;
+            font-size: 1.2rem;
             line-height: 24px;
 
             .notebook-lines {
@@ -375,11 +377,9 @@ body.school {
               outline: none;
               white-space: pre-wrap;
               line-height: 24px;
-              font-size: 16px;
             }
             .student-notes * {
               line-height: 24px;
-              font-size: 16px;
             }
           }
 
@@ -607,7 +607,7 @@ body.school {
               border-radius: 7px;
               color: white;
               font-weight: bold;
-              font-size: 16px;
+              font-size: 1rem;
               margin: 0;
               height: 16px;
               display: flex;
@@ -831,6 +831,8 @@ body.school {
 
 @media screen and (max-width: 991px) {
   body.school {
+    font-size: 14px;
+
     nav.navbar {
       justify-content: flex-end;
       padding: 8px;
@@ -943,6 +945,8 @@ body.school {
 
 @media screen and (max-width: 500px) {
   body.school {
+    font-size: 12px;
+
     .personal-container {
       .school-content .form-content .row {
         grid-template-columns: 80px 1fr;

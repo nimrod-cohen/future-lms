@@ -25,22 +25,22 @@ $images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
   lesson-id="<?php echo $_POST["lesson_id"]; ?>">
   <div class="school-sidebar">
     <div class="sidebar-header">
+      <?php echo $course->raw("name"); ?>
+      <img class="close-sidebar" src="<?php echo $images_dir_url; ?>/close.svg" />
       <button class="nav-lessons" type="button" aria-label="Choose Lesson">
         <img src="<?php echo $images_dir_url; ?>/index.svg" />
       </button>
-      <?php echo $course->field("name"); ?>
-      <img class="close-sidebar" src="<?php echo $images_dir_url; ?>/close.svg" />
     </div>
   </div>
   <div class="lesson">
     <div class="lesson-videos">
       <div class="lesson-videos-nav">
-        <a class="prev-video" href="#">&rarr; לסרטון הקודם</a>
+        <a class="prev-video" href="#"><?php _e("&rarr; Previous video", "future-lms"); ?></a>
         <span id="current-lesson-title">
           <span class="lesson-title"><?php echo $lesson->raw("title"); ?></span>
           <span class="multiple-video-indication hidden"></span>
         </span>
-        <a class="next-video" href="#">לסרטון הבא &larr;</a>
+        <a class="next-video" href="#"><?php _e("&larr; Next video", "future-lms"); ?></a>
       </div>
       <div class="video-container"></div>
     </div>
