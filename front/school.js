@@ -132,9 +132,11 @@ class Classroom {
     });
 
     coursePage.querySelector('.toggle-videos').addEventListener('click', this.enlargeMaterials);
-    document.querySelector('.nav-lessons').addEventListener('click', () => {
-      this.toggleMobileSidebar(true);
-    });
+    document.querySelectorAll('.nav-lessons').forEach(nav =>
+      nav.addEventListener('click', () => {
+        this.toggleMobileSidebar(true);
+      })
+    );
 
     coursePage.querySelector('.close-sidebar').addEventListener('click', () => this.toggleMobileSidebar(false));
 
@@ -143,6 +145,17 @@ class Classroom {
     });
     coursePage.querySelector('.prev-video').addEventListener('click', () => {
       this.promoteVideo(-1);
+    });
+
+    const exitBtn = coursePage.querySelector('.exit-to-lobby');
+    exitBtn.addEventListener('click', e => {
+      e.preventDefault();
+      document.location.href = '/lobby';
+    });
+
+    //load all popovers
+    document.querySelectorAll('.show-popover').forEach(el => {
+      new Popover(el);
     });
 
     //listen to student note changes
