@@ -116,8 +116,6 @@ class FutureLMS {
         add_action("restrict_manage_posts", [$this, "showTagsFilter"]);
         add_action('show_user_profile', [$this, 'extraUserFields']);
         add_action('edit_user_profile', [$this, 'extraUserFields']);
-        add_action('personal_options_update', [$this, 'saveExtraUserFields']);
-        add_action('edit_user_profile_update', [$this, 'saveExtraUserFields']);
         add_action('manage_users_columns', [$this, 'addExtraUserFieldsToList']);
         add_filter('manage_users_custom_column', [$this, 'addExtraUserFieldsToListData'], 10, 3);
         add_action('manage_edit-module_columns', [$this, 'addExtraModuleFieldsToList']);

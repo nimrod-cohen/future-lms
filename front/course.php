@@ -28,7 +28,7 @@ $images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
       <label>
         <?php echo $course->raw("name"); ?>
       </label>
-      <a href="#" class="exit-to-lobby show-popover" data-content="<?php _e("Exit to lobby","future-lms"); ?>">
+      <a href="#" class="exit-to-lobby show-popover pop-right" data-content="<?php _e("Exit to lobby","future-lms"); ?>">
         <img alt="<?php _e("Exit to lobby","future-lms"); ?>" src="<?php echo $images_dir_url; ?>/exit.svg" />
       </a>
       <img class="close-sidebar" alt="<?php _e("Close index","future-lms"); ?>" src="<?php echo $images_dir_url; ?>/close.svg" />
@@ -54,7 +54,7 @@ $images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
         <span class="lesson-header">
           <span class="lesson-title"><?php echo $lesson->raw("title"); ?></span>
         </span>
-        <button class="nav-lessons show-popover" type="button" aria-label="Choose Lesson" data-content="<?php _e("Choose lesson", "future-lms"); ?>">
+        <button class="nav-lessons show-popover pop-right" type="button" aria-label="Choose Lesson" data-content="<?php _e("Choose lesson", "future-lms"); ?>">
           <img src="<?php echo $images_dir_url; ?>/index.svg" alt="<?php _e("Navigate lessons","future-lms"); ?>" />
         </button>
       </span>
@@ -63,7 +63,7 @@ $images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
         <li tab-id="additional">חומרים ועזרים נלווים</li>
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
-        <li class="toggle-videos show-popover" data-content="<?php _e("Toggle videos", "future-lms"); ?>" ><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
+        <li class="toggle-videos show-popover pop-right" data-content="<?php _e("Toggle videos", "future-lms"); ?>" ><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
       </ul>
       <div class="lesson-content-viewer"></div>
     </div>
