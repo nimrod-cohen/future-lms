@@ -11,22 +11,6 @@
 }
 
 body.school {
-  direction: rtl;
-
-  * {
-    line-height: 2em;
-    font-family: Assistant, sans-serif;
-    margin: 0;
-    box-sizing: border-box;
-    padding: 0;
-    margin: 0;
-  }
-
-  ol,
-  ul {
-    list-style-position: inside;
-  }
-
   nav.navbar {
     border: 0;
     display: grid;
@@ -54,6 +38,22 @@ body.school {
 
   .row.page-content {
     padding: 20px 0px;
+  }
+
+  .school-container {
+    * {
+      line-height: 2em;
+      font-family: Assistant, sans-serif;
+      margin: 0;
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
+
+    ol,
+    ul {
+      list-style-position: inside;
+    }
   }
 
   .school-container.classroom {
