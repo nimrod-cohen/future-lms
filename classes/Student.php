@@ -1,8 +1,9 @@
 <?php
 
 namespace FutureLMS\classes;
+use FutureLMS\FutureLMS;
 
-class DBManager
+class Student
 {
     private $_studentId = null;
     private $_courses = null;
@@ -10,12 +11,6 @@ class DBManager
     function __construct($studentId)
     {
         $this->_studentId = $studentId;
-    }
-
-    public static function TABLE_PREFIX()
-    {
-        global $wpdb;
-        return $wpdb->prefix.'flms_';
     }
 
     public function getStudentCourses()
@@ -28,7 +23,7 @@ class DBManager
 
         $sql = $wpdb->prepare("SELECT p.id as id, p2.post_title as `course_name`, pm4.meta_value as shortname, pm.meta_value as course_id, pm2.meta_value as start_date, cts.registration_date, pm3.meta_value as lessons
           from " . $wpdb->prefix . "posts p
-          inner join " .   self::TABLE_PREFIX() . "class_to_students cts on cts.class_id = p.id
+          inner join " .   FutureLMS::TABLE_PREFIX() . "class_to_students cts on cts.class_id = p.id
           inner join " .   $wpdb->prefix . "postmeta pm on pm.meta_key = 'course' and pm.post_id = p.id
           INNER JOIN " .   $wpdb->prefix . "posts p2 on p2.id = pm.meta_value
           left outer join " .   $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'start_date' and pm2.post_id = p.id
@@ -75,10 +70,10 @@ class DBManager
     {
         global $wpdb;
         if ($subscribe) {
-            $sql = "REPLACE INTO " .   self::TABLE_PREFIX() . "class_to_students (student_id, class_id, registration_date)
+            $sql = "REPLACE INTO " .   FutureLMS::TABLE_PREFIX() . "class_to_students (student_id, class_id, registration_date)
           values (%d, %d, CURRENT_TIMESTAMP)";
         } else {
-            $sql = "DELETE FROM " .   self::TABLE_PREFIX() . "class_to_students WHERE student_id = %d and class_id = %d";
+            $sql = "DELETE FROM " .   FutureLMS::TABLE_PREFIX() . "class_to_students WHERE student_id = %d and class_id = %d";
         }
         $sql = $wpdb->prepare($sql, $this->_studentId, $classId);
         $wpdb->query($sql);
@@ -89,7 +84,7 @@ class DBManager
         global $wpdb;
 
         $sql = "SELECT p.*, u.user_email, um.meta_value as affiliate_id, aff.display_name as affiliate_name, course.post_title as course_name
-    FROM " .   self::TABLE_PREFIX() . "payments p
+    FROM " .   FutureLMS::TABLE_PREFIX() . "payments p
     LEFT OUTER JOIN ".$wpdb->prefix."users u on u.ID = p.student_id
     LEFT OUTER JOIN ".$wpdb->prefix."usermeta um on u.ID = um.user_id and um.meta_key = 'affiliate_id'
     LEFT OUTER JOIN ".$wpdb->prefix."users aff on aff.ID = um.meta_value
@@ -104,7 +99,7 @@ class DBManager
     public function savePayment($courseId, $classId, $sum, $transRef, $processor, $comment)
     {
         global $wpdb;
-        $sql = "INSERT INTO " . self::TABLE_PREFIX() . "payments (student_id, course_id, class_id, payment_date, transaction_ref, sum, processor, comment, deleted)
+        $sql = "INSERT INTO " . FutureLMS::TABLE_PREFIX() . "payments (student_id, course_id, class_id, payment_date, transaction_ref, sum, processor, comment, deleted)
           values (%d, %d, %d, CURRENT_TIMESTAMP, '%s', %f, '%s', '%s', 0)";
         $sql = $wpdb->prepare($sql, $this->_studentId, $courseId, $classId, $transRef, $sum, $processor, $comment);
         $wpdb->query($sql);
@@ -115,7 +110,7 @@ class DBManager
     {
         global $wpdb;
         $sql = "SELECT p.*, u.user_email, um.meta_value as affiliate_id, aff.display_name as affiliate_name
-    FROM " . self::TABLE_PREFIX() . "payments p
+    FROM " . FutureLMS::TABLE_PREFIX() . "payments p
     LEFT OUTER JOIN ".$wpdb->prefix."users u on u.ID = p.student_id
     LEFT OUTER JOIN ".$wpdb->prefix."usermeta um on u.ID = um.user_id and um.meta_key = 'affiliate_id'
     LEFT OUTER JOIN ".$wpdb->prefix."users aff on aff.ID = um.meta_value
@@ -127,7 +122,7 @@ class DBManager
     public static function deletePayment($paymentId)
     {
         global $wpdb;
-        $sql = "UPDATE " . self::TABLE_PREFIX() . "payments SET deleted = 1 WHERE id = %d";
+        $sql = "UPDATE " . FutureLMS::TABLE_PREFIX() . "payments SET deleted = 1 WHERE id = %d";
         $sql = $wpdb->prepare($sql, $paymentId);
         $wpdb->query($sql);
     }
@@ -255,7 +250,7 @@ class DBManager
         }
 
         $sql = "select u.id, u.user_email, u.display_name, IFNULL(um.meta_value,'') as phone, cs.registration_date, cs.class_id, classes.post_title as class_name, courses.id as course_id, courses.post_title as course_name
-      from ".self::TABLE_PREFIX()."class_to_students cs
+      from " . FutureLMS::TABLE_PREFIX() . "class_to_students cs
       inner join ".$wpdb->prefix."users u on u.id = cs.student_id
       inner join ".$wpdb->prefix."posts classes on classes.id = cs.class_id
       inner join ".$wpdb->prefix."postmeta wpm on wpm.post_id = cs.class_id and wpm.meta_key = 'course'
@@ -273,7 +268,7 @@ class DBManager
     {
         global $wpdb;
         $sql = "SELECT notes
-          FROM " .   self::TABLE_PREFIX() . "student_notes
+          FROM " . FutureLMS::TABLE_PREFIX() . "student_notes
           WHERE student_id = %d AND lesson_id = %d";
         $sql = $wpdb->prepare($sql, $this->_studentId, $lessonId);
         return $wpdb->get_var($sql);
@@ -282,7 +277,7 @@ class DBManager
     public function setStudentNotes($lessonId, $notes)
     {
         global $wpdb;
-        $sql = "REPLACE INTO " .   self::TABLE_PREFIX() . "student_notes (student_id, lesson_id, notes)
+        $sql = "REPLACE INTO " . FutureLMS::TABLE_PREFIX() . "student_notes (student_id, lesson_id, notes)
           values (%d, %d, '%s')";
         $sql = $wpdb->prepare($sql, $this->_studentId, $lessonId, $notes);
         $wpdb->query($sql);

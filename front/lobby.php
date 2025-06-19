@@ -4,7 +4,7 @@ Template Name: School Template
  */
 
 use FutureLMS\classes\Courses;
-use FutureLMS\classes\DBManager;
+use FutureLMS\classes\Student;
 
 $post = get_post();
 
@@ -41,7 +41,7 @@ $urls = [
 //get all posts of type course, where post is publised
 $courses = new WP_Query(["post_type" => 'course', 'posts_per_page' => -1, 'post_status' => 'publish']);
 
-$valueQuery = new DBManager($user->ID);
+$student = new Student($user->ID);
 
 $attendingCourses = [];
 $availableCourses = [];
@@ -50,7 +50,7 @@ while ($courses->have_posts()) {
   //get post object of the current pod
   $post = $courses->next_post();
 
-  if ($valueQuery->isAttending($post->ID)) {
+  if ($student->isAttending($post->ID)) {
     $attendingCourses[] = $post;
   } else {
     if (Courses::course_has_tag($post->ID, 'hidden')) {

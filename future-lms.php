@@ -34,10 +34,9 @@ namespace FutureLMS;
 
 use Exception;
 use WP_User;
-use WP_Query;
 use WP_User_Query;
 use NumberFormatter;
-use FutureLMS\classes\DBManager;
+use FutureLMS\classes\Student;
 use FutureLMS\classes\VersionManager;
 use FutureLMS\classes\Courses;
 use FutureLMS\classes\PodsWrapper;
@@ -60,6 +59,12 @@ class FutureLMS {
         add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
         add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
         add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
+    }
+
+    public static function TABLE_PREFIX()
+    {
+        global $wpdb;
+        return $wpdb->prefix.'flms_';
     }
 
     public static function version() {
@@ -113,7 +118,6 @@ class FutureLMS {
         add_action("wp_ajax_send_email", [$this, "sendEmail"]);
         add_action("wp_ajax_value_get_settings", [$this, "getSettings"]);
         add_action("wp_ajax_value_set_settings", [$this, "setSettings"]);
-        add_action("restrict_manage_posts", [$this, "showTagsFilter"]);
         add_action('show_user_profile', [$this, 'extraUserFields']);
         add_action('edit_user_profile', [$this, 'extraUserFields']);
         add_action('manage_users_columns', [$this, 'addExtraUserFieldsToList']);
@@ -351,49 +355,6 @@ class FutureLMS {
         throw new Exception("Mising user data for this transaction");
     }
 
-    public function showTagsFilter() {
-        if (!is_admin()) {
-            return;
-        }
-
-        global $wpdb, $table_prefix;
-
-        $post_type = (isset($_GET['post_type'])) ? $_GET['post_type'] : 'post';
-
-        //only add filter to post type you want
-        if (!in_array($post_type, ['lesson', 'module'])) {
-            return;
-        }
-
-        //query database to get a list of years for the specific post type:
-        $values = array();
-        $tags = $wpdb->get_results("SELECT distinct(t.name) AS tag, t.slug
-            FROM " . $table_prefix . "terms t
-            INNER JOIN " . $table_prefix . "term_taxonomy tt on tt.term_id=t.term_id
-            WHERE tt.taxonomy = 'post_tag'
-            order by t.name");
-        foreach ($tags as &$tagRow) {
-            $values[$tagRow->tag] = $tagRow->slug;
-        }
-
-        //give a unique name in the select field
-        ?><select name="tag">
-        <option value="">All courses</option>
-        <?php
-        $current_v = isset($_GET['tag']) ? $_GET['tag'] : '';
-        foreach ($values as $label => $value) {
-            printf(
-                '<option value="%s"%s>%s</option>',
-                $value,
-                $value == $current_v ? ' selected="selected"' : '',
-                $label
-            );
-        }
-        ?>
-        </select>
-        <?php
-    }
-
     public function enqueueSchoolScripts() {
         wp_enqueue_script('futurelms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
         wp_enqueue_style('futurelms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
@@ -491,21 +452,18 @@ class FutureLMS {
             update_user_meta($studentId, 'user_phone', $phone);
         }
 
-        $query = new DBManager($studentId);
+        $student = new Student($studentId);
 
-        $class = $query->getClass($courseId);
+        $class = $student->getClass($courseId);
 
         if (!$class) { //currently not listed at all
-            $query->subscribeToClass($classId, true);
+            $student->subscribeToClass($classId, true);
         } else if ($class["id"] != $classId) { //already registered to another class
-            $query->subscribeToClass($class["id"], false);
-            $query->subscribeToClass($classId, true);
+            $student->subscribeToClass($class["id"], false);
+            $student->subscribeToClass($classId, true);
         }
-
-        //add payment record
-        $query = new DBManager(intval($studentId));
-
-        $paymentId = $query->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
+        //save payment
+        $paymentId = $student->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
 
         //do actions after payment future-lms/payment_notification
         do_action('future-lms/payment_notification', [
@@ -526,9 +484,9 @@ class FutureLMS {
     public function removePayment() {
         $paymentId = $_REQUEST["payment_id"];
 
-        $payment = DBManager::getPayment($paymentId);
+        $payment = Student::getPayment($paymentId);
 
-        DBManager::deletePayment($paymentId);
+        Student::deletePayment($paymentId);
 
         do_action('future-lms/payment_removed', [
             "course_id" => $payment["course_id"],
@@ -549,15 +507,15 @@ class FutureLMS {
         $studentId = $_REQUEST["student_id"];
         $classId = $_REQUEST["class_id"];
 
-        $query = new DBManager($studentId);
+        $student = new Student($studentId);
 
-        $class = $query->getClass($courseId);
+        $class = $student->getClass($courseId);
 
         if (!$class) { //currently not listed at all
             echo json_encode([]);
             die();
         }
-        $query->subscribeToClass($classId, false);
+        $student->subscribeToClass($classId, false);
 
         echo json_encode([]);
         die();
@@ -567,7 +525,7 @@ class FutureLMS {
         $courseId = $_REQUEST["course_id"];
         $studentId = $_REQUEST["student_id"];
 
-        $query = new DBManager($studentId);
+        $student = new Student($studentId);
 
         $classes = PodsWrapper::factory("class", ["where" => "course.id = " . $courseId], -1);
 
@@ -576,7 +534,7 @@ class FutureLMS {
                 'id' => $row->ID,
                 'title' => $row->post_title,
                 'start_date' => strtotime($row->field("start_date")),
-                'attending' => $query->isAttendingClass($courseId, $row->ID)
+                'attending' => $student->isAttendingClass($courseId, $row->ID)
             ];
         }
 
@@ -597,7 +555,7 @@ class FutureLMS {
             $month = intval($_REQUEST["month"]);
             $year = intval($_REQUEST["year"]);
 
-            $result = DBManager::getClassStudents($courseId, $classId, $search, $month, $year);
+            $result = Student::getClassStudents($courseId, $classId, $search, $month, $year);
 
             echo json_encode($result);
             die();
@@ -616,8 +574,8 @@ class FutureLMS {
         $percent = intval($_POST["percent"]);
         $seconds = intval($_POST["seconds"]);
 
-        $valueQuery = new DBManager(get_current_user_id());
-        $data = $valueQuery->getStudentProgress();
+        $student = new Student(get_current_user_id());
+        $data = $student->getStudentProgress();
 
         if (!isset($data["courses"])) {
             $data["courses"] = [];
@@ -662,7 +620,7 @@ class FutureLMS {
             $video["seconds"] = $seconds;
             $video["percent"] = $percent;
 
-            $valueQuery->setStudentProgress($data);
+            $student->setStudentProgress($data);
         }
 
     }
@@ -676,8 +634,8 @@ class FutureLMS {
                 $studentId = $_POST["student_id"];
             }
 
-            $valueQuery = new DBManager($studentId);
-            $courses = $valueQuery->getStudentCourses();
+            $student = new Student($studentId);
+            $courses = $student->getStudentCourses();
             $courses = array_reduce($courses, function ($carry, $item) {
                 //make sure just new students are participating
                 if (strtotime($item["registration_date"]) <= strtotime("2023-06-01")) {
@@ -688,7 +646,7 @@ class FutureLMS {
                 return $carry;
             }, []);
 
-            $result["progress"] = $valueQuery->getStudentProgress();
+            $result["progress"] = $student->getStudentProgress();
             $result["course_tree"] = Courses::get_courses_tree($courses);
 
             echo json_encode($result);
@@ -704,9 +662,9 @@ class FutureLMS {
             $lessonId = intval($_POST["lesson_id"]);
             $notes = $_POST["notes"];
 
-            $valueQuery = new DBManager(get_current_user_id());
+            $student = new Student(get_current_user_id());
 
-            $valueQuery->setStudentNotes($lessonId, $notes);
+            $student->setStudentNotes($lessonId, $notes);
 
             echo json_encode([]);
             die();
@@ -725,18 +683,18 @@ class FutureLMS {
 
             //check if course exists
             $course = PodsWrapper::factory("course", $courseId);
-            $valueQuery = new DBManager(get_current_user_id());
+            $student = new Student(get_current_user_id());
 
             //course id not found or student not listed
             if (!$course->exists()
-                || !$valueQuery->isAttending($courseId)
-                || !$valueQuery->isLessonOpen($courseId, $lessonId)
+                || !$student->isAttending($courseId)
+                || !$student->isLessonOpen($courseId, $lessonId)
             ) {
                 throw new Exception("Failed to load class");
                 return;
             }
 
-            $class = $valueQuery->getClass($courseId);
+            $class = $student->getClass($courseId);
 
             $pod = PodsWrapper::factory('lesson', $lessonId);
 
@@ -744,7 +702,7 @@ class FutureLMS {
             $result["homework"] = $pod->display('homework');
             $result["additionalFiles"] = $pod->display('additional_files');
             $result["lessonContent"] = $pod->display('post_content');
-            $result["studentNotes"] = $valueQuery->getStudentNotes($lessonId);
+            $result["studentNotes"] = $student->getStudentNotes($lessonId);
 
             $videos = $pod->raw('video_list');
             $videos = empty($videos) ? [] : json_decode($videos, true);
@@ -837,13 +795,13 @@ class FutureLMS {
         $content = $_REQUEST["content"];
         $test = $_REQUEST["test"] == "1";
 
-        $users = [];
+        $students = [];
         if (!$test) {
-            $users = DBManager::getClassStudents($courseId, $classId, null);
+            $students = Student::getClassStudents($courseId, $classId, null);
         } else {
             $admins = get_users('role=administrator');
             foreach ($admins as $user) {
-                $users[] = ["user_email" => $user->user_email];
+                $students[] = ["user_email" => $user->user_email];
             }
         }
 
@@ -852,7 +810,7 @@ class FutureLMS {
         $headers[] = 'Content-Type: text/html; charset=UTF-8';
         $content = stripslashes($content);
 
-        $addressees = array_reduce($users, function ($result, $user) {
+        $addressees = array_reduce($students, function ($result, $user) {
             $result[] = "Bcc: " . $user["user_email"];
             return $result;
         }, []);
@@ -862,7 +820,7 @@ class FutureLMS {
         foreach ($addresseeChunks as $addresseeChunk) {
             $heads = array_merge($headers, $addresseeChunk);
 
-            if (wp_get_environment_type() != 'production') {
+            if (wp_get_environment_type() !== 'production') {
                 continue;
             }
 
@@ -915,7 +873,7 @@ class FutureLMS {
     public function getAllPayments() {
         $month = intval($_REQUEST["month"]);
         $year = intval($_REQUEST["year"]);
-        $results = DBManager::getPayments($year, $month);
+        $results = Student::getPayments($year, $month);
         echo json_encode($results);
         die();
     }
@@ -940,7 +898,7 @@ class FutureLMS {
             $search = isset($_REQUEST['search']) ? $_REQUEST['search'] : false;
             $courseId = $_REQUEST['course_id'];
 
-            $result = DBManager::getCourseClasses($courseId, $search);
+            $result = Student::getCourseClasses($courseId, $search);
 
             $result = array_map(function ($item) {
                 return [
@@ -969,7 +927,7 @@ class FutureLMS {
 
         $existing = [];
         if (isset($_REQUEST["class_id"])) {
-            $existing = DBManager::getClassStudents(null, $_REQUEST["class_id"]);
+            $existing = Student::getClassStudents(null, $_REQUEST["class_id"]);
         }
 
         $query = new WP_User_Query([

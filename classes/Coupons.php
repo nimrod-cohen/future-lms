@@ -1,6 +1,8 @@
 <?php
 namespace FutureLMS\classes;
 
+use FutureLMS\FutureLMS;
+
 class Coupons {
   private static $instance;
 
@@ -19,7 +21,7 @@ class Coupons {
 
   public function deleteCoupon() {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $sql = 'update '.$prefix.'coupons set deleted = 1 where id = %d';
     $sql = $wpdb->prepare($sql, $_POST["coupon_id"]);
@@ -30,7 +32,7 @@ class Coupons {
 
   public function saveCoupon() {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $couponId = isset($_POST["coupon_id"]) ? $_POST["coupon_id"] : false;
 
@@ -79,7 +81,7 @@ class Coupons {
 
   public function byCode($promo) {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $sql = "SELECT c.id, c.code, c.email, c.global, c.course_id, DATE_FORMAT(c.expires, '%Y-%m-%d') as expires, c.price, p.post_title as course, c.comment
     FROM ".$prefix."coupons c
@@ -98,7 +100,7 @@ class Coupons {
 
   public function getCoupons() {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $sql = "SELECT c.id, c.code, c.email, c.global, c.course_id, DATE_FORMAT(c.expires, '%Y-%m-%d') as expires, c.price, p.post_title as course, c.comment
     FROM ".$prefix."coupons c

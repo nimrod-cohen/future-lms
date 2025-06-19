@@ -8,7 +8,7 @@ class VersionManager {
   {
     global $wpdb;
 
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $curr = get_option(self::SCHOOL_VERSION, 0);
 

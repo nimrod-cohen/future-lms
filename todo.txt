@@ -8,3 +8,5 @@
 10. fix progress bar in lobby
 11. rewrite progress calculation and send events every time progress promotes by 1% per course.
 12. color scheme support to LMS front (including inner shop and couse area)
+13. sendEmail function - add teacher email to course, and send as sender.
+14. move static functions from Student class to School/Class/Course etc'.

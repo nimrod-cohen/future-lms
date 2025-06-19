@@ -4,6 +4,7 @@ namespace FutureLMS\classes;
 
 use Exception;
 use NumberFormatter;
+use FutureLMS\FutureLMS;
 
 class Courses {
   private static $instance;
@@ -70,7 +71,6 @@ class Courses {
 
   public static function get_courses_tree($courses = null, $enabledOnly = true) {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
 
     $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
     pmprice.meta_value AS full_price, pmurl.meta_value AS course_page_url, pmcurl.meta_value AS charge_url
