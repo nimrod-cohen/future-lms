@@ -3,7 +3,7 @@
 Template Name: School Template
  */
 
-use FutureLMS\classes\Courses;
+use FutureLMS\classes\Course;
 use FutureLMS\classes\Student;
 
 $post = get_post();
@@ -53,7 +53,7 @@ while ($courses->have_posts()) {
   if ($student->isAttending($post->ID)) {
     $attendingCourses[] = $post;
   } else {
-    if (Courses::course_has_tag($post->ID, 'hidden')) {
+    if (Course::course_has_tag($post->ID, 'hidden')) {
       continue;
     }
     $availableCourses[] = $post;

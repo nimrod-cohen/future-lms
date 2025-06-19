@@ -1,7 +1,7 @@
   <?php
 
 use FutureLMS\FutureLMS;
-use FutureLMS\classes\Courses;
+use FutureLMS\classes\Course;
 ?>
 <h2 class="courses-header"><?php _e("Our courses","future-lms"); ?></h2>
 <div class="available-courses course-list">
@@ -9,7 +9,7 @@ use FutureLMS\classes\Courses;
 
 $sortedCourses = ["regular" => [], "featured" => []];
 foreach ($availableCourses as $course) {
-  $featured = Courses::course_has_tag($course->ID, 'featured');
+  $featured = Course::course_has_tag($course->ID, 'featured');
   $sortedCourses[$featured ? 'featured' : 'regular'][] = $course;
 }
 $sortedCourses = array_merge($sortedCourses['featured'], $sortedCourses['regular']);

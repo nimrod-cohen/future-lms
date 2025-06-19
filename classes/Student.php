@@ -13,7 +13,7 @@ class Student
         $this->_studentId = $studentId;
     }
 
-    public function getStudentCourses()
+    public function courses()
     {
         if (!empty($this->_courses)) {
             return $this->_courses;
@@ -39,7 +39,7 @@ class Student
 
     public function getClass($courseId)
     {
-        $attendingCourses = $this->getStudentCourses();
+        $attendingCourses = $this->courses();
 
         foreach ($attendingCourses as $attendedCourse) {
             if ($attendedCourse["course_id"] == $courseId) {
@@ -50,12 +50,12 @@ class Student
         return null;
     }
 
-    public function setStudentProgress($data)
+    public function setProgress($data)
     {
         update_user_meta($this->_studentId, 'course_progress', json_encode($data));
     }
 
-    public function getStudentProgress()
+    public function getProgress()
     {
         $data = get_user_meta($this->_studentId, 'course_progress', true);
 
@@ -159,7 +159,7 @@ class Student
         if ($search) {
             $where .= " AND t.post_title like '%" . $search . "%'";
         }
-        $classes = PodsWrapper::factory('Class', ['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
+        $classes = BaseObject::factory('Class', ['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
         $result = [];
 
         foreach ($classes->results() as $row) {
@@ -216,12 +216,12 @@ class Student
 
     public function getCourseModules($courseId)
     {
-        return PodsWrapper::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "order.meta_value ASC", "limit" => -1]);
+        return BaseObject::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "order.meta_value ASC", "limit" => -1]);
     }
 
     public function getModuleLessons($moduleId)
     {
-        return PodsWrapper::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "lesson_number.meta_value ASC", "limit" => -1]);
+        return BaseObject::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "lesson_number.meta_value ASC", "limit" => -1]);
     }
 
     public static function getClassStudents($courseId, $classId, $search = null, $month = null, $year = null)

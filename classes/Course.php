@@ -4,15 +4,14 @@ namespace FutureLMS\classes;
 
 use Exception;
 use NumberFormatter;
-use FutureLMS\FutureLMS;
 
-class Courses {
+class Course {
   private static $instance;
   private $formatter = null;
 
   public static function get_instance() {
     if (!isset(self::$instance)) {
-      self::$instance = new Courses();
+      self::$instance = new Course();
     }
     return self::$instance;
   }
@@ -45,7 +44,7 @@ class Courses {
         return "";
     }
 
-    $course = PodsWrapper::factory("course", $course_id);
+    $course = BaseObject::factory("course", $course_id);
 
     $self = self::get_instance();
     $full_price = floatval($course->field("full_price"));
@@ -221,7 +220,7 @@ class Courses {
     update_post_meta($lessonId, 'video_list', '');
     update_post_meta($lessonId, 'additional_files', '');
     update_post_meta($lessonId, 'homework', '');
-    $lesson = PodsWrapper::factory('lesson', $lessonId);
+    $lesson = BaseObject::factory('lesson', $lessonId);
     $lesson->field('module', $moduleId);
     $lesson->save();
 
@@ -467,7 +466,7 @@ class Courses {
   }
 
   public static function course_has_tag($courseId, $tag): bool {
-    $tags = PodsWrapper::get_field('course', $courseId, 'tags', true) ?? '';
+    $tags = BaseObject::get_field('course', $courseId, 'tags', true) ?? '';
     $tags = explode(",", $tags);
     $tags = array_map('trim', $tags);
     return in_array($tag, $tags);
@@ -542,6 +541,6 @@ class Courses {
   }
 }
 
-$coursesManagement = Courses::get_instance();
+$coursesManagement = Course::get_instance();
 
 ?>

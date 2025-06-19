@@ -14,9 +14,9 @@ foreach ($attendingCourses as $post) {
   $courseUrl = $courses->meta("course_page_url");
   $author = get_the_author_meta('display_name', $post->post_author);
 
-  $class = $valueQuery->getClass($post->ID);
+  $class = $student->getClass($post->ID);
 
-  $lessons = $valueQuery->getClassLessonsByCourse($post->ID);
+  $lessons = $student->getClassLessonsByCourse($post->ID);
   $nextLessson = null;
   if (is_array($lessons) && count($lessons) > 0) {
     $nextLessson = $lessons[0]["id"];

@@ -7,7 +7,7 @@ use WP_Query;
 /**
  * Wrapper - A lightweight Pods-like implementation
  */
-class PodsWrapper
+class BaseObject
 {
   private $pod_name;
   private $pod_id;
@@ -16,8 +16,8 @@ class PodsWrapper
   private $is_collection = false;
   private $collection = [];
   private $query_args = [];
-  private $pod_config = [];
-  private $current_item = 0;
+  private $current_item = 0; // For collection iteration
+  private $current_item_index = 0;
 
   /**
    * Constructor
@@ -27,9 +27,6 @@ class PodsWrapper
   public function __construct($pod_name, $id_or_params = null)
   {
       $this->pod_name = $pod_name;
-
-      // Load pod configuration
-      $this->load_pod_config();
 
       if (is_numeric($id_or_params)) {
           // Single item by ID
@@ -53,44 +50,13 @@ class PodsWrapper
   }
 
   /**
-   * Load pod configuration
-   */
-  private function load_pod_config()
-  {
-      // In a real implementation, you might load this from options or a custom table
-      $this->pod_config = [
-          'type' => 'post_type', // post_type, taxonomy, settings, etc.
-          'fields' => [] // Would contain field definitions
-      ];
-  }
-
-  /**
    * Load a single item
    */
   private function load($id)
   {
       $this->pod_id = $id;
       $this->is_collection = false;
-
-      if ($this->is_post_type()) {
-          $this->load_post($id);
-      }
-  }
-
-  /**
-   * Check if this pod is a post type
-   */
-  private function is_post_type()
-  {
-      return $this->pod_config['type'] === 'post_type' || post_type_exists($this->pod_name);
-  }
-
-  /**
-   * Check if this pod is a taxonomy
-   */
-  private function is_taxonomy()
-  {
-      return $this->pod_config['type'] === 'taxonomy' || taxonomy_exists($this->pod_name);
+      $this->load_post($id);
   }
 
   /**
@@ -100,7 +66,7 @@ class PodsWrapper
   {
       $post = get_post($id);
 
-      if ($post && ($post->post_type === $this->pod_name || $this->pod_config['type'] === 'post_type')) {
+      if ($post && $post->post_type === $this->pod_name) {
           $this->data = $post;
           $this->fields = get_post_meta($id);
 
@@ -120,7 +86,7 @@ class PodsWrapper
    */
   private function load_from_object($post)
   {
-      if ($post && ($post->post_type === $this->pod_name || $this->pod_config['type'] === 'post_type')) {
+      if ($post && $post->post_type === $this->pod_name) {
           $this->data = $post;
           $this->fields = get_post_meta($post->ID);
 
@@ -149,9 +115,7 @@ class PodsWrapper
     $this->is_collection = true;
     $this->query_args = $params;
 
-    if ($this->is_post_type()) {
-      $this->query_posts($params);
-    }
+    $this->query_posts($params);
     return $this;
   }
 
@@ -312,12 +276,7 @@ class PodsWrapper
           return false;
       }
 
-      if ($this->is_post_type()) {
-          return $this->save_post();
-      }
-
-      // Implement other save methods for taxonomies, etc.
-      return false;
+      return $this->save_post();
   }
 
   /**
@@ -374,28 +333,26 @@ class PodsWrapper
       return !empty($this->collection) ? $this->collection[0] : null;
   }
 
-  private $current_item_index = 0; // Renamed to avoid confusion with the actual item
-  private $current_item_data = null;
 
   /**
    * Fetch the next item in the collection
-   * @return PodsWrapper|false
+   * @return BaseObject|false
    */
   public function fetch() {
     if (!$this->is_collection || empty($this->collection)) {
-      $this->current_item_data = null; // Reset
+      $this->current_item = null; // Reset
       return false;
     }
 
     if ($this->current_item_index < count($this->collection)) {
-      $this->current_item_data = $this->collection[$this->current_item_index];
+      $this->current_item = $this->collection[$this->current_item_index];
       $this->current_item_index++;
-      return $this->current_item_data; // Return true to indicate a successful fetch
+      return $this->current_item; // Return true to indicate a successful fetch
     }
 
     // Reset for next iteration if needed
     $this->current_item_index = 0;
-    $this->current_item_data = null;
+    $this->current_item = null;
     return false;
   }
   /**
@@ -406,63 +363,25 @@ class PodsWrapper
     return $this;
   }
 
-  /**
-   * Relationship support
-   */
-  public function related($field_name, $params = [])
-  {
-      $related_ids = $this->field($field_name);
-      if (empty($related_ids)) return null;
-
-      if (is_array($related_ids)) {
-          // Handle multiple relationships
-          $collection = [];
-          foreach ($related_ids as $id) {
-              $related_pod = $this->get_related_pod_type($field_name);
-              if ($related_pod) {
-                  $collection[] = new self($related_pod, $id);
-              }
-          }
-          return $collection;
-      } else {
-          // Single relationship
-          $related_pod = $this->get_related_pod_type($field_name);
-          return $related_pod ? new self($related_pod, $related_ids) : null;
-      }
-  }
-
-  private function get_related_pod_type($field_name)
-  {
-      // In a real implementation, you'd check your field configuration
-      // This is a simplified version
-      $relationship_fields = [
-          'author' => 'author',
-          'category' => 'category',
-          'course' => 'course',
-      ];
-
-      return $relationship_fields[$field_name] ?? null;
-  }
-
   public function raw($field_name)
   {
 
     // handle fetch iterations
-    if ($this->current_item_data !== null) {
-      if (is_object($this->current_item_data)) {
+    if ($this->current_item !== null) {
+      if (is_object($this->current_item)) {
 
-        // check if current_item_data has a data array and look for property
-        if (isset($this->current_item_data->data)) {
-          if (is_array($this->current_item_data->data) && array_key_exists($field_name, $this->current_item_data->data)) {
-            return $this->current_item_data->data[$field_name];
-          } elseif (is_object($this->current_item_data->data) && property_exists($this->current_item_data->data, $field_name)) {
-            return $this->current_item_data->data->$field_name;
+        // check if current_item has a data array and look for property
+        if (isset($this->current_item->data)) {
+          if (is_array($this->current_item->data) && array_key_exists($field_name, $this->current_item->data)) {
+            return $this->current_item->data[$field_name];
+          } elseif (is_object($this->current_item->data) && property_exists($this->current_item->data, $field_name)) {
+            return $this->current_item->data->$field_name;
           }
         }
 
-        // check if current_item_data has this property directly
-        if (property_exists($this->current_item_data, $field_name)) {
-          return $this->current_item_data->$field_name;
+        // check if current_item has this property directly
+        if (property_exists($this->current_item, $field_name)) {
+          return $this->current_item->$field_name;
         }
       }
     }
@@ -478,78 +397,9 @@ class PodsWrapper
         return $this->data->post_title ?? null;
     }
 
-    if (!$this->is_relationship_field($field_name)) {
-      return $this->field($field_name);
-    }
-
-    // handle relations
-    $related_pod_type = $this->get_related_pod_type($field_name);
-    if (!$related_pod_type) {
-      return $this->field($field_name);
-    }
-
-    $raw_value = get_post_meta($this->pod_id, '_pods_' . $field_name, true);
-    $raw_value = is_serialized($raw_value) ? maybe_unserialize($raw_value) : $raw_value;
-
-    // Handle a single relationship
-    if (is_numeric($raw_value)) {
-      return $this->get_relationship_data($related_pod_type, $raw_value);
-    }
-
-    // Handle an array of IDs
-    if (is_array($raw_value)) {
-      $results = [];
-      foreach ($raw_value as $id) {
-        if (is_numeric($id)) {
-          $results[] = $this->get_relationship_data($related_pod_type, $id);
-        }
-      }
-      return !empty($results) ? (count($results) === 1 ? $results[0] : $results) : null;
-    }
-
-    // Fallback to simple field value
-    $field_value = $this->field($field_name);
-    return is_numeric($field_value) ? $this->get_relationship_data($related_pod_type, $field_value) : null;
+    return $this->field($field_name);
   }
 
-  /**
-   * Get complete relationship data as array
-   */
-  private function get_relationship_data($pod_type, $id) {
-      $item = new self($pod_type, $id);
-      if (!$item->exists()) return null;
-
-      $data = [];
-
-      // Add core post fields
-      foreach (get_object_vars($item->data) as $key => $value) {
-          $data[$key] = $value;
-      }
-
-      // Add meta fields
-      foreach ($item->fields as $key => $value) {
-          $data[$key] = $value;
-      }
-
-      // Add special fields
-      $data['ID'] = $item->pod_id;
-      $data['post_type'] = $pod_type;
-
-      return $data;
-  }
-
-  /**
-   * Check if a field is a relationship
-   */
-  private function is_relationship_field($field_name) {
-      // Check for Pods relationship meta
-      if (metadata_exists('post', $this->pod_id, '_pods_' . $field_name)) {
-          return true;
-      }
-      // Check if field value looks like a relationship ID
-      $value = $this->field($field_name);
-      return is_numeric($value) && $value > 0;
-  }
 
   public function exists() {
       return !empty($this->data);

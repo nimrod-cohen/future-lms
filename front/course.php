@@ -1,6 +1,6 @@
 <?php
 
-use FutureLMS\classes\PodsWrapper;
+use FutureLMS\classes\BaseObject;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST'
   || !isset($_POST["course_id"])
@@ -12,8 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST'
 
 $courseId = $_POST["course_id"];
 $lessonId = $_POST["lesson_id"];
-$course = PodsWrapper::factory("course", $courseId);
-$lesson = PodsWrapper::factory("lesson", $lessonId);
+$course = BaseObject::factory("course", $courseId);
+$lesson = BaseObject::factory("lesson", $lessonId);
 
 $images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
 

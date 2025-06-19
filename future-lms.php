@@ -38,8 +38,8 @@ use WP_User_Query;
 use NumberFormatter;
 use FutureLMS\classes\Student;
 use FutureLMS\classes\VersionManager;
-use FutureLMS\classes\Courses;
-use FutureLMS\classes\PodsWrapper;
+use FutureLMS\classes\Course;
+use FutureLMS\classes\BaseObject;
 
 class FutureLMS {
     public $coupons = null;
@@ -47,11 +47,11 @@ class FutureLMS {
     function __construct() {
         VersionManager::installVersion();
 
-       // $this->coupons = Coupons::get_instance();
+       // $this->coupons = Coupon::get_instance();
 
         add_action('init', [$this, 'initHooks']);
 
-        add_shortcode('flms_course_price', ['FutureLMS\classes\Courses', 'get_course_price_box']);
+        add_shortcode('flms_course_price', ['FutureLMS\classes\Course', 'get_course_price_box']);
         add_shortcode('flms_school_lobby', [$this, 'showSchoolLobby']);
         add_filter('body_class', [$this,'add_school_class_to_body']);
 
@@ -152,7 +152,7 @@ class FutureLMS {
             return;
         }
 
-        $lesson = PodsWrapper::factory("lesson", $post_id);
+        $lesson = BaseObject::factory("lesson", $post_id);
         $videoList = $lesson->field("video_list");
         $videoList = empty($videoList) ? "[]" : $videoList;
         $videoList = json_decode($videoList, true);
@@ -181,7 +181,7 @@ class FutureLMS {
             return;
         }
 
-        $course = PodsWrapper::factory("course", $post_id);
+        $course = BaseObject::factory("course", $post_id);
         $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
         $price = $course->field($column);
         echo $fmt->formatCurrency($price, "ILS");
@@ -261,11 +261,11 @@ class FutureLMS {
 
     public function addExtraModuleFieldsToListData($column_name, $module_id) {
         if ('course' == $column_name) {
-            $pod = PodsWrapper::factory("module", $module_id);
+            $pod = BaseObject::factory("module", $module_id);
             $course = $pod->raw("course");
             echo "<a href='" . site_url("/wp-admin/post.php?post=" . $course["ID"] . "&action=edit") . "'>" . $course["post_title"] . "</a>";
         } else if ("order" == $column_name) {
-            $pod = PodsWrapper::factory("module", $module_id);
+            $pod = BaseObject::factory("module", $module_id);
             echo $pod->raw("order");
         }
     }
@@ -527,7 +527,7 @@ class FutureLMS {
 
         $student = new Student($studentId);
 
-        $classes = PodsWrapper::factory("class", ["where" => "course.id = " . $courseId], -1);
+        $classes = BaseObject::factory("class", ["where" => "course.id = " . $courseId], -1);
 
         foreach($classes->results() as $row) {
             $result[] = [
@@ -575,7 +575,7 @@ class FutureLMS {
         $seconds = intval($_POST["seconds"]);
 
         $student = new Student(get_current_user_id());
-        $data = $student->getStudentProgress();
+        $data = $student->getProgress();
 
         if (!isset($data["courses"])) {
             $data["courses"] = [];
@@ -620,7 +620,7 @@ class FutureLMS {
             $video["seconds"] = $seconds;
             $video["percent"] = $percent;
 
-            $student->setStudentProgress($data);
+            $student->setProgress($data);
         }
 
     }
@@ -635,7 +635,7 @@ class FutureLMS {
             }
 
             $student = new Student($studentId);
-            $courses = $student->getStudentCourses();
+            $courses = $student->courses();
             $courses = array_reduce($courses, function ($carry, $item) {
                 //make sure just new students are participating
                 if (strtotime($item["registration_date"]) <= strtotime("2023-06-01")) {
@@ -646,8 +646,8 @@ class FutureLMS {
                 return $carry;
             }, []);
 
-            $result["progress"] = $student->getStudentProgress();
-            $result["course_tree"] = Courses::get_courses_tree($courses);
+            $result["progress"] = $student->getProgress();
+            $result["course_tree"] = Course::get_courses_tree($courses);
 
             echo json_encode($result);
             die();
@@ -682,7 +682,7 @@ class FutureLMS {
             $lessonId = intval($_POST["lesson_id"]);
 
             //check if course exists
-            $course = PodsWrapper::factory("course", $courseId);
+            $course = BaseObject::factory("course", $courseId);
             $student = new Student(get_current_user_id());
 
             //course id not found or student not listed
@@ -694,17 +694,15 @@ class FutureLMS {
                 return;
             }
 
-            $class = $student->getClass($courseId);
+            $lesson = BaseObject::factory('lesson', $lessonId);
 
-            $pod = PodsWrapper::factory('lesson', $lessonId);
-
-            $result["presentation"] = $pod->display('presentation');
-            $result["homework"] = $pod->display('homework');
-            $result["additionalFiles"] = $pod->display('additional_files');
-            $result["lessonContent"] = $pod->display('post_content');
+            $result["presentation"] = $lesson->display('presentation');
+            $result["homework"] = $lesson->display('homework');
+            $result["additionalFiles"] = $lesson->display('additional_files');
+            $result["lessonContent"] = $lesson->display('post_content');
             $result["studentNotes"] = $student->getStudentNotes($lessonId);
 
-            $videos = $pod->raw('video_list');
+            $videos = $lesson->raw('video_list');
             $videos = empty($videos) ? [] : json_decode($videos, true);
 
             if (!empty($videos)) {
@@ -735,7 +733,7 @@ class FutureLMS {
         try {
             $classId = $_REQUEST["class_id"];
 
-            $class = PodsWrapper::factory("class", $classId);
+            $class = BaseObject::factory("class", $classId);
 
             $result = [];
             if (!$class) {
@@ -751,12 +749,12 @@ class FutureLMS {
 
             $course = $class->raw("course");
 
-            $modules = PodsWrapper::factory("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
+            $modules = BaseObject::factory("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
             while ($module = $modules->fetch()) {
                 $moduleId = $module->raw('ID');
 
-                $lessons = PodsWrapper::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
+                $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
                 while ($lesson = $lessons->fetch()) {
                     $open = false;
@@ -835,7 +833,7 @@ class FutureLMS {
         $classId = $_REQUEST["class_id"];
         $lessonId = $_REQUEST["lesson_id"];
 
-        $class = PodsWrapper::factory("class", $classId);
+        $class = BaseObject::factory("class", $classId);
 
         if (!$class) {
             die();
@@ -879,7 +877,7 @@ class FutureLMS {
     }
 
     public function getCourseChargeUrl() {
-        $course = PodsWrapper::factory('Course', intval($_REQUEST["course_id"]));
+        $course = BaseObject::factory('Course', intval($_REQUEST["course_id"]));
         $chargeUrl = $course->field('charge_url');
         $fullPrice = $course->field('full_price');
         $chargeUrl = add_query_arg(['sum' => $fullPrice], $chargeUrl); //will replace if exists.
@@ -889,7 +887,7 @@ class FutureLMS {
     }
 
     public function getAllCourses() {
-        echo json_encode(["courses" => Courses::get_courses_tree(null, false)]);
+        echo json_encode(["courses" => Course::get_courses_tree(null, false)]);
         die();
     }
 
@@ -963,7 +961,7 @@ class FutureLMS {
     }
 
     public static function get_course_image($course_id, $size = 'thumbnail') {
-      $course = PodsWrapper::factory('Course', $course_id);
+      $course = BaseObject::factory('Course', $course_id);
       $image = $course->field('_thumbnail_id');
       $genericImage = plugin_dir_url(__FILE__) . 'assets/images/generic-course-placeholder.png';
       $found = true;

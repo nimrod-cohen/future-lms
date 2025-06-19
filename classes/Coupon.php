@@ -3,23 +3,23 @@ namespace FutureLMS\classes;
 
 use FutureLMS\FutureLMS;
 
-class Coupons {
+class Coupon {
   private static $instance;
 
   public static function get_instance() {
     if (!isset(self::$instance)) {
-      self::$instance = new Coupons();
+      self::$instance = new Coupon();
     }
     return self::$instance;
   }
 
   protected function __construct() {
-    add_action("wp_ajax_save_coupon", [$this, "saveCoupon"]);
-    add_action("wp_ajax_delete_coupon", [$this, "deleteCoupon"]);
-    add_action("wp_ajax_get_coupons", [$this, "getCoupons"]);
+    add_action("wp_ajax_save_coupon", [$this, "save"]);
+    add_action("wp_ajax_delete_coupon", [$this, "delete"]);
+    add_action("wp_ajax_get_coupons", [$this, "all"]);
   }
 
-  public function deleteCoupon() {
+  public function delete() {
     global $wpdb;
     $prefix = FutureLMS::TABLE_PREFIX();
 
@@ -30,7 +30,7 @@ class Coupons {
     die();
   }
 
-  public function saveCoupon() {
+  public function save() {
     global $wpdb;
     $prefix = FutureLMS::TABLE_PREFIX();
 
@@ -98,7 +98,7 @@ class Coupons {
     return $row;
   }
 
-  public function getCoupons() {
+  public function all() {
     global $wpdb;
     $prefix = FutureLMS::TABLE_PREFIX();
 
@@ -113,6 +113,6 @@ class Coupons {
   }
 }
 
-$coupons = Coupons::get_instance();
+$coupons = Coupon::get_instance();
 
 ?>
