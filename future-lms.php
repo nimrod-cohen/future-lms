@@ -224,14 +224,14 @@ class FutureLMS {
     }
 
     public function addExtraModuleFieldsToListData($column_name, $module_id) {
-        if ('course' == $column_name) {
-            $pod = BaseObject::factory("module", $module_id);
-            $course = $pod->raw("course");
-            echo "<a href='" . site_url("/wp-admin/post.php?post=" . $course["ID"] . "&action=edit") . "'>" . $course["post_title"] . "</a>";
-        } else if ("order" == $column_name) {
-            $pod = BaseObject::factory("module", $module_id);
-            echo $pod->raw("order");
-        }
+      $pod = BaseObject::factory("module", $module_id);
+      switch ($column_name) {
+        case "course":
+          $courseId = $pod->raw("course");
+          $course = BaseObject::factory("course", $courseId);
+          echo "<a href='" . site_url("/wp-admin/post.php?post=" . $courseId . "&action=edit") . "'>" . $course->raw("name") . "</a>";
+          break;
+      }
     }
 
     public function addExtraModuleFieldsToList($columns) {

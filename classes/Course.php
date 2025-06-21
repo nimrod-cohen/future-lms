@@ -43,7 +43,7 @@ class Course extends BaseObject {
 
   public function modules()
   {
-      return BaseObject::factory("module", ["where" => "course.id = " . $this->raw("ID"), "orderby" => "order.meta_value ASC", "limit" => -1]);
+      return BaseObject::factory("module", ["where" => "course = " . $this->raw("ID"), "orderby" => "order.meta_value ASC", "limit" => -1]);
   }
 
   public static function get_classes($courseId, $search)
