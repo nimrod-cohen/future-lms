@@ -835,16 +835,6 @@ body.school {
       }
     }
   }
-
-  footer {
-    display: grid;
-    justify-items: center;
-    padding: 2px 0;
-    * {
-      font-size: 0.8rem;
-      line-height: 1rem;
-    }
-  }
 }
 
 @media screen and (max-width: 1350px) {
