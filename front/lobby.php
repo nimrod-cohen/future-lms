@@ -27,7 +27,7 @@ $urls = [
 		<div class="row page-content">
 			<div class="col-lg-12 main-content">
         <div class="school-header">
-          <span class="hello"><?php echo _e('Hey ','future-lms'). $user->data->display_name; ?>, 
+          <span class="hello"><?php echo sprintf(__('Hey %s','future-lms'), $user->data->display_name); ?>, 
             <a class="text-blue-600 underline" href="/"><?php _e('Back to site &larr;','future-lms');?></a>
           </span>
           <span class="tabs">

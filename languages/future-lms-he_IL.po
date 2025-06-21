@@ -1,0 +1,50 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: future-lms 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-22 12:00+0300\n"
+"PO-Revision-Date: 2025-06-22 01:40+0300\n"
+"Last-Translator: Your Name <your@email.com>\n"
+"Language-Team: Hebrew\n"
+"Language: he_IL\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Poedit 3.6\n"
+
+msgid "%s discount"
+msgstr "%s הנחה"
+
+msgid "My courses"
+msgstr "הקורסים שלי"
+
+msgid "Course store"
+msgstr "חנות הקורסים"
+
+msgid "Hey %s"
+msgstr "היי %s"
+
+msgid "Back to site &larr;"
+msgstr "חזרה לאתר &larr;"
+
+msgid "You are not registered to any course"
+msgstr "אינך רשום לאף קורס"
+
+msgid "Course details"
+msgstr "פרטי הקורס"
+
+msgid "Popular"
+msgstr "פופלרי"
+
+msgid "Enter course"
+msgstr "צפייה בקורס"
+
+msgid "Exit to lobby"
+msgstr "צא לאזור התלמידים"
+
+msgid "Toggle videos"
+msgstr "החבא/הצג וידאו"
+
+msgid "Choose lesson"
+msgstr "בחירת שיעור"

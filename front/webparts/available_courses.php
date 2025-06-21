@@ -2,7 +2,7 @@
 
 use FutureLMS\FutureLMS;
 
- _e("Available courses","future-lms"); ?></h2>
+ _e("Course store","future-lms"); ?></h2>
 <div class="available-courses course-list">
 <?php
 

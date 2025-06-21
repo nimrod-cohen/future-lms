@@ -61,6 +61,11 @@ class FutureLMS {
     add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
     add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
     add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
+    add_action('plugins_loaded', [$this,'future_lms_load_textdomain']);
+  }
+
+  function future_lms_load_textdomain() {
+    load_plugin_textdomain('future-lms', false, dirname(plugin_basename(__FILE__)) . '/languages/');
   }
 
   public static function TABLE_PREFIX()

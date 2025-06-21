@@ -1,4 +1,4 @@
-<h2 class="courses-header"><?php echo _e("Your courses","future-lms"); ?></h2>
+<h2 class="courses-header"><?php echo _e("My courses","future-lms"); ?></h2>
 <div class="my-courses course-list">
 <?php
 
