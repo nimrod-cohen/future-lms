@@ -30,7 +30,7 @@ foreach ($attending_courses as $course) {
               <span class='course-progress-bar'></span>
             </span>
             <span class='course-cta'>
-              <form method="POST" class="course-entry-form" action="<?php echo $courseWorkspacePage ?>">
+              <form method="POST" class="course-entry-form">
                 <input type="hidden" name="course_id" value="<?php echo $course->raw("ID"); ?>">
                 <input type="hidden" name="class_id" value="<?php echo $class["id"]; ?>">
                 <input type="hidden" name="lesson_id" value="<?php echo $nextLessson; ?>">
