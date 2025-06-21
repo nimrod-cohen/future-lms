@@ -6,17 +6,17 @@ use FutureLMS\FutureLMS;
 class Student
 {
     private $_studentId = null;
-    private $_courses = null;
+    private $_attendence_info = null;
 
     function __construct($studentId)
     {
         $this->_studentId = $studentId;
     }
 
-    public function courses()
+    public function attendence_info()
     {
-        if (!empty($this->_courses)) {
-            return $this->_courses;
+        if (!empty($this->_attendence_info)) {
+            return $this->_attendence_info;
         }
 
         global $wpdb;
@@ -34,20 +34,17 @@ class Student
           AND cts.student_id = %d", $this->_studentId);
 
         $courses = $wpdb->get_results($sql, ARRAY_A);
-        $this->_courses = array_map(function ($course) {
-            $course = new Course($course);
-            return $course;
-        }, $courses);
+        $this->_attendence_info = $courses;
 
-        return $this->_courses;
+        return $this->_attendence_info;
     }
 
     public function get_class($courseId)
     {
-        $attendingCourses = $this->courses();
+        $attending_courses = $this->attendence_info();
 
-        foreach ($attendingCourses as $attendedCourse) {
-            if ($attendedCourse->raw('ID') == $courseId) {
+        foreach ($attending_courses as $attendedCourse) {
+            if ($attendedCourse['course_id'] == $courseId) {
                 return $attendedCourse;
             }
 

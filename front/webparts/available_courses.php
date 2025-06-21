@@ -2,14 +2,14 @@
 <div class="available-courses course-list">
 <?php
 
-$sortedCourses = ["regular" => [], "featured" => []];
-foreach ($availableCourses as $course) {
+$sorted_courses = ["regular" => [], "featured" => []];
+foreach ($available_courses as $course) {
   $featured = $course->has_tag('featured');
-  $sortedCourses[$featured ? 'featured' : 'regular'][] = $course;
+  $sorted_courses[$featured ? 'featured' : 'regular'][] = $course;
 }
-$sortedCourses = array_merge($sortedCourses['featured'], $sortedCourses['regular']);
+$sorted_courses = array_merge($sorted_courses['featured'], $sorted_courses['regular']);
 
-foreach ($sortedCourses as $course) {
+foreach ($sorted_courses as $course) {
   //get post thumbnail
   $courseImage = $course->get_featured_image('full');
   $courseUrl = $course->raw("course_page_url");
@@ -37,7 +37,7 @@ foreach ($sortedCourses as $course) {
       <span class='course-author'><?php echo $author; ?></span>
       <?php include "short_description.php"; ?>
       <?php 
-      get_template_part('webparts/course_price', null, [
+      get_template_part('webparts/price_box', null, [
         'course' => $course
       ]);
       ?>

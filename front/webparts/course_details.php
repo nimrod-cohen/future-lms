@@ -22,7 +22,7 @@ $user = wp_get_current_user();
       <?php echo $courseDescription; ?>
       <?php echo apply_filters('future-lms/post_course_description', '', [$courseId]); ?>
     </span>
-    <?php get_template_part('webparts/course_price', null, [
+    <?php get_template_part('webparts/price_box', null, [
       'course' => $course
     ]); ?>
     <form id="buy-course-form" method="POST" action=#">

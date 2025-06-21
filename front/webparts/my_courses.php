@@ -2,11 +2,11 @@
 <div class="my-courses course-list">
 <?php
 
-if (count($attendingCourses) == 0) {
+if (count($attending_courses) == 0) {
   echo "<div class='no-courses'>".__("You are not registered to any course", "future-lms")."</div>";
 }
 
-foreach ($attendingCourses as $course) {
+foreach ($attending_courses as $course) {
   $image = $course->get_featured_image('full');
 
   $courseUrl = $course->raw("course_page_url");

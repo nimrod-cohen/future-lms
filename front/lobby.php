@@ -6,6 +6,7 @@ Template Name: School Template
 use FutureLMS\classes\BaseObject;
 use FutureLMS\classes\Course;
 use FutureLMS\classes\Student;
+use FutureLMS\FutureLMS;
 
 $post = get_post();
 
@@ -43,37 +44,38 @@ $courses = new Course();
 
 $student = new Student($user->ID);
 
-$attendingCourses = [];
-$availableCourses = [];
+$attending_courses = [];
+$available_courses = [];
 
 while ($obj = $courses->fetch()) {
   $course = new Course($obj);
   if ($student->is_attending_course($course->raw("ID"))) {
-    $attendingCourses[] = $course;
+    $attending_courses[] = $course;
   } else {
     //cast BaseObject to Course
     if ($course->has_tag('hidden')) {
       continue;
     }
-    $availableCourses[] = $course;
+    $available_courses[] = $course;
   }
 }
 ?>
 <?php
 switch ($schoolPage) {
 case "mycourses":
-  get_template_part("webparts/my_courses.php", null, [
-    'attendingCourses' => $attendingCourses
+  FutureLMS::get_template_part("my_courses.php", [
+    'attending_courses' => $attending_courses,
+    'student' => $student
   ]);
   break;
 case "courses":
-  get_template_part("webparts/available_courses.php", null, [
-    'attendingCourses' => $availableCourses
+  FutureLMS::get_template_part("available_courses.php", [
+    'available_courses' => $available_courses
   ]);
   break;
 case "course-details":
   $course = new Course($_POST["course_id"] ?? 0);
-  get_template_part("webparts/course_details.php", null, [
+  FutureLMS::get_template_part("course_details.php", [
     'course' => $course
   ]);
   break;
