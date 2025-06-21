@@ -516,7 +516,7 @@ class FutureLMS {
         }
     }
 
-    public function get_student_progress() {
+    public function set_student_progress() {
         $courseId = $_POST["course_id"];
         $moduleId = $_POST["module_id"];
         $lessonId = $_POST["lesson_id"];
@@ -572,7 +572,6 @@ class FutureLMS {
 
             $student->set_progress($data);
         }
-
     }
 
     public function get_student_progress() {
