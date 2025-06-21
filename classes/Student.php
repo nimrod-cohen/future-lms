@@ -37,7 +37,7 @@ class Student
         return $this->_courses;
     }
 
-    public function getClass($courseId)
+    public function get_class($courseId)
     {
         $attendingCourses = $this->courses();
 
@@ -50,12 +50,12 @@ class Student
         return null;
     }
 
-    public function setProgress($data)
+    public function set_progress($data)
     {
         update_user_meta($this->_studentId, 'course_progress', json_encode($data));
     }
 
-    public function getProgress()
+    public function get_progress()
     {
         $data = get_user_meta($this->_studentId, 'course_progress', true);
 
@@ -66,7 +66,7 @@ class Student
         return json_decode($data, true);
     }
 
-    public function subscribeToClass($classId, $subscribe)
+    public function subscribe_to_class($classId, $subscribe)
     {
         global $wpdb;
         if ($subscribe) {
@@ -79,7 +79,7 @@ class Student
         $wpdb->query($sql);
     }
 
-    public static function getPayments($year, $month)
+    public static function get_payments($year, $month)
     {
         global $wpdb;
 
@@ -96,7 +96,7 @@ class Student
         return $wpdb->get_results($sql, ARRAY_A);
     }
 
-    public function savePayment($courseId, $classId, $sum, $transRef, $processor, $comment)
+    public function save_payment($courseId, $classId, $sum, $transRef, $processor, $comment)
     {
         global $wpdb;
         $sql = "INSERT INTO " . FutureLMS::TABLE_PREFIX() . "payments (student_id, course_id, class_id, payment_date, transaction_ref, sum, processor, comment, deleted)
@@ -106,7 +106,7 @@ class Student
         return $wpdb->insert_id;
     }
 
-    public static function getPayment($paymentId)
+    public static function get_payment($paymentId)
     {
         global $wpdb;
         $sql = "SELECT p.*, u.user_email, um.meta_value as affiliate_id, aff.display_name as affiliate_name
@@ -119,7 +119,7 @@ class Student
         return $wpdb->get_row($sql, ARRAY_A);
     }
 
-    public static function deletePayment($paymentId)
+    public static function delete_payment($paymentId)
     {
         global $wpdb;
         $sql = "UPDATE " . FutureLMS::TABLE_PREFIX() . "payments SET deleted = 1 WHERE id = %d";
@@ -128,21 +128,21 @@ class Student
     }
 
     //check if the user attends this course
-    public function isAttendingClass($courseId, $classId)
+    public function is_attending_class($courseId, $classId)
     {
-        $class = $this->getClass($courseId);
+        $class = $this->get_class($courseId);
         return intval($class["id"]) == $classId;
     }
 
     //check if the user attends this course
-    public function isAttending($courseId)
+    public function is_attending_course($courseId)
     {
-        return $this->getClass($courseId) !== null;
+        return $this->get_class($courseId) !== null;
     }
 
-    public function getClassLessonsByCourse($courseId)
+    public function get_class_lessons_by_course_id($courseId)
     {
-        $course = $this->getClass($courseId);
+        $course = $this->get_class($courseId);
 
         if ($course == null) {
             return false;
@@ -153,29 +153,10 @@ class Student
         return $lessons;
     }
 
-    public static function getCourseClasses($courseId, $search)
-    {
-        $where = 'course.id = ' . $courseId;
-        if ($search) {
-            $where .= " AND t.post_title like '%" . $search . "%'";
-        }
-        $classes = BaseObject::factory('Class', ['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
-        $result = [];
-
-        foreach ($classes->results() as $row) {
-          $result[] = [
-              'id' => $row->ID,
-              'title' => $row->post_title
-          ];
-        }
-
-        return $result;
-    }
-
     //get last open class
-    public function getNextLesson($courseId)
+    public function get_next_lesson($courseId)
     {
-        $lessons = $this->getClassLessonsByCourse($courseId);
+        $lessons = $this->get_class_lessons_by_course_id($courseId);
 
         if (!$lessons) {
             return null;
@@ -193,9 +174,9 @@ class Student
         return $lesson["id"];
     }
 
-    public function isLessonOpen($courseId, $lessonId)
+    public function is_lesson_open($courseId, $lessonId)
     {
-        $lessons = $this->getClassLessonsByCourse($courseId);
+        $lessons = $this->get_class_lessons_by_course_id($courseId);
 
         //if not managed assume open
         if (!$lessons) {
@@ -214,57 +195,12 @@ class Student
         return !empty($lesson["open"]) && $lesson["open"] == true;
     }
 
-    public function getCourseModules($courseId)
+    public function get_module_lessons($moduleId)
     {
-        return BaseObject::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "order.meta_value ASC", "limit" => -1]);
+        return new Lesson(["where" => "module.id = " . $moduleId, "orderby" => "lesson_number.meta_value ASC", "limit" => -1]);
     }
 
-    public function getModuleLessons($moduleId)
-    {
-        return BaseObject::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "lesson_number.meta_value ASC", "limit" => -1]);
-    }
-
-    public static function getClassStudents($courseId, $classId, $search = null, $month = null, $year = null)
-    {
-        global $wpdb;
-
-        $where = '1 = 1';
-        $search = '%' . $wpdb->esc_like($search) . '%';
-
-        if (!empty($courseId)) {
-            $where .= ' AND courses.id = ' . $courseId;
-        }
-
-        if (!empty($classId)) {
-            $where .= ' AND class_id = ' . $classId;
-        }
-
-        if (!empty($search)) {
-            $where .= " AND ( u.display_name like %s OR u.user_email like %s)";
-        } else {
-            $search = 1;
-            $where .= " AND (%d = %d) ";
-        }
-        if (!empty($month)) {
-            $where .= " AND ( month(cs.registration_date) = " . $month . " AND year(cs.registration_date) = " . $year . ")";
-        }
-
-        $sql = "select u.id, u.user_email, u.display_name, IFNULL(um.meta_value,'') as phone, cs.registration_date, cs.class_id, classes.post_title as class_name, courses.id as course_id, courses.post_title as course_name
-      from " . FutureLMS::TABLE_PREFIX() . "class_to_students cs
-      inner join ".$wpdb->prefix."users u on u.id = cs.student_id
-      inner join ".$wpdb->prefix."posts classes on classes.id = cs.class_id
-      inner join ".$wpdb->prefix."postmeta wpm on wpm.post_id = cs.class_id and wpm.meta_key = 'course'
-      inner join ".$wpdb->prefix."posts courses on courses.id = wpm.meta_value
-      left outer join ".$wpdb->prefix."usermeta um on cs.student_id = um.user_id and um.meta_key = 'user_phone'
-      where " . $where . "
-      order by cs.registration_date desc";
-
-        $sql = $wpdb->prepare($sql, $search, $search);
-
-        return $wpdb->get_results($sql, ARRAY_A);
-    }
-
-    public function getStudentNotes($lessonId)
+    public function get_lesson_notes($lessonId)
     {
         global $wpdb;
         $sql = "SELECT notes
@@ -274,7 +210,7 @@ class Student
         return $wpdb->get_var($sql);
     }
 
-    public function setStudentNotes($lessonId, $notes)
+    public function set_lesson_notes($lessonId, $notes)
     {
         global $wpdb;
         $sql = "REPLACE INTO " . FutureLMS::TABLE_PREFIX() . "student_notes (student_id, lesson_id, notes)

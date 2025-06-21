@@ -2,6 +2,7 @@
 
 namespace FutureLMS\classes;
 
+use NumberFormatter;
 use WP_Query;
 
 /**
@@ -9,14 +10,15 @@ use WP_Query;
  */
 class BaseObject
 {
+  private $formatter = null;
+
   private $pod_name;
   private $pod_id;
   private $data = null;
   private $fields = [];
   private $is_collection = false;
   private $collection = [];
-  private $query_args = [];
-  private $current_item = 0; // For collection iteration
+  private $current_item = null; // For collection iteration
   private $current_item_index = 0;
 
   /**
@@ -24,20 +26,26 @@ class BaseObject
    * @param string $pod_name Pod/Post type name
    * @param mixed $id_or_params ID or query parameters
    */
-  public function __construct($pod_name, $id_or_params = null)
+  public function __construct($pod_name, $id_or_params = [])
   {
-      $this->pod_name = $pod_name;
+    $this->pod_name = $pod_name;
 
-      if (is_numeric($id_or_params)) {
-          // Single item by ID
-          $this->load($id_or_params);
-      } elseif (is_array($id_or_params)) {
-          // Query multiple items
-          $this->query($id_or_params);
-      } elseif (is_object($id_or_params)) {
-          // Existing WP object
-          $this->load_from_object($id_or_params);
-      }
+    if (is_numeric($id_or_params)) {
+        // Single item by ID
+        $this->load($id_or_params);
+    } elseif (is_array($id_or_params)) {
+        // Query multiple items
+        $this->query($id_or_params);
+    } elseif (is_object($id_or_params)) {
+        // Existing WP object
+        $this->load_from_object($id_or_params);
+    } else {
+      //Query all items if no ID or params provided
+      $this->query([]);
+    }
+
+    $this->formatter = new NumberFormatter(get_locale(), NumberFormatter::CURRENCY);
+    $this->formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
   }
 
 
@@ -88,6 +96,7 @@ class BaseObject
   {
       if ($post && $post->post_type === $this->pod_name) {
           $this->data = $post;
+          $this->pod_id = $post->ID;
           $this->fields = get_post_meta($post->ID);
 
           // Flatten single meta values
@@ -113,7 +122,6 @@ class BaseObject
     }
 
     $this->is_collection = true;
-    $this->query_args = $params;
 
     $this->query_posts($params);
     return $this;
@@ -135,7 +143,7 @@ class BaseObject
 
     $this->collection = [];
     foreach ($query->posts as $post) {
-        $this->collection[] = new self($this->pod_name, $post->ID);
+        $this->collection[] = new self($this->pod_name, $post);
     }
   }
 
@@ -228,10 +236,6 @@ class BaseObject
         return null;
     }
 
-    if (!get_post($post_id)) {
-        return null;
-    }
-
     return get_post_meta($post_id, $field_name, $single);
   }
 
@@ -264,7 +268,7 @@ class BaseObject
   public function display($name)
   {
     $value = $this->field($name);
-    return apply_filters('wrapper_display', $value, $name, $this);
+    return apply_filters('future-lms/field_display', $value, $name, $this);
   }
 
   /**

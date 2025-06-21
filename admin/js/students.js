@@ -407,7 +407,7 @@ class StudentsTab {
 
   addStudentToClass(courseId, userData, sum) {
     JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'add_class',
+      action: 'add_student_to_class',
       student_id: userData.id,
       name: userData.name,
       phone: userData.phone,

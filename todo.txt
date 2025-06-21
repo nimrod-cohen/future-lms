@@ -10,3 +10,5 @@
 12. color scheme support to LMS front (including inner shop and couse area)
 13. sendEmail function - add teacher email to course, and send as sender.
 14. move static functions from Student class to School/Class/Course etc'.
+15. check if open/closed class lessons are enforced in student area
+16. get rid of course charge url, find a way to subscribe a user to a course without it.

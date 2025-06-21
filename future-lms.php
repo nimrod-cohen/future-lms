@@ -40,6 +40,8 @@ use FutureLMS\classes\Student;
 use FutureLMS\classes\VersionManager;
 use FutureLMS\classes\Course;
 use FutureLMS\classes\BaseObject;
+use FutureLMS\classes\Lesson;
+use FutureLMS\classes\SchoolClass;
 
 class FutureLMS {
     public $coupons = null;
@@ -52,7 +54,7 @@ class FutureLMS {
         add_action('init', [$this, 'initHooks']);
 
         add_shortcode('flms_course_price', ['FutureLMS\classes\Course', 'get_course_price_box']);
-        add_shortcode('flms_school_lobby', [$this, 'showSchoolLobby']);
+        add_shortcode('flms_school_lobby', [$this, 'show_school_lobby']);
         add_filter('body_class', [$this,'add_school_class_to_body']);
 
         add_filter('manage_course_posts_columns', [$this, 'addCoursesColumns']);
@@ -82,7 +84,7 @@ class FutureLMS {
       return $classes;
     }
 
-    public function showSchoolLobby() {
+    public function show_school_lobby() {
       if(is_admin() || !is_user_logged_in() || !current_user_can('student')) {
         return;
       }
@@ -99,21 +101,21 @@ class FutureLMS {
         add_action('admin_menu', [$this, 'addAdminMenu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueueAdminScript']);
         add_action("wp_enqueue_scripts", [$this, 'enqueueSchoolScripts']);
-        add_action("wp_ajax_search_students", [$this, "searchStudents"]);
-        add_action("wp_ajax_get_all_courses", [$this, "getAllCourses"]);
-        add_action("wp_ajax_get_course_charge_url", [$this, "getCourseChargeUrl"]);
-        add_action("wp_ajax_get_all_payments", [$this, "getAllPayments"]);
-        add_action("wp_ajax_search_classes", [$this, "searchClasses"]);
-        add_action("wp_ajax_get_classes", [$this, "getClasses"]);
-        add_action("wp_ajax_get_lessons", [$this, "getLessons"]);
-        add_action("wp_ajax_get_lesson_content", [$this, "getLessonContent"]);
-        add_action("wp_ajax_set_student_notes", [$this, "setStudentNotes"]);
+        add_action("wp_ajax_search_students", [$this, "search_students"]);
+        add_action("wp_ajax_get_all_courses", [$this, "get_all_Courses"]);
+        add_action("wp_ajax_get_course_charge_url", [$this, "get_course_charge_url"]);
+        add_action("wp_ajax_get_all_payments", [$this, "get_all_payments"]);
+        add_action("wp_ajax_search_classes", [$this, "search_classes"]);
+        add_action("wp_ajax_get_classes", [$this, "get_student_classes"]);
+        add_action("wp_ajax_get_lessons", [$this, "get_class_lessons"]);
+        add_action("wp_ajax_get_lesson_content", [$this, "get_lesson_content"]);
+        add_action("wp_ajax_set_student_notes", [$this, "set_student_notes"]);
         add_action("wp_ajax_get_student_progress", [$this, "getStudentProgress"]);
         add_action("wp_ajax_set_student_progress", [$this, "setStudentProgress"]);
-        add_action("wp_ajax_get_students", [$this, "getStudents"]);
-        add_action("wp_ajax_remove_class", [$this, "removeStudentFromClass"]);
-        add_action("wp_ajax_remove_payment", [$this, "removePayment"]);
-        add_action("wp_ajax_add_class", [$this, "addStudentToClass"]);
+        add_action("wp_ajax_get_students", [$this, "get_students"]);
+        add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
+        add_action("wp_ajax_remove_payment", [$this, "remove_payment"]);
+        add_action("wp_ajax_add_stodent_to_class", [$this, "add_student_to_class"]);
         add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
         add_action("wp_ajax_send_email", [$this, "sendEmail"]);
         add_action("wp_ajax_value_get_settings", [$this, "getSettings"]);
@@ -127,11 +129,11 @@ class FutureLMS {
         add_action('manage_edit-lesson_columns', [$this, 'addExtraLessonFieldsToList']);
         add_filter('manage_lesson_posts_custom_column', [$this, 'addExtraLessonFieldsToListData'], 10, 2);
         //restrict access to lessons:
-        add_action('template_redirect', [$this, 'restrictSchoolAccess']);
+        add_action('template_redirect', [$this, 'restrict_school_access']);
 
     }
 
-    public function restrictSchoolAccess() {
+    public function restrict_school_access() {
       if (is_single()) {
         global $post;
         // Check if the post type is lesson, module, class or course
@@ -356,26 +358,17 @@ class FutureLMS {
     }
 
     public function enqueueSchoolScripts() {
-        wp_enqueue_script('futurelms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
-        wp_enqueue_style('futurelms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
-        wp_enqueue_script('futurelms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
+        wp_enqueue_script('future-lms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
+        wp_enqueue_style('future-lms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
+        wp_enqueue_script('future-lms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
 
-        wp_localize_script('futurelms_school_script', 'school_info', [
+        wp_localize_script('future-lms_school_script', 'school_info', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'theme_url' => plugin_dir_url(__FILE__)
         ]);
     }
 
     public function enqueueAdminScript($hook) {
-
-        if (in_array($hook, ['post.php', 'post-new.php']) &&
-            get_current_screen()->post_type == 'webinar') {
-
-            wp_enqueue_script('future-lms-admin-webinars-js', plugin_dir_url(__FILE__) . 'admin/js/webinars.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
-            wp_enqueue_style('future-lms-webinars-css', plugin_dir_url(__FILE__) . 'admin/css/webinars.css');
-            return;
-        }
-
         if ("toplevel_page_future-lms-settings" != $hook) {
             return;
         }
@@ -408,7 +401,8 @@ class FutureLMS {
     }
 
     //called when sum is 0, or payment is not by credit card.
-    public function addStudentToClass() {
+    //TODO: remove user creation from here, or ask if create user
+    public function add_student_to_class() {
         $courseId = $_REQUEST["course_id"];
         $studentId = $_REQUEST["student_id"];
         $classId = $_REQUEST["class_id"];
@@ -433,9 +427,10 @@ class FutureLMS {
             $student = new WP_User($studentId);
             $student->remove_role('subscriber');
             $student->add_role('student');
-            //TODO:: move to customerio
+            //TODO:: change to an action hook, let the platform decide what to do with new student
             wp_new_user_notification($studentId, null, 'both');
         } else {
+            $student->add_role('student'); //make sure user has student role
             $studentId = $student->ID;
         }
 
@@ -454,16 +449,16 @@ class FutureLMS {
 
         $student = new Student($studentId);
 
-        $class = $student->getClass($courseId);
+        $old_class = $student->get_class($courseId);
 
-        if (!$class) { //currently not listed at all
-            $student->subscribeToClass($classId, true);
-        } else if ($class["id"] != $classId) { //already registered to another class
-            $student->subscribeToClass($class["id"], false);
-            $student->subscribeToClass($classId, true);
+        if (!$old_class) { //currently not listed at all
+            $student->subscribe_to_class($classId, true);
+        } else if ($old_class["id"] != $classId) { //already registered to another class
+            $student->subscribe_to_class($old_class["id"], false);
+            $student->subscribe_to_class($classId, true);
         }
         //save payment
-        $paymentId = $student->savePayment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
+        $paymentId = $student->save_payment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
 
         //do actions after payment future-lms/payment_notification
         do_action('future-lms/payment_notification', [
@@ -477,16 +472,15 @@ class FutureLMS {
             "comment" => $comment
         ]);
 
-        echo json_encode([]);
-        die();
+        wp_send_json([]);
     }
 
-    public function removePayment() {
+    public function remove_payment() {
         $paymentId = $_REQUEST["payment_id"];
 
-        $payment = Student::getPayment($paymentId);
+        $payment = Student::get_payment($paymentId);
 
-        Student::deletePayment($paymentId);
+        Student::delete_payment($paymentId);
 
         do_action('future-lms/payment_removed', [
             "course_id" => $payment["course_id"],
@@ -498,30 +492,28 @@ class FutureLMS {
             "comment" => $payment["comment"]
         ]);
 
-        echo json_encode([]);
-        die();
+        wp_send_json([]);
     }
 
-    public function removeStudentFromClass() {
+    public function remove_student_from_class() {
         $courseId = $_REQUEST["course_id"];
         $studentId = $_REQUEST["student_id"];
         $classId = $_REQUEST["class_id"];
 
         $student = new Student($studentId);
 
-        $class = $student->getClass($courseId);
+        $class = $student->get_class($courseId);
 
         if (!$class) { //currently not listed at all
             echo json_encode([]);
             die();
         }
-        $student->subscribeToClass($classId, false);
+        $student->subscribe_to_class($classId, false);
 
-        echo json_encode([]);
-        die();
+        wp_send_json([]);
     }
 
-    public function getClasses() {
+    public function get_student_classes() {
         $courseId = $_REQUEST["course_id"];
         $studentId = $_REQUEST["student_id"];
 
@@ -534,7 +526,7 @@ class FutureLMS {
                 'id' => $row->ID,
                 'title' => $row->post_title,
                 'start_date' => strtotime($row->field("start_date")),
-                'attending' => $student->isAttendingClass($courseId, $row->ID)
+                'attending' => $student->is_attending_class($courseId, $row->ID)
             ];
         }
 
@@ -543,11 +535,10 @@ class FutureLMS {
             return $a["start_date"] < $b["start_date"];
         });
 
-        echo json_encode($result);
-        die();
+        wp_send_json($result);
     }
 
-    public function getStudents() {
+    public function get_students() {
         try {
             $courseId = intval($_REQUEST["course_id"]);
             $classId = intval($_REQUEST["class_id"]);
@@ -555,14 +546,12 @@ class FutureLMS {
             $month = intval($_REQUEST["month"]);
             $year = intval($_REQUEST["year"]);
 
-            $result = Student::getClassStudents($courseId, $classId, $search, $month, $year);
+            $result = SchoolClass::students($courseId, $classId, $search, $month, $year);
 
-            echo json_encode($result);
-            die();
+            wp_send_json($result);
 
         } catch (Exception $ex) {
-            echo json_encode([]);
-            die();
+            wp_send_json(["error" => $ex->getMessage()]);
         }
     }
 
@@ -575,7 +564,7 @@ class FutureLMS {
         $seconds = intval($_POST["seconds"]);
 
         $student = new Student(get_current_user_id());
-        $data = $student->getProgress();
+        $data = $student->get_progress();
 
         if (!isset($data["courses"])) {
             $data["courses"] = [];
@@ -620,7 +609,7 @@ class FutureLMS {
             $video["seconds"] = $seconds;
             $video["percent"] = $percent;
 
-            $student->setProgress($data);
+            $student->set_progress($data);
         }
 
     }
@@ -646,7 +635,7 @@ class FutureLMS {
                 return $carry;
             }, []);
 
-            $result["progress"] = $student->getProgress();
+            $result["progress"] = $student->get_progress();
             $result["course_tree"] = Course::get_courses_tree($courses);
 
             echo json_encode($result);
@@ -657,14 +646,14 @@ class FutureLMS {
         }
     }
 
-    public function setStudentNotes() {
+    public function set_student_notes() {
         try {
             $lessonId = intval($_POST["lesson_id"]);
             $notes = $_POST["notes"];
 
             $student = new Student(get_current_user_id());
 
-            $student->setStudentNotes($lessonId, $notes);
+            $student->set_lesson_notes($lessonId, $notes);
 
             echo json_encode([]);
             die();
@@ -674,7 +663,7 @@ class FutureLMS {
         }
     }
 
-    public function getLessonContent() {
+    public function get_lesson_content() {
         try {
             $result = [];
 
@@ -687,20 +676,20 @@ class FutureLMS {
 
             //course id not found or student not listed
             if (!$course->exists()
-                || !$student->isAttending($courseId)
-                || !$student->isLessonOpen($courseId, $lessonId)
+                || !$student->is_attending_course($courseId)
+                || !$student->is_lesson_open($courseId, $lessonId)
             ) {
                 throw new Exception("Failed to load class");
                 return;
             }
 
-            $lesson = BaseObject::factory('lesson', $lessonId);
+            $lesson = new Lesson($lessonId);
 
             $result["presentation"] = $lesson->display('presentation');
             $result["homework"] = $lesson->display('homework');
             $result["additionalFiles"] = $lesson->display('additional_files');
             $result["lessonContent"] = $lesson->display('post_content');
-            $result["studentNotes"] = $student->getStudentNotes($lessonId);
+            $result["studentNotes"] = $student->get_lesson_notes($lessonId);
 
             $videos = $lesson->raw('video_list');
             $videos = empty($videos) ? [] : json_decode($videos, true);
@@ -718,7 +707,7 @@ class FutureLMS {
         }
     }
 
-    public static function notifyAdmins($title, $message) {
+    public static function notify_admins($title, $message) {
         if (wp_get_environment_type() !== "production") {
             return;
         }
@@ -729,27 +718,22 @@ class FutureLMS {
         ]);
     }
 
-    public function getLessons() {
+    public function get_class_lessons() {
         try {
             $classId = $_REQUEST["class_id"];
 
-            $class = BaseObject::factory("class", $classId);
-
-            $result = [];
+            $class = new SchoolClass($classId);
             if (!$class) {
                 throw new Exception('cannot find class by id');
             }
 
-            $classLessons = $class->raw("lessons");
-            if ($classLessons) {
-                $classLessons = json_decode($classLessons, true);
-            } else {
-                $classLessons = [];
-            }
+            $classLessons = $class->raw("lessons") ?? '[]';
+            $classLessons = json_decode($classLessons, true);
+            $classLessons = is_array($classLessons) ? $classLessons : [];
+            
+            $courseId = $class->raw("course");
 
-            $course = $class->raw("course");
-
-            $modules = BaseObject::factory("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
+            $modules = BaseObject::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
             while ($module = $modules->fetch()) {
                 $moduleId = $module->raw('ID');
@@ -757,10 +741,10 @@ class FutureLMS {
                 $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
                 while ($lesson = $lessons->fetch()) {
-                    $open = false;
+                    $open = true;
                     $pos = array_search($lesson->raw("ID"), array_column($classLessons, 'id'));
                     if (false !== $pos) {
-                        $open = $classLessons[$pos]["open"];
+                        $open = $classLessons[$pos]["open"] ?? true;
                     }
 
                     $result[] = [
@@ -795,7 +779,7 @@ class FutureLMS {
 
         $students = [];
         if (!$test) {
-            $students = Student::getClassStudents($courseId, $classId, null);
+            $students = SchoolClass::students($courseId, $classId, null);
         } else {
             $admins = get_users('role=administrator');
             foreach ($admins as $user) {
@@ -868,15 +852,15 @@ class FutureLMS {
         die();
     }
 
-    public function getAllPayments() {
+    public function get_all_payments() {
         $month = intval($_REQUEST["month"]);
         $year = intval($_REQUEST["year"]);
-        $results = Student::getPayments($year, $month);
+        $results = Student::get_payments($year, $month);
         echo json_encode($results);
         die();
     }
 
-    public function getCourseChargeUrl() {
+    public function get_course_charge_url() {
         $course = BaseObject::factory('Course', intval($_REQUEST["course_id"]));
         $chargeUrl = $course->field('charge_url');
         $fullPrice = $course->field('full_price');
@@ -886,17 +870,17 @@ class FutureLMS {
         die();
     }
 
-    public function getAllCourses() {
+    public function get_all_Courses() {
         echo json_encode(["courses" => Course::get_courses_tree(null, false)]);
         die();
     }
 
-    public function searchClasses() {
+    public function search_classes() {
         try {
             $search = isset($_REQUEST['search']) ? $_REQUEST['search'] : false;
             $courseId = $_REQUEST['course_id'];
 
-            $result = Student::getCourseClasses($courseId, $search);
+            $result = Course::get_classes($courseId, $search);
 
             $result = array_map(function ($item) {
                 return [
@@ -915,7 +899,7 @@ class FutureLMS {
         }
     }
 
-    public function searchStudents() {
+    public function search_students() {
         $search = $_REQUEST['search'];
 
         if (empty($search)) {
@@ -925,7 +909,7 @@ class FutureLMS {
 
         $existing = [];
         if (isset($_REQUEST["class_id"])) {
-            $existing = Student::getClassStudents(null, $_REQUEST["class_id"]);
+            $existing = SchoolClass::students(null, $_REQUEST["class_id"]);
         }
 
         $query = new WP_User_Query([
