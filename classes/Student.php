@@ -32,7 +32,12 @@ class Student
           WHERE p.post_type = 'class'
           AND p.post_status = 'publish'
           AND cts.student_id = %d", $this->_studentId);
-        $this->_courses = $wpdb->get_results($sql, ARRAY_A);
+
+        $courses = $wpdb->get_results($sql, ARRAY_A);
+        $this->_courses = array_map(function ($course) {
+            $course = new Course($course);
+            return $course;
+        }, $courses);
 
         return $this->_courses;
     }
@@ -42,7 +47,7 @@ class Student
         $attendingCourses = $this->courses();
 
         foreach ($attendingCourses as $attendedCourse) {
-            if ($attendedCourse["course_id"] == $courseId) {
+            if ($attendedCourse->raw('ID') == $courseId) {
                 return $attendedCourse;
             }
 

@@ -19,3 +19,8 @@
 20. extraUserFields, addExtraUserFieldsToList, addExtraUserFieldsToListData,addExtraModuleFieldsToListData,
     addExtraLessonFieldsToList,addExtraLessonFieldsToListData
     remvoe all these once all is managed from the LMS UI
+21. review the featured tags - must they be part of the LMS?
+22. add video preview support to course to show on course page.
+23. add ability to measure video hours and show hours in single-course.php. search: <!-- • 3.5 שעות-->
+24. export/import course tree to JSON
+25. check that the get_template_part works with theme overriding the plugin webparts

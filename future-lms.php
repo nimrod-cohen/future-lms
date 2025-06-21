@@ -183,9 +183,10 @@ class FutureLMS {
             return;
         }
 
-        $course = BaseObject::factory("course", $post_id);
+        $course = new Course($post_id);
         $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
-        $price = $course->field($column);
+        $price = $course->field($column)?? 0;
+        $price = empty($price) ? 0 : floatval($price);
         echo $fmt->formatCurrency($price, "ILS");
     }
 
@@ -902,28 +903,6 @@ class FutureLMS {
         echo json_encode(["success" => true, "results" => $result]);
 
         die();
-    }
-
-    public static function get_course_image($course_id, $size = 'thumbnail') {
-      $course = BaseObject::factory('Course', $course_id);
-      $image = $course->field('_thumbnail_id');
-      $genericImage = plugin_dir_url(__FILE__) . 'assets/images/generic-course-placeholder.png';
-      $found = true;
-      //check if image exists
-      if(empty($image) || !is_numeric($image)) {
-        $found = false;
-        $image = $genericImage;
-      } else {
-        $image = wp_get_attachment_image_src($image, $size);
-        if (empty($image) || !is_array($image)) {
-          $found = false;
-          $image = $genericImage;
-        } else {
-          $image = $image[0]; //get the URL
-        }
-      }
-
-      return apply_filters('future-lms/course_image', $image, $found, $course_id, $size);
     }
 }
 

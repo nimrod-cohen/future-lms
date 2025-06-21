@@ -9,9 +9,6 @@ use FutureLMS\classes\Student;
 
 $post = get_post();
 
-$courseWorkspacePage = get_pages(['child_of' => $post->ID, 'meta_key' => '_wp_page_template', 'meta_value' => 'course.php']);
-$courseWorkspacePage = get_page_link($courseWorkspacePage[0] ?? null);
-
 $user = wp_get_current_user();
 
 $schoolPage = "courses";
@@ -42,35 +39,43 @@ $urls = [
         <div class="school-courses">
         <?php
 //get all posts of type course, where post is publised
-$courses = new BaseObject('course');
+$courses = new Course();
 
 $student = new Student($user->ID);
 
 $attendingCourses = [];
 $availableCourses = [];
 
-while ($post = $courses->fetch()) {
-  //get post object of the current pod
-  if ($student->is_attending_course($courses->raw("ID"))) {
-    $attendingCourses[] = $post;
+while ($obj = $courses->fetch()) {
+  $course = new Course($obj);
+  if ($student->is_attending_course($course->raw("ID"))) {
+    $attendingCourses[] = $course;
   } else {
-    if (Course::course_has_tag($courses->raw("ID"), 'hidden')) {
+    //cast BaseObject to Course
+    if ($course->has_tag('hidden')) {
       continue;
     }
-    $availableCourses[] = $post;
+    $availableCourses[] = $course;
   }
 }
 ?>
 <?php
 switch ($schoolPage) {
 case "mycourses":
-  include_once "webparts/my_courses.php";
+  get_template_part("webparts/my_courses.php", null, [
+    'attendingCourses' => $attendingCourses
+  ]);
   break;
 case "courses":
-  include_once "webparts/available_courses.php";
+  get_template_part("webparts/available_courses.php", null, [
+    'attendingCourses' => $availableCourses
+  ]);
   break;
 case "course-details":
-  include_once "webparts/course_details.php";
+  $course = new Course($_POST["course_id"] ?? 0);
+  get_template_part("webparts/course_details.php", null, [
+    'course' => $course
+  ]);
   break;
 }
 ?>

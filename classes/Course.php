@@ -3,12 +3,11 @@
 namespace FutureLMS\classes;
 
 class Course extends BaseObject {
-  protected function __construct($course_id_or_params = null) {
+  public function __construct($course_id_or_params = null) {
     parent::__construct('course', $course_id_or_params);
   }
 
-  public function get_course_price_box($args) {
-
+  public static function get_course_price_box($args) {
     $format = isset($args) && isset($args["format"]) ? $args["format"] :
         "<span class='course-price'>
           <span style='text-decoration:line-through; margin:0 8px;'>{full_price}</span>
@@ -20,12 +19,12 @@ class Course extends BaseObject {
         return "";
     }
 
-    $course = BaseObject::factory("course", $course_id);
+    $course = new Course($course_id);
 
     $full_price = floatval($course->field("full_price"));
-    $full_price_txt = $this->formatter->formatCurrency($full_price, get_option('future-lms_currency', 'ILS'));
+    $full_price_txt = $course->formatter->formatCurrency($full_price, get_option('future-lms_currency', 'ILS'));
     $discount_price = floatval($course->field("discount_price"));
-    $discount_price_txt = $this->formatter->formatCurrency($discount_price, get_option('future-lms_currency', 'ILS'));
+    $discount_price_txt = $course->formatter->formatCurrency($discount_price, get_option('future-lms_currency', 'ILS'));
 
     if(!empty($discount_price)) {
       $discount_price = floatval($discount_price);
@@ -42,9 +41,9 @@ class Course extends BaseObject {
     return $result;
   }
 
-  public function modules($courseId)
+  public function modules()
   {
-      return BaseObject::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "order.meta_value ASC", "limit" => -1]);
+      return BaseObject::factory("module", ["where" => "course.id = " . $this->raw("ID"), "orderby" => "order.meta_value ASC", "limit" => -1]);
   }
 
   public static function get_classes($courseId, $search)
@@ -195,11 +194,32 @@ class Course extends BaseObject {
     return $result;
   }
 
-  public static function course_has_tag($courseId, $tag): bool {
-    $tags = BaseObject::get_field('course', $courseId, 'tags', true) ?? '';
+  public function has_tag($tag): bool {
+    $tags = $this->field("tags") ?? '';
     $tags = explode(",", $tags);
     $tags = array_map('trim', $tags);
     return in_array($tag, $tags);
+  }
+
+  public function get_featured_image($size = 'thumbnail') {
+    $image = $this->field('_thumbnail_id');
+    $genericImage = plugin_dir_url(__FILE__) . 'assets/images/generic-course-placeholder.png';
+    $found = true;
+    //check if image exists
+    if(empty($image) || !is_numeric($image)) {
+      $found = false;
+      $image = $genericImage;
+    } else {
+      $image = wp_get_attachment_image_src($image, $size);
+      if (empty($image) || !is_array($image)) {
+        $found = false;
+        $image = $genericImage;
+      } else {
+        $image = $image[0]; //get the URL
+      }
+    }
+
+    return apply_filters('future-lms/course_image', $image, $found, $this->raw("ID"), $size);
   }
 }
 ?>

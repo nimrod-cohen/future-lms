@@ -1,17 +1,15 @@
-<h2 class="courses-header">הקורסים שלך</h2>
+<h2 class="courses-header"><?php echo _e("Your courses","future-lms"); ?></h2>
 <div class="my-courses course-list">
 <?php
-
-use FutureLMS\FutureLMS;
 
 if (count($attendingCourses) == 0) {
   echo "<div class='no-courses'>".__("You are not registered to any course", "future-lms")."</div>";
 }
 
 foreach ($attendingCourses as $course) {
-  $image = FutureLMS::get_course_image($course->raw("ID"), 'full');
+  $image = $course->get_featured_image('full');
 
-  $courseUrl = $courses->raw("course_page_url");
+  $courseUrl = $course->raw("course_page_url");
   $author = get_the_author_meta('display_name', $course->raw("post_author"));
 
   $class = $student->get_class($course->raw("ID"));

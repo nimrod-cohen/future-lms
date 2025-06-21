@@ -1,22 +1,14 @@
 <?php
 
-use FutureLMS\FutureLMS;
-
-$courseId = $_POST["course_id"];
-
 // Get course details and present them as a sales page
-$course = get_post($courseId);
-$courseTitle = $course->post_title;
-$courseDescription = get_post_meta($courseId, "short_description", true);
-$coursePrice = get_post_meta($courseId, "full_price", true);
-$chargeUrl = get_post_meta($courseId, "charge_url", true);
+$courseTitle = $course->display("name");
+$courseDescription = $course->display("short_description");
+$coursePrice = $course->display("full_price");
+$chargeUrl = $course->field("charge_url");
 $chargeUrl = add_query_arg(['sum' => $coursePrice], $chargeUrl); //will replace if exists.
 
-$fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
-$coursePrice = $fmt->formatCurrency($coursePrice, "ILS");
-
 $author = get_the_author_meta('display_name', $course->post_author);
-$courseImage = FutureLMS::get_course_image($courseId);
+$courseImage = $course->get_featured_image('full');
 
 $user = wp_get_current_user();
 ?>
@@ -30,7 +22,9 @@ $user = wp_get_current_user();
       <?php echo $courseDescription; ?>
       <?php echo apply_filters('future-lms/post_course_description', '', [$courseId]); ?>
     </span>
-    <span class='course-price'>מחיר: <?php echo $coursePrice; ?></span>
+    <?php get_template_part('webparts/course_price', null, [
+      'course' => $course
+    ]); ?>
     <form id="buy-course-form" method="POST" action=#">
       <input type='hidden' id="course-description" value="<?php echo $courseTitle; ?>">
       <input type="hidden" name="charge-url" id="charge-url" value="<?php echo $chargeUrl; ?>">

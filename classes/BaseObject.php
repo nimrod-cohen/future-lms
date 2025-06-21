@@ -10,7 +10,7 @@ use WP_Query;
  */
 class BaseObject
 {
-  private $formatter = null;
+  protected $formatter = null;
 
   private $pod_name;
   private $pod_id;
@@ -28,6 +28,9 @@ class BaseObject
    */
   public function __construct($pod_name, $id_or_params = [])
   {
+    $this->formatter = new NumberFormatter(get_locale(), NumberFormatter::CURRENCY);
+    $this->formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+
     $this->pod_name = $pod_name;
 
     if (is_numeric($id_or_params)) {
@@ -43,9 +46,6 @@ class BaseObject
       //Query all items if no ID or params provided
       $this->query([]);
     }
-
-    $this->formatter = new NumberFormatter(get_locale(), NumberFormatter::CURRENCY);
-    $this->formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
   }
 
 
@@ -267,7 +267,7 @@ class BaseObject
    */
   public function display($name)
   {
-    $value = $this->field($name);
+    $value = $this->raw($name);
     return apply_filters('future-lms/field_display', $value, $name, $this);
   }
 
@@ -342,7 +342,7 @@ class BaseObject
    * Fetch the next item in the collection
    * @return BaseObject|false
    */
-  public function fetch() {
+  public function fetch() : BaseObject|false {
     if (!$this->is_collection || empty($this->collection)) {
       $this->current_item = null; // Reset
       return false;
@@ -396,7 +396,6 @@ class BaseObject
       case 'ID':
         return $this->pod_id;
       case 'name':
-        return $this->data->post_title ?? null;
       case 'title':
         return $this->data->post_title ?? null;
     }
@@ -404,6 +403,10 @@ class BaseObject
     return $this->field($field_name);
   }
 
+  public function post() {
+      // Return the raw post object
+      return $this->data;
+  }
 
   public function exists() {
       return !empty($this->data);
