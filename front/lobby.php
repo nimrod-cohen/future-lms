@@ -3,7 +3,6 @@
 Template Name: School Template
  */
 
-use FutureLMS\classes\BaseObject;
 use FutureLMS\classes\Course;
 use FutureLMS\classes\Student;
 use FutureLMS\FutureLMS;

@@ -829,10 +829,10 @@ class FutureLMS {
 
   public static function get_template_part($template_name, $args = []) {
     $template_name = ltrim($template_name, '/');
-    $relative_path = "front/webparts/{$template_name}";
-
     // Check for override in the theme
-    $theme_path = locate_template($relative_path);
+    $theme_path = locate_template("future-lms/{$template_name}");
+
+    $relative_path = "front/webparts/{$template_name}";
 
     if (!$theme_path) {
       $plugin_path = plugin_dir_path(__FILE__) . $relative_path;

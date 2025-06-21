@@ -28,9 +28,6 @@ class BaseObject
    */
   public function __construct($pod_name, $id_or_params = [])
   {
-    $this->formatter = new NumberFormatter(get_locale(), NumberFormatter::CURRENCY);
-    $this->formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
-
     $this->pod_name = $pod_name;
 
     if (is_numeric($id_or_params)) {
@@ -48,6 +45,13 @@ class BaseObject
     }
   }
 
+  public function get_formatter() {
+    if ($this->formatter === null) {
+      $this->formatter = new NumberFormatter(get_locale(), NumberFormatter::CURRENCY);
+      $this->formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+    }
+    return $this->formatter;
+  }
 
   /**
    * Factory method

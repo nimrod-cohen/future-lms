@@ -1,6 +1,9 @@
 <?php
 
 // Get course details and present them as a sales page
+
+use FutureLMS\FutureLMS;
+
 $courseTitle = $course->display("name");
 $courseDescription = $course->display("short_description");
 $coursePrice = $course->display("full_price");
@@ -22,9 +25,7 @@ $user = wp_get_current_user();
       <?php echo $courseDescription; ?>
       <?php echo apply_filters('future-lms/post_course_description', '', [$courseId]); ?>
     </span>
-    <?php get_template_part('webparts/price_box', null, [
-      'course' => $course
-    ]); ?>
+    <?php FutureLMS::get_template_part('price_box.php', ['course' => $course]); ?>
     <form id="buy-course-form" method="POST" action=#">
       <input type='hidden' id="course-description" value="<?php echo $courseTitle; ?>">
       <input type="hidden" name="charge-url" id="charge-url" value="<?php echo $chargeUrl; ?>">

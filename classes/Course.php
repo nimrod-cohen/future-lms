@@ -2,43 +2,17 @@
 
 namespace FutureLMS\classes;
 
+use FutureLMS\FutureLMS;
+
 class Course extends BaseObject {
   public function __construct($course_id_or_params = null) {
     parent::__construct('course', $course_id_or_params);
   }
 
   public static function get_course_price_box($args) {
-    $format = isset($args) && isset($args["format"]) ? $args["format"] :
-        "<span class='course-price'>
-          <span style='text-decoration:line-through; margin:0 8px;'>{full_price}</span>
-          <span style='font-weight:bold'>{discount_price}</span>
-        </span>";
-    $course_id = isset($args) && isset($args["course_id"]) ? $args["course_id"] : false;
-
-    if (!$course_id) {
-        return "";
-    }
-
-    $course = new Course($course_id);
-
-    $full_price = floatval($course->field("full_price"));
-    $full_price_txt = $course->formatter->formatCurrency($full_price, get_option('future-lms_currency', 'ILS'));
-    $discount_price = floatval($course->field("discount_price"));
-    $discount_price_txt = $course->formatter->formatCurrency($discount_price, get_option('future-lms_currency', 'ILS'));
-
-    if(!empty($discount_price)) {
-      $discount_price = floatval($discount_price);
-    }
-
-    $payments = isset($args["payments"]) ? intval($args["payments"]) : 1;
-
-    $result = preg_replace("/{full_price}/", $full_price_txt, $format);
-    $result = preg_replace("/{discount_price}/", $discount_price_txt, $result);
-    $result = preg_replace("/{payment_price}/", number_format(ceil($discount_price / $payments)), $result);
-    $result = preg_replace("/{payments}/", $payments, $result);
-    $result = preg_replace("/{discount_pct}/", $discount_price > 0 ? (round((1 - ($discount_price / $full_price)) * 100))."%" : "", $result);
-
-    return $result;
+    $course = new Course($args["course_id"] ?? false);
+    include FutureLMS::get_template_part("price_box.php",["course" => $course]);
+    return;
   }
 
   public function modules()

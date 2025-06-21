@@ -1,4 +1,8 @@
-<h2 class="courses-header"><?php _e("Available courses","future-lms"); ?></h2>
+<h2 class="courses-header"><?php
+
+use FutureLMS\FutureLMS;
+
+ _e("Available courses","future-lms"); ?></h2>
 <div class="available-courses course-list">
 <?php
 
@@ -37,9 +41,7 @@ foreach ($sorted_courses as $course) {
       <span class='course-author'><?php echo $author; ?></span>
       <?php include "short_description.php"; ?>
       <?php 
-      get_template_part('webparts/price_box', null, [
-        'course' => $course
-      ]);
+      FutureLMS::get_template_part('price_box.php', ['course' => $course]);
       ?>
       <form method="POST" action="<?php echo $courseUrl; ?>">
         <input type="hidden" name="course_id" value="<?php echo $course->ID; ?>">
