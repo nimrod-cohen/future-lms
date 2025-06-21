@@ -47,11 +47,11 @@ class FutureLMS {
     public $coupons = null;
 
     function __construct() {
-        VersionManager::installVersion();
+        VersionManager::install_version();
 
        // $this->coupons = Coupon::get_instance();
 
-        add_action('init', [$this, 'initHooks']);
+        add_action('init', [$this, 'init_hooks']);
 
         add_shortcode('flms_course_price', ['FutureLMS\classes\Course', 'get_course_price_box']);
         add_shortcode('flms_school_lobby', [$this, 'show_school_lobby']);
@@ -97,9 +97,9 @@ class FutureLMS {
 
     }
 
-    public function initHooks() {
-        add_action('admin_menu', [$this, 'addAdminMenu']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueueAdminScript']);
+    public function init_hooks() {
+        add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_action("wp_enqueue_scripts", [$this, 'enqueueSchoolScripts']);
         add_action("wp_ajax_search_students", [$this, "search_students"]);
         add_action("wp_ajax_get_all_courses", [$this, "get_all_Courses"]);
@@ -110,16 +110,16 @@ class FutureLMS {
         add_action("wp_ajax_get_lessons", [$this, "get_class_lessons"]);
         add_action("wp_ajax_get_lesson_content", [$this, "get_lesson_content"]);
         add_action("wp_ajax_set_student_notes", [$this, "set_student_notes"]);
-        add_action("wp_ajax_get_student_progress", [$this, "getStudentProgress"]);
-        add_action("wp_ajax_set_student_progress", [$this, "setStudentProgress"]);
+        add_action("wp_ajax_get_student_progress", [$this, "get_student_progress"]);
+        add_action("wp_ajax_set_student_progress", [$this, "set_student_progress"]);
         add_action("wp_ajax_get_students", [$this, "get_students"]);
         add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
         add_action("wp_ajax_remove_payment", [$this, "remove_payment"]);
         add_action("wp_ajax_add_stodent_to_class", [$this, "add_student_to_class"]);
         add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
         add_action("wp_ajax_send_email", [$this, "sendEmail"]);
-        add_action("wp_ajax_value_get_settings", [$this, "getSettings"]);
-        add_action("wp_ajax_value_set_settings", [$this, "setSettings"]);
+        add_action("wp_ajax_value_get_settings", [$this, "get_settings"]);
+        add_action("wp_ajax_value_set_settings", [$this, "set_settings"]);
         add_action('show_user_profile', [$this, 'extraUserFields']);
         add_action('edit_user_profile', [$this, 'extraUserFields']);
         add_action('manage_users_columns', [$this, 'addExtraUserFieldsToList']);
@@ -189,51 +189,12 @@ class FutureLMS {
         echo $fmt->formatCurrency($price, "ILS");
     }
 
-    public function getSettings() {
-        $zoomAppClientId = get_option('zoom_app_client_id', '');
-        $zoomAppClientSecret = get_option('zoom_app_client_secret', '');
-        $zoomAccountId = get_option('zoom_account_id', '');
-        $shorturlsToken = get_option('shorturls_token', '');
-        $shorturlsUsername = get_option('shorturls_username', '');
-        $whatsapp019Token = get_option('whatsapp_019_token', '');
-        $whatsapp019Username = get_option('whatsapp_019_username', '');
-        $whatsapp_019_phone = get_option('whatsapp_019_phone', '');
-
-        echo json_encode([
-            'zoom_app_client_id' => $zoomAppClientId,
-            'zoom_app_client_secret' => $zoomAppClientSecret,
-            'zoom_account_id' => $zoomAccountId,
-            'shorturls_token' => $shorturlsToken,
-            'shorturls_username' => $shorturlsUsername,
-            'whatsapp_019_token' => $whatsapp019Token,
-            'whatsapp_019_username' => $whatsapp019Username,
-            'whatsapp_019_phone' => $whatsapp_019_phone
-        ]);
-
-        die;
+    public function get_settings() {
+        wp_send_json([]);
     }
 
-    public function setSettings() {
-        $zoomAppClientId = $_POST["zoom_app_client_id"];
-        $zoomAppClientSecret = $_POST["zoom_app_client_secret"];
-        $zoomAccountId = $_POST["zoom_account_id"];
-        $shorturlsToken = $_POST["shorturls_token"];
-        $shorturlsUsername = $_POST["shorturls_username"];
-        $whatsapp019Token = $_POST["whatsapp_019_token"];
-        $whatsapp019Username = $_POST["whatsapp_019_username"];
-        $whatsapp019Phone = $_POST["whatsapp_019_phone"];
-
-        update_option('zoom_app_client_id', $zoomAppClientId, true);
-        update_option('zoom_app_client_secret', $zoomAppClientSecret, true);
-        update_option('zoom_account_id', $zoomAccountId, true);
-        update_option('shorturls_token', $shorturlsToken, true);
-        update_option('shorturls_username', $shorturlsUsername, true);
-        update_option('whatsapp_019_token', $whatsapp019Token, true);
-        update_option('whatsapp_019_username', $whatsapp019Username, true);
-        update_option('whatsapp_019_phone', $whatsapp019Phone, true);
-
-        echo json_encode(["error" => false, "message" => "Settings saved successfully"]);
-        die;
+    public function set_settings() {
+        wp_send_json(["error" => false, "message" => "Settings saved successfully"]);
     }
 
     public static function log($msg) {
@@ -368,7 +329,7 @@ class FutureLMS {
         ]);
     }
 
-    public function enqueueAdminScript($hook) {
+    public function enqueue_admin_assets($hook) {
         if ("toplevel_page_future-lms-settings" != $hook) {
             return;
         }
@@ -392,11 +353,11 @@ class FutureLMS {
 
     }
 
-    public function addAdminMenu() {
-        add_menu_page('Future LMS', 'Future LMS', 'manage_options', 'future-lms-settings', [$this, 'showAdminPage'], 'dashicons-schedule', 30);
+    public function add_admin_menu() {
+        add_menu_page('Future LMS', 'Future LMS', 'manage_options', 'future-lms-settings', [$this, 'show_admin_page'], 'dashicons-schedule', 30);
     }
 
-    public function showAdminPage() {
+    public function show_admin_page() {
         require_once __DIR__ . DIRECTORY_SEPARATOR . 'admin/admin.php';
     }
 
@@ -555,7 +516,7 @@ class FutureLMS {
         }
     }
 
-    public function setStudentProgress() {
+    public function get_student_progress() {
         $courseId = $_POST["course_id"];
         $moduleId = $_POST["module_id"];
         $lessonId = $_POST["lesson_id"];
@@ -614,7 +575,7 @@ class FutureLMS {
 
     }
 
-    public function getStudentProgress() {
+    public function get_student_progress() {
         try {
             $result = [];
             $studentId = get_current_user_id();

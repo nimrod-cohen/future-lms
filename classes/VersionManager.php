@@ -4,7 +4,7 @@ use FutureLMS\FutureLMS;
 
 class VersionManager {
   const SCHOOL_VERSION = 'future_lms_version';
-  public static function installVersion()
+  public static function install_version()
   {
     global $wpdb;
 
