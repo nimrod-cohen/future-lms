@@ -14,7 +14,8 @@ class SettingsTab {
     JSUtils.fetch(__futurelms.ajax_url, {
       action: 'future_lms_get_settings'
     }).then(data => {
-      this.tab.querySelector('#default_lobby_page').value = data.default_lobby_page || 'mycourses';
+      this.tab.querySelector('#default_lobby_page').value = data.default_lobby_page;
+      this.tab.querySelector('#store_currency').value = data.store_currency;
     });
   };
 
@@ -22,7 +23,8 @@ class SettingsTab {
     e.preventDefault();
 
     let data = {
-      default_lobby_page: this.tab.querySelector('#default_lobby_page').value
+      default_lobby_page: this.tab.querySelector('#default_lobby_page').value,
+      store_currency: this.tab.querySelector('#store_currency').value
     };
 
     JSUtils.fetch(__futurelms.ajax_url, {

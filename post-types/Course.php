@@ -130,9 +130,8 @@ function render_course_meta_box($post)
 }
 
 // Save meta data
-add_action('save_post_course', function ($post_id) {
-    if (!isset($_POST['_course_nonce']) || !wp_verify_nonce($_POST['_course_nonce'], 'course_meta_nonce')) return;
-
+add_action('save_post_course', function ($post_id, $post) {
+  if (isset($_POST['_course_nonce']) && wp_verify_nonce($_POST['_course_nonce'], 'course_meta_nonce')) {
     $fields = [
         'full_price',
         'discount_price',
@@ -151,4 +150,6 @@ add_action('save_post_course', function ($post_id) {
             update_post_meta($post_id, $field, sanitize_text_field($_POST[$field]));
         }
     }
-});
+  }
+  do_action('future-lms/course_saved', $post_id, $post);
+}, 10, 2);

@@ -3,8 +3,16 @@
 namespace FutureLMS\classes;
 
 class Settings {
-  private const OPTIONS = ['flms_default_lobby_page' => 'mycourses'];
+  private const OPTIONS = ['flms_default_lobby_page' => 'mycourses',
+                           'flms_store_currency' => 'ILS'];
   private const PREFIX = 'flms_';
+
+  public const CURRENCIES = [
+    'ILS' => '₪',
+    'USD' => '$',
+    'EUR' => '€',
+    'GBP' => '£'
+  ];
 
   public static function all(){
     $result = [];

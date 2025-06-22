@@ -1,7 +1,10 @@
 <?php 
+  use FutureLMS\classes\Settings;
+
   $fmt = $course->get_formatter();
   $full_price = $course->field("full_price") ?? 0;
-  $full_price_txt = $fmt->formatCurrency($full_price, get_option('future-lms_currency', 'ILS'));
+  $currency = Settings::get('store_currency'); 
+  $full_price_txt = $fmt->formatCurrency($full_price, $currency);
 
   $discount_price = $course->field("discount_price") ?? 0;
   if(!empty($discount_price)) {
@@ -14,10 +17,10 @@
   $installment_txt = '';
   $payments = 1;
   if(!empty($discount_price)) {
-    $discount_price_txt = $fmt->formatCurrency($discount_price, get_option('future-lms_currency', 'ILS'));
+    $discount_price_txt = $fmt->formatCurrency($discount_price, $currency);
     $payments = isset($args["payments"]) ? intval($args["payments"]) : 1;
     $payments_installment = $final_price / $payments;
-    $installment_txt = $fmt->formatCurrency($payments_installment, get_option('future-lms_currency', 'ILS'));
+    $installment_txt = $fmt->formatCurrency($payments_installment, $currency);
   }
 ?>
 <span class='course-price' style="display: grid; grid-template-areas:'line-1' 'line-2'; gap:8px;align-items:center; width:100%;">

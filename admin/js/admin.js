@@ -70,7 +70,7 @@ class AdminManager {
         style: 'currency',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-        currency: 'ILS'
+        currency: __futurelms.store_currency
       }).format(totalPayments);
 
       COMMON.getTab(COMMON.TABS.BILLING).querySelector(

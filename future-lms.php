@@ -197,7 +197,8 @@ class FutureLMS {
     $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
     $price = $course->field($column)?? 0;
     $price = empty($price) ? 0 : floatval($price);
-    echo $fmt->formatCurrency($price, "ILS");
+    $currency = Settings::get("store_currency");
+    echo $fmt->formatCurrency($price, $currency);
   }
 
   public function get_settings() {
@@ -313,7 +314,10 @@ class FutureLMS {
     wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js']);
     wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css']);
 
-    wp_localize_script('future-lms-admin-js', '__futurelms', ['ajax_url' => admin_url('admin-ajax.php')]);
+    wp_localize_script('future-lms-admin-js', '__futurelms', [
+      'ajax_url' => admin_url('admin-ajax.php'),
+      'store_currency' => Settings::get("store_currency"),
+    ]);
 
     wp_enqueue_script('trumbowyg-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/trumbowyg.min.js');
     wp_enqueue_script('trumbowyg-base64-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/plugins/base64/trumbowyg.base64.min.js', ['trumbowyg-js']);
