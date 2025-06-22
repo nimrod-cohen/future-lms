@@ -12,17 +12,21 @@ class SettingsTab {
     console.log('getting settings');
 
     JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'value_get_settings'
-    }).then(data => {});
+      action: 'future_lms_get_settings'
+    }).then(data => {
+      this.tab.querySelector('#default_lobby_page').value = data.default_lobby_page || 'mycourses';
+    });
   };
 
   setSettings = e => {
     e.preventDefault();
 
-    let data = {};
+    let data = {
+      default_lobby_page: this.tab.querySelector('#default_lobby_page').value
+    };
 
     JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'value_set_settings',
+      action: 'future_lms_set_settings',
       ...data
     }).then(data => {
       notifications.show(data.message, 'success');

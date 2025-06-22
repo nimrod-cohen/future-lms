@@ -1,5 +1,5 @@
 1. handle top navigation menus during logged in
-DONE 2. turn all the hebrew into text domain __ / _e(...,"future-lms"), including JS side by passing localized strings
+2. turn all the hebrew into text domain __ / _e(...,"future-lms"), including JS side by passing localized strings
 3. support theme structure php replacement to front/webparts school webparts
 6. fix lobby course thumbnail - full width in box
 7. add setting for school currency
@@ -26,3 +26,4 @@ DONE 8. add function to print course price as currency
 25. check that the get_template_part works with theme overriding the plugin webparts
 26. add maximum payments to course settings
 27. mark course as featured without tags, and allow i18n "Popular" for featured courses
+28. start versioning and deploying via git

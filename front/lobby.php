@@ -4,6 +4,7 @@ Template Name: School Template
  */
 
 use FutureLMS\classes\Course;
+use FutureLMS\classes\Settings;
 use FutureLMS\classes\Student;
 use FutureLMS\FutureLMS;
 
@@ -11,7 +12,8 @@ $post = get_post();
 
 $user = wp_get_current_user();
 
-$schoolPage = "courses";
+$schoolPage = Settings::get('default_lobby_page');
+
 if (isset($_GET["pg"])) {
   $schoolPage = $_GET["pg"];
 }
@@ -31,9 +33,9 @@ $urls = [
             <a class="text-blue-600 underline" href="/"><?php _e('Back to site &larr;','future-lms');?></a>
           </span>
           <span class="tabs">
-            <a href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
+            <a class="<?php echo $schoolPage === "mycourses" ? "selected" : ""; ?>" href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
             <span class="divider">&nbsp;</span>
-            <a href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course store','future-lms');?></a>
+            <a class="<?php echo $schoolPage === "courses" ? "selected" : ""; ?>" href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course store','future-lms');?></a>
           </span>
         </div>
         <div class="school-courses">

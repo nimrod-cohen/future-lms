@@ -490,6 +490,9 @@ body.school {
       .tabs {
         display: flex;
         > a {
+          &.selected {
+            background-color: #efefef;
+          }
           padding: 5px 10px;
           &:hover {
             text-decoration: none;
@@ -499,7 +502,7 @@ body.school {
 
         .divider {
           width: 1px;
-          border-left: solid 1px #e0e0e0;
+          border-left: solid 1px white;
         }
       }
     }

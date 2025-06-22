@@ -42,14 +42,13 @@ use FutureLMS\classes\Course;
 use FutureLMS\classes\BaseObject;
 use FutureLMS\classes\Lesson;
 use FutureLMS\classes\SchoolClass;
+use FutureLMS\classes\Settings;
 
 class FutureLMS {
   public $coupons = null;
 
   function __construct() {
     VersionManager::install_version();
-
-    // $this->coupons = Coupon::get_instance();
 
     add_action('init', [$this, 'init_hooks']);
 
@@ -123,8 +122,8 @@ class FutureLMS {
     add_action("wp_ajax_add_stodent_to_class", [$this, "add_student_to_class"]);
     add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
-    add_action("wp_ajax_value_get_settings", [$this, "get_settings"]);
-    add_action("wp_ajax_value_set_settings", [$this, "set_settings"]);
+    add_action("wp_ajax_future_lms_get_settings", [$this, "get_settings"]);
+    add_action("wp_ajax_future_lms_set_settings", [$this, "set_settings"]);
     add_action('show_user_profile', [$this, 'extraUserFields']);
     add_action('edit_user_profile', [$this, 'extraUserFields']);
     add_action('manage_users_columns', [$this, 'addExtraUserFieldsToList']);
@@ -135,6 +134,13 @@ class FutureLMS {
     add_filter('manage_lesson_posts_custom_column', [$this, 'addExtraLessonFieldsToListData'], 10, 2);
     //restrict access to lessons:
     add_action('template_redirect', [$this, 'restrict_school_access']);
+
+    //add student role if not exists
+     add_role('student', 'Student', [
+        'read' => true,
+        'edit_posts' => false,
+        'delete_posts' => false,
+    ]);
   }
 
   public function restrict_school_access() {
@@ -195,10 +201,13 @@ class FutureLMS {
   }
 
   public function get_settings() {
-    wp_send_json([]);
+    $result = Settings::all();
+    wp_send_json($result);
   }
 
   public function set_settings() {
+    //loop through all POST variables and update options
+    Settings::set_many($_POST);
     wp_send_json(["error" => false, "message" => "Settings saved successfully"]);
   }
 
