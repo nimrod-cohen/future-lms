@@ -39,6 +39,19 @@ class Course extends BaseObject {
       return $result;
   }
 
+  public function price() {
+    $discount_price = $this->raw("discount_price");
+    $discount_price = !empty($discount_price) ? floatval($discount_price) : false;
+
+    if ($discount_price) {
+      return $discount_price;
+    }
+
+    $full_price = $this->raw("full_price");
+    $full_price = !empty($full_price) ? floatval($full_price) : false;
+    return $full_price;
+  }
+
   public static function get_courses_tree($courses = null, $enabledOnly = true) {
     global $wpdb;
 
