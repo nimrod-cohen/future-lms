@@ -100,7 +100,7 @@ class CouponsTab {
         failed = true;
       }
 
-      //at least 10 ILS
+      //minimum 10 to pass charging
       if (!values.price || values.price < 10) {
         priceField.classList.add('error');
         failed = true;

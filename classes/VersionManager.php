@@ -4,11 +4,11 @@ use FutureLMS\FutureLMS;
 
 class VersionManager {
   const SCHOOL_VERSION = 'future_lms_version';
-  public static function installVersion()
+  public static function install_version()
   {
     global $wpdb;
 
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $curr = get_option(self::SCHOOL_VERSION, 0);
 

@@ -1,7 +1,7 @@
 <?php
-$short_desc = get_post_meta($post->ID, "short_description", true);
+$short_desc = get_post_meta($course->raw("ID"), "short_description", true);
 ?>
-<?php if (!empty($$short_desc)) {?>
+<?php if (!empty($short_desc)) {?>
   <span class='course-short-desc'>
     <?php echo $short_desc; ?>
     <span class='course-read-more'>

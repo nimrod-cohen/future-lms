@@ -1,7 +1,28 @@
-1. why icon is "Array"
-2. turn all the hebrew into text domain __ / _e(...,"future-lms")
+1. handle top navigation menus during logged in
+2. turn all the hebrew into text domain __ / _e(...,"future-lms"), including JS side by passing localized strings
 3. support theme structure php replacement to front/webparts school webparts
-4. call /course.php from lobby (course.php shortcode eliminated)
 6. fix lobby course thumbnail - full width in box
-7. add setting for school currency
-8. add function to print course price
+9. support RTL/LTR mode - in settings (is it necessary? site is RTL if hebrew front)
+10. fix progress bar in lobby
+11. rewrite progress calculation and send events every time progress promotes by 1% per course.
+12. color scheme support to LMS front (including inner shop and couse area)
+13. sendEmail function - add teacher email to course, and send as sender.
+14. move static functions from Student class to School/Class/Course etc'.
+15. check if open/closed class lessons are enforced in student area
+16. get rid of course charge url, find a way to subscribe a user to a course without it.
+17. review add_student_to_class and see if we can clean it up from code that is not LMS related.
+18. check if get_course_price_box works
+19. addCoursesColumns,fillCoursesColumns,addLessonsColumns,fillLessonsColumns  
+    remove it once all is managed from the LMS UI
+20. extraUserFields, addExtraUserFieldsToList, addExtraUserFieldsToListData,addExtraModuleFieldsToListData,
+    addExtraLessonFieldsToList,addExtraLessonFieldsToListData
+    remvoe all these once all is managed from the LMS UI
+21. review the featured tags - must they be part of the LMS?
+22. add video preview support to course to show on course page.
+23. add ability to measure video hours and show hours in single-course.php. search: <!-- • 3.5 שעות-->
+24. export/import course tree to JSON
+25. check that the get_template_part works with theme overriding the plugin webparts
+26. add maximum payments to course settings
+27. mark course as featured without tags, and allow i18n "Popular" for featured courses
+28. start versioning and deploying via git
+29. Add support to multi currency store

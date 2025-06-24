@@ -1,25 +1,27 @@
 <?php
 namespace FutureLMS\classes;
 
-class Coupons {
+use FutureLMS\FutureLMS;
+
+class Coupon {
   private static $instance;
 
   public static function get_instance() {
     if (!isset(self::$instance)) {
-      self::$instance = new Coupons();
+      self::$instance = new Coupon();
     }
     return self::$instance;
   }
 
   protected function __construct() {
-    add_action("wp_ajax_save_coupon", [$this, "saveCoupon"]);
-    add_action("wp_ajax_delete_coupon", [$this, "deleteCoupon"]);
-    add_action("wp_ajax_get_coupons", [$this, "getCoupons"]);
+    add_action("wp_ajax_save_coupon", [$this, "save"]);
+    add_action("wp_ajax_delete_coupon", [$this, "delete"]);
+    add_action("wp_ajax_get_coupons", [$this, "all"]);
   }
 
-  public function deleteCoupon() {
+  public function delete() {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $sql = 'update '.$prefix.'coupons set deleted = 1 where id = %d';
     $sql = $wpdb->prepare($sql, $_POST["coupon_id"]);
@@ -28,9 +30,9 @@ class Coupons {
     die();
   }
 
-  public function saveCoupon() {
+  public function save() {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $couponId = isset($_POST["coupon_id"]) ? $_POST["coupon_id"] : false;
 
@@ -79,7 +81,7 @@ class Coupons {
 
   public function byCode($promo) {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $sql = "SELECT c.id, c.code, c.email, c.global, c.course_id, DATE_FORMAT(c.expires, '%Y-%m-%d') as expires, c.price, p.post_title as course, c.comment
     FROM ".$prefix."coupons c
@@ -96,9 +98,9 @@ class Coupons {
     return $row;
   }
 
-  public function getCoupons() {
+  public function all() {
     global $wpdb;
-    $prefix = DBManager::TABLE_PREFIX();
+    $prefix = FutureLMS::TABLE_PREFIX();
 
     $sql = "SELECT c.id, c.code, c.email, c.global, c.course_id, DATE_FORMAT(c.expires, '%Y-%m-%d') as expires, c.price, p.post_title as course, c.comment
     FROM ".$prefix."coupons c
@@ -111,6 +113,6 @@ class Coupons {
   }
 }
 
-$coupons = Coupons::get_instance();
+$coupons = Coupon::get_instance();
 
 ?>

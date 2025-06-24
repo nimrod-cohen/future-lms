@@ -1,34 +1,31 @@
-  <?php
+<h2 class="courses-header"><?php
 
 use FutureLMS\FutureLMS;
-use FutureLMS\classes\Courses;
-?>
-<h2 class="courses-header"><?php _e("Our courses","future-lms"); ?></h2>
+
+ _e("Course store","future-lms"); ?></h2>
 <div class="available-courses course-list">
 <?php
 
-$sortedCourses = ["regular" => [], "featured" => []];
-foreach ($availableCourses as $course) {
-  $featured = Courses::course_has_tag($course->ID, 'featured');
-  $sortedCourses[$featured ? 'featured' : 'regular'][] = $course;
+$sorted_courses = ["regular" => [], "featured" => []];
+foreach ($available_courses as $course) {
+  $featured = $course->has_tag('featured');
+  $sorted_courses[$featured ? 'featured' : 'regular'][] = $course;
 }
-$sortedCourses = array_merge($sortedCourses['featured'], $sortedCourses['regular']);
+$sorted_courses = array_merge($sorted_courses['featured'], $sorted_courses['regular']);
 
-foreach ($sortedCourses as $course) {
+foreach ($sorted_courses as $course) {
   //get post thumbnail
-  $courseImage = FutureLMS::get_course_image($course->ID);
-  $courseUrl = get_post_meta($course->ID, "course_page_url", true);
+  $courseImage = $course->get_featured_image('full');
+  $courseUrl = $course->raw("course_page_url");
 
   if (!$courseUrl) {
     $currentUrl = wp_unslash(esc_url_raw(add_query_arg(null, null)));
     $courseUrl = add_query_arg('pg', 'course-details', $currentUrl);
   }
 
-  $author = get_the_author_meta('display_name', $course->post_author);
+  $author = $course->display('author');
 
-  $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
-  $price = get_post_meta($course->ID, "full_price", true);
-  $tags = get_post_meta($course->ID, "tags", true);
+  $tags = $course->raw("tags");
   //strip html tags
   $tags = strip_tags($tags);
   //strip spaces and split by comma
@@ -43,7 +40,9 @@ foreach ($sortedCourses as $course) {
       <span class='course-name'><?php echo $course->post_title; ?></span>
       <span class='course-author'><?php echo $author; ?></span>
       <?php include "short_description.php"; ?>
-      <span class='course-price'><?php echo $fmt->formatCurrency($price, "ILS"); ?></span>
+      <?php 
+      FutureLMS::get_template_part('price_box.php', ['course' => $course]);
+      ?>
       <form method="POST" action="<?php echo $courseUrl; ?>">
         <input type="hidden" name="course_id" value="<?php echo $course->ID; ?>">
         <button type="submit" class='add-to-cart' href="<?php echo $courseUrl; ?>">

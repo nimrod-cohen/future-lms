@@ -3,17 +3,17 @@
 Template Name: School Template
  */
 
-use FutureLMS\classes\Courses;
-use FutureLMS\classes\DBManager;
+use FutureLMS\classes\Course;
+use FutureLMS\classes\Settings;
+use FutureLMS\classes\Student;
+use FutureLMS\FutureLMS;
 
 $post = get_post();
 
-$courseWorkspacePage = get_pages(['child_of' => $post->ID, 'meta_key' => '_wp_page_template', 'meta_value' => 'course.php']);
-$courseWorkspacePage = get_page_link($courseWorkspacePage[0] ?? null);
-
 $user = wp_get_current_user();
 
-$schoolPage = "courses";
+$schoolPage = Settings::get('default_lobby_page');
+
 if (isset($_GET["pg"])) {
   $schoolPage = $_GET["pg"];
 }
@@ -29,47 +29,56 @@ $urls = [
 		<div class="row page-content">
 			<div class="col-lg-12 main-content">
         <div class="school-header">
-          <span class="hello">היי <?php echo $user->data->display_name; ?></span>
+          <span class="hello"><?php echo sprintf(__('Hey %s','future-lms'), $user->data->display_name); ?>, 
+            <a class="text-blue-600 underline" href="/"><?php _e('Back to site &larr;','future-lms');?></a>
+          </span>
           <span class="tabs">
-            <a href="<?php echo $urls["my_courses"]; ?>">הקורסים שלי</a>
+            <a class="<?php echo $schoolPage === "mycourses" ? "selected" : ""; ?>" href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
             <span class="divider">&nbsp;</span>
-            <a href="<?php echo $urls["available_courses"]; ?>">חנות הקורסים</a>
+            <a class="<?php echo $schoolPage === "courses" ? "selected" : ""; ?>" href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course store','future-lms');?></a>
           </span>
         </div>
         <div class="school-courses">
         <?php
 //get all posts of type course, where post is publised
-$courses = new WP_Query(["post_type" => 'course', 'posts_per_page' => -1, 'post_status' => 'publish']);
+$courses = new Course();
 
-$valueQuery = new DBManager($user->ID);
+$student = new Student($user->ID);
 
-$attendingCourses = [];
-$availableCourses = [];
+$attending_courses = [];
+$available_courses = [];
 
-while ($courses->have_posts()) {
-  //get post object of the current pod
-  $post = $courses->next_post();
-
-  if ($valueQuery->isAttending($post->ID)) {
-    $attendingCourses[] = $post;
+while ($obj = $courses->fetch()) {
+  $course = new Course($obj);
+  if ($student->is_attending_course($course->raw("ID"))) {
+    $attending_courses[] = $course;
   } else {
-    if (Courses::course_has_tag($post->ID, 'hidden')) {
+    //cast BaseObject to Course
+    if ($course->has_tag('hidden')) {
       continue;
     }
-    $availableCourses[] = $post;
+    $available_courses[] = $course;
   }
 }
 ?>
 <?php
 switch ($schoolPage) {
 case "mycourses":
-  include_once "webparts/my_courses.php";
+  FutureLMS::get_template_part("my_courses.php", [
+    'attending_courses' => $attending_courses,
+    'student' => $student
+  ]);
   break;
 case "courses":
-  include_once "webparts/available_courses.php";
+  FutureLMS::get_template_part("available_courses.php", [
+    'available_courses' => $available_courses
+  ]);
   break;
 case "course-details":
-  include_once "webparts/course_details.php";
+  $course = new Course($_POST["course_id"] ?? 0);
+  FutureLMS::get_template_part("course_details.php", [
+    'course' => $course
+  ]);
   break;
 }
 ?>

@@ -1,6 +1,6 @@
 <?php
 
-use FutureLMS\classes\PodsWrapper;
+use FutureLMS\classes\BaseObject;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST'
   || !isset($_POST["course_id"])
@@ -12,8 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST'
 
 $courseId = $_POST["course_id"];
 $lessonId = $_POST["lesson_id"];
-$course = PodsWrapper::factory("course", $courseId);
-$lesson = PodsWrapper::factory("lesson", $lessonId);
+$course = BaseObject::factory("course", $courseId);
+$lesson = BaseObject::factory("lesson", $lessonId);
+
+$images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
 
 ?>
 <div
@@ -21,29 +23,47 @@ $lesson = PodsWrapper::factory("lesson", $lessonId);
   course-id="<?php echo $courseId; ?>"
   class-id="<?php echo $_POST["class_id"]; ?>"
   lesson-id="<?php echo $_POST["lesson_id"]; ?>">
-<?php get_sidebar('school', ["course" => $course]); ?>
+  <div class="school-sidebar">
+    <div class="sidebar-header">
+      <label>
+        <?php echo $course->raw("name"); ?>
+      </label>
+      <a href="#" class="exit-to-lobby show-popover pop-right" data-content="<?php _e("Exit to lobby","future-lms"); ?>">
+        <img alt="<?php _e("Exit to lobby","future-lms"); ?>" src="<?php echo $images_dir_url; ?>/exit.svg" />
+      </a>
+      <img class="close-sidebar" alt="<?php _e("Close index","future-lms"); ?>" src="<?php echo $images_dir_url; ?>/close.svg" />
+    </div>
+  </div>
   <div class="lesson">
     <div class="lesson-videos">
       <div class="lesson-videos-nav">
-        <a class="prev-video" href="#">&rarr; לסרטון הקודם</a>
+        <a class="prev-video" href="#"><?php _e("&rarr; Previous video", "future-lms"); ?></a>
         <span id="current-lesson-title">
           <span class="lesson-title"><?php echo $lesson->raw("title"); ?></span>
           <span class="multiple-video-indication hidden"></span>
+          <button class="nav-lessons show-popover" type="button" aria-label="Choose Lesson" data-content="<?php _e("Choose lesson", "future-lms"); ?>">
+            <img src="<?php echo $images_dir_url; ?>/index.svg" />
+          </button>
         </span>
-        <a class="next-video" href="#">לסרטון הבא &larr;</a>
+        <a class="next-video" href="#"><?php _e("&larr; Next video", "future-lms"); ?></a>
       </div>
       <div class="video-container"></div>
     </div>
     <div class="lesson-materials">
       <span class="current-lesson-title show-no-videos">
-        <span class="lesson-title"><?php echo $lesson->raw("title"); ?></span>
+        <span class="lesson-header">
+          <span class="lesson-title"><?php echo $lesson->raw("title"); ?></span>
+        </span>
+        <button class="nav-lessons show-popover pop-right" type="button" aria-label="Choose Lesson" data-content="<?php _e("Choose lesson", "future-lms"); ?>">
+          <img src="<?php echo $images_dir_url; ?>/index.svg" alt="<?php _e("Navigate lessons","future-lms"); ?>" />
+        </button>
       </span>
       <ul class="lesson-materials-nav">
         <li class="selected" tab-id="content">מה נלמד בשיעור</li>
         <li tab-id="additional">חומרים ועזרים נלווים</li>
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
-        <li class="toggle-videos"><img src="<?php echo plugin_dir_url(__FILE__); ?>/front/assets/image/toggle-up.svg" /></li>
+        <li class="toggle-videos show-popover pop-right" data-content="<?php _e("Toggle videos", "future-lms"); ?>" ><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
       </ul>
       <div class="lesson-content-viewer"></div>
     </div>
