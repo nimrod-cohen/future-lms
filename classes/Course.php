@@ -20,13 +20,18 @@ class Course extends BaseObject {
       return BaseObject::factory("module", ["where" => "course = " . $this->raw("ID"), "orderby" => "order.meta_value ASC", "limit" => -1]);
   }
 
-  public static function get_classes($courseId, $search)
+  public static function get_classes($courseId, $search, $enabledOnly = true)
   {
       $where = 'course.id = ' . $courseId;
       if ($search) {
           $where .= " AND t.post_title like '%" . $search . "%'";
       }
-      $classes = new SchoolClass(['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC']);
+
+    $post_status = $enabledOnly
+      ? ['publish']
+      : ['publish', 'pending', 'draft', 'future', 'private', 'trash'];
+
+      $classes = new SchoolClass(['limit' => 0, 'where' => $where, 'orderby' => 'start_date DESC', 'post_status' => $post_status]);
       $result = [];
 
       foreach ($classes->results() as $row) {
@@ -180,6 +185,7 @@ class Course extends BaseObject {
 
     return $result;
   }
+
 
   public function has_tag($tag): bool {
     $tags = $this->field("tags") ?? '';

@@ -16,8 +16,9 @@ class Admin {
   protected function __construct() {
     add_action("wp_ajax_edit_course", [$this, "edit_course"]);
     add_action("wp_ajax_change_course_status", [$this, "change_course_status"]);
+    add_action("wp_ajax_change_schoolclass_status", [$this, "change_schoolclass_status"]);
     add_action("wp_ajax_change_module_status", [$this, "change_module_status"]);
-    add_action("wp_ajax_change_lesson_status", [$this, "chane_lesson_status"]);
+    add_action("wp_ajax_change_lesson_status", [$this, "change_lesson_status"]);
     add_action("wp_ajax_edit_module", [$this, "edit_module"]);
     add_action("wp_ajax_reorder_module", [$this, "reorder_module"]);
     add_action("wp_ajax_reorder_lesson", [$this, "reorder_lesson"]);
@@ -32,6 +33,7 @@ class Admin {
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
       $startDate = isset($_POST['start_date']) ? $_POST['start_date'] : null;
       $lessons = isset($_POST['lessons']) ? $_POST['lessons'] : "[]";
+      $isLiveClass = isset($_POST['is_live_class']) ? $_POST['is_live_class'] : 0;
 
       if (empty($classId)) {
         //create new course, a course is a wp_post with post_type = course
@@ -50,6 +52,7 @@ class Admin {
       update_post_meta($classId, 'course', $courseId);
       update_post_meta($classId, 'start_date', $startDate);
       update_post_meta($classId, 'lessons', stripslashes($lessons));
+      update_post_meta($classId, 'is_live_class', $isLiveClass);
 
       wp_send_json(['error' => false]);
     } catch (Exception $e) {
@@ -282,6 +285,17 @@ class Admin {
     $this->fix_modules_order($courseId);
 
     wp_send_json(['error' => false]);
+  }
+
+  public function change_schoolclass_status() {
+    global $wpdb;
+
+    $classId = $_POST["class_id"];
+    $status = $_POST["status"];
+
+    $wpdb->update($wpdb->prefix."posts", ["post_status" => $status], ["ID" => $classId]);
+    clean_post_cache($classId);
+    wp_transition_post_status($status, get_post_status($classId), get_post($classId));
   }
 
   private function fix_modules_order($courseId) {

@@ -107,6 +107,7 @@ class FutureLMS {
     add_action("wp_enqueue_scripts", [$this, 'enqueueSchoolScripts']);
     add_action("wp_ajax_search_students", [$this, "search_students"]);
     add_action("wp_ajax_get_all_courses", [$this, "get_all_Courses"]);
+    add_action("wp_ajax_get_all_classes", [$this, "get_all_Classes"]);
     add_action("wp_ajax_get_course_charge_url", [$this, "get_course_charge_url"]);
     add_action("wp_ajax_get_all_payments", [$this, "get_all_payments"]);
     add_action("wp_ajax_search_classes", [$this, "search_classes"]);
@@ -309,6 +310,7 @@ class FutureLMS {
     wp_enqueue_script('future-lms-admin-common-js', plugin_dir_url(__FILE__) . 'admin/js/common.js?time=' . date('Y_m_d_H'));
     wp_enqueue_script('future-lms-admin-students-js', plugin_dir_url(__FILE__) . 'admin/js/students.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
     wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
+    wp_enqueue_script('future-lms-admin-classes-js', plugin_dir_url(__FILE__) . 'admin/js/classes.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
     wp_enqueue_script('future-lms-admin-coupons-js', plugin_dir_url(__FILE__) . 'admin/js/coupons.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
     wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
     wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js']);
@@ -682,6 +684,63 @@ class FutureLMS {
     }
   }
 
+  public function getLessonsForClass($classId = null)
+  {
+    try {
+      if (empty($classId))
+        $classId = $_REQUEST["class_id"];
+
+      $class = BaseObject::factory("class", $classId);
+
+      $result = [];
+      if (!$class) {
+        throw new Exception('cannot find class by id');
+      }
+
+      $classLessons = $class->raw("lessons");
+      if ($classLessons) {
+        $classLessons = json_decode($classLessons, true);
+      } else {
+        $classLessons = [];
+      }
+
+      $course = $class->raw("course");
+
+      $modules = BaseObject::factory("module", ["where" => "course.id = " . $course["ID"], "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
+
+      while ($module = $modules->fetch()) {
+        $moduleId = $module->raw('ID');
+
+        $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
+
+        while ($lesson = $lessons->fetch()) {
+          $open = false;
+          $pos = array_search($lesson->raw("ID"), array_column($classLessons, 'id'));
+          if (false !== $pos) {
+            $open = $classLessons[$pos]["open"];
+          }
+
+          $result[] = [
+            "module_id" => $moduleId,
+            "module_title" => $module->raw("name", true),
+            "module_order" => $module->raw("order", true),
+            "intro_module" => $module->raw("intro_module", true),
+            "lesson_number" => $lesson->raw("lesson_number", true),
+            "id" => $lesson->raw("ID", true),
+            "title" => stripslashes($lesson->raw("title", true)),
+            "open" => $open
+          ];
+        }
+
+      }
+
+      return $result;
+    } catch (Exception $ex) {
+      echo json_encode([]);
+      die();
+    }
+  }
+
   public function sendEmail() {
     $courseId = $_REQUEST["course_id"];
     $classId = $_REQUEST["class_id"];
@@ -727,6 +786,7 @@ class FutureLMS {
   public function setLesson() {
     $classId = $_REQUEST["class_id"];
     $lessonId = $_REQUEST["lesson_id"];
+    $isClassLive = $_REQUEST["is_class_live"] ?? "false";
 
     $class = BaseObject::factory("class", $classId);
 
@@ -753,13 +813,13 @@ class FutureLMS {
     if (!$found) {
         $lessons[] = [
             "id" => $lessonId,
-            "open" => true
+            "open" => $isClassLive === "true" ? true : false
         ];
     }
 
     $lessons = json_encode($lessons);
     $class->save('lessons', $lessons);
-    wp_send_json([]);
+    wp_send_json('[]');
   }
 
   public function get_all_payments() {
@@ -780,6 +840,20 @@ class FutureLMS {
 
   public function get_all_Courses() {
     wp_send_json(["courses" => Course::get_courses_tree(null, false)]);
+  }
+
+  public function get_all_Classes()
+  {
+    $courseId = $_POST["course_id"];
+
+    $result = Course::get_classes($courseId, false, false);
+
+    $classesIds = array_map(function ($item) {
+      return $item["id"];
+    }, $result);
+
+    echo json_encode(["classes" => SchoolClass::get_classes_tree($classesIds, false)]);
+    die();
   }
 
   public function search_classes() {

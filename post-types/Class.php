@@ -70,6 +70,16 @@ function render_class_meta_box($post) {
                           style="width:100%; height:120px;"><?= esc_textarea($meta['lessons'][0] ?? '') ?></textarea>
             </label>
         </p>
+        <!-- Is Live Course Checkbox -->
+        <p>
+            <label>
+                <input type="checkbox"
+                       name="is_live_class"
+                       value="1"
+                  <?php checked(isset($meta['is_live_class'][0]) && $meta['is_live_class'][0] === '1') ?>>
+                <strong>This is a live class</strong>
+            </label>
+        </p>
     </div>
     <?php
 }
@@ -92,4 +102,9 @@ add_action('save_post_class', function($post_id) {
     if (isset($_POST['lessons'])) {
         update_post_meta($post_id, 'lessons', sanitize_textarea_field($_POST['lessons']));
     }
+
+	// Save Is Live Course
+	if (isset($_POST['is_live_class'])) {
+		update_post_meta($post_id, 'is_live_class', sanitize_textarea_field($_POST['is_live_class']));
+	}
 });

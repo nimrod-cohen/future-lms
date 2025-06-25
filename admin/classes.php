@@ -4,7 +4,7 @@
             <div class="ui form">
                 <div class="field">
                     <div class="ui search selection dropdown courses">
-                        <div class="text">Select a course</div>
+                        <div class="text">Loading courses...</div>
                     </div>
                 </div>
             </div>

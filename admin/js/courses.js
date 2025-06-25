@@ -70,7 +70,6 @@ class CoursesTab {
     });
 
     document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
-    document.querySelector('.action-bar [data-action="add-class"]').addEventListener('click', this.addClass);
   }
 
   reoderLesson = async (e, direction) => {
@@ -382,10 +381,6 @@ class CoursesTab {
     this.editCourse(null);
   };
 
-  addClass = () => {
-    this.editClass(null);
-  };
-
   updateCourse = e => {
     const course = e.target.closest('.course');
     const courseId = course.dataset.courseId;
@@ -522,91 +517,5 @@ class CoursesTab {
     });
   };
 
-  editClass = async classId => {
-    const selectedClass = classId ? this.state.get('classes')[classId] : null;
 
-    const formatDateTimeForInput = dateString => {
-      if (!dateString) return '';
-      try {
-        const date = new Date(dateString);
-
-        if (isNaN(date.getTime())) return '';
-
-        const pad = num => num.toString().padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
-          date.getMinutes()
-        )}`;
-      } catch (e) {
-        return '';
-      }
-    };
-
-    remodaler.show({
-      title: classId ? 'Edit Class' : 'Add Class',
-      message: `
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Class Name</label>
-            <input type='text' name='class_name' value='${selectedClass?.name || ''}'/>
-        </div>
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Select Course</label>
-            <select name="class_course_id" class="remodal-form-select" disabled>
-                <option value="">Loading courses...</option>
-            </select>
-            <div class="remodal-loading-indicator"></div>
-        </div>
-            <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Start Date & Time</label>
-            <input type="datetime-local" 
-                   name="class_start_date" 
-                   value="${formatDateTimeForInput(selectedClass?.start_date)}" 
-                   class="remodal-datetime-input"
-                   step="300" min="${new Date().toISOString().slice(0, 16)}">
-        </div>
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Lessons</label>
-            <input type='text' name='class_lessons' value='${selectedClass?.lessons || ''}' />
-        </div>`,
-      type: remodaler.types.FORM,
-      confirmText: classId ? 'Update' : 'Create',
-      confirm: async vals => {
-        var data = {
-          action: 'edit_class',
-          class_id: classId || '',
-          course_id: vals.class_course_id,
-          name: vals.class_name,
-          start_date: vals.class_start_date,
-          lessons: vals.class_lessons
-        };
-
-        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
-        if (!result.error) {
-          //show success notification
-          window.notifications.show('Class saved successfully', 'success');
-        }
-      }
-    });
-
-    const courses = this.state.get('courses');
-
-    const coursesArray = Object.keys(courses).map(id => ({
-      id: id,
-      ...courses[id]
-    }));
-
-    const select = document.querySelector('.remodal-form-select[name="class_course_id"]');
-    if (select) {
-      select.innerHTML = `
-                <option value="">-- Select a Course --</option>
-                    ${coursesArray
-                      .map(
-                        course =>
-                          `<option value="${course.id}" ${selectedClass?.id === course.id ? 'selected' : ''}>
-                        ${course.name}
-                </option>`
-                      )
-                      .join('')}`;
-      select.disabled = false;
-    }
-  };
 }

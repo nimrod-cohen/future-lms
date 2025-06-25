@@ -278,13 +278,21 @@ class BaseObject
   /**
    * Save item
    */
-  public function save()
+  public function save($field_name = null, $value = null)
   {
-      if ($this->is_collection) {
-          return false;
-      }
+    if ($this->is_collection) {
+      return false;
+    }
 
+    if ($field_name !== null) {
+      return $this->save_field($field_name, $value);
+    }
+
+    if ($this->is_post_type()) {
       return $this->save_post();
+    }
+
+    return false;
   }
 
   /**
@@ -308,14 +316,51 @@ class BaseObject
           $this->pod_id = $result;
 
           // Save meta fields
-          foreach ($this->fields as $key => $value) {
-              update_post_meta($this->pod_id, $key, $value);
-          }
+        foreach ($this->fields as $key => $value) {
+          $this->save_field($key, $value);
+        }
 
           return true;
       }
 
       return false;
+  }
+
+  private function save_field($field_name, $value)
+  {
+    if ($this->is_relationship_field($field_name)) {
+      $this->save_relationship_field($field_name, $value);
+    } else {
+      if (is_array($value) || is_object($value)) {
+        $value = json_encode($value);
+      }
+      update_post_meta($this->pod_id, $field_name, $value);
+
+      if (is_array($value) || is_object($value)) {
+        update_post_meta($this->pod_id, '_is_json_' . $field_name, '1');
+      }
+    }
+  }
+
+  private function save_relationship_field($field_name, $value)
+  {
+    $ids = [];
+
+    if (is_numeric($value)) {
+      $ids = [$value];
+    } elseif (is_array($value)) {
+      $ids = array_filter($value, 'is_numeric');
+    } elseif (is_object($value) && isset($value->ID)) {
+      $ids = [$value->ID];
+    }
+
+    update_post_meta($this->pod_id, '_pods_' . $field_name, $ids);
+
+    if (count($ids) === 1) {
+      update_post_meta($this->pod_id, $field_name, $ids[0]);
+    } else {
+      delete_post_meta($this->pod_id, $field_name);
+    }
   }
 
   /**
@@ -405,6 +450,15 @@ class BaseObject
     }
 
     return $this->field($field_name);
+  }
+
+  private function is_relationship_field($field_name) {
+    $value = $this->field($field_name);
+    $meta_value = get_post_meta($this->pod_id, '_pods_' . $field_name, true);
+
+    return is_serialized($meta_value) ||
+      (is_array($value) && isset($value['ID'])) ||
+      (is_numeric($value) && $value > 0);
   }
 
   public function post() {
