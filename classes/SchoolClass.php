@@ -123,6 +123,16 @@ use FutureLMS\classes\BaseObject;
 
         foreach ($moduleRows as $moduleRow) {
           $moduleId = $moduleRow["module_id"];
+          $class["modules"][$moduleId] = [];
+          $module = &$class["modules"][$moduleId];
+          $module["name"] = $moduleRow["module_name"];
+          $module["count_progress"] = $moduleRow["count_progress"] == "1";
+          $module["intro_module"] = $moduleRow["intro_module"] == "1";
+          $module["order"] = $moduleRow["module_order"];
+          $module["teaser"] = $moduleRow["teaser"] ?? '';
+          $module["enabled"] = $moduleRow["post_status"] == "publish";
+
+          $module["lessons"] = [];
 
           $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm2.meta_value AS video_list,
           pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser
@@ -143,8 +153,8 @@ use FutureLMS\classes\BaseObject;
 
           foreach ($lessonRows as $lessonRow) {
             $lessonId = $lessonRow["lesson_id"];
-            $class["lessons"][$lessonId] = [];
-            $lesson = &$class["lessons"][$lessonId];
+            $module["lessons"][$lessonId] = [];
+            $lesson = &$module["lessons"][$lessonId];
             $lesson["id"] = $lessonId;
             $lesson["name"] = $lessonRow["lesson_name"];
             $lesson["order"] = $lessonRow["lesson_number"];

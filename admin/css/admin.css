@@ -422,59 +422,124 @@ div.error {
 
             }
 
-            > .class-lessons {
-              border: solid 1px rgb(239, 238, 238);
-              padding: 5px 10px;
-              border-radius: 4px;
+            .class-module {
+              display: grid;
+              column-gap: 10px;
+              row-gap: 6px;
+              padding: 4px;
+              border-radius: 3px;
+              align-items: center;
+              grid-template-columns: max-content max-content 1fr;
+              grid-template-areas:
+                  "order name actions"
+                  "lessons lessons lessons";
+              justify-content: start;
 
-              .class-lesson {
-                display: flex;
-                background: rgb(249, 248, 248);
-                &:hover {
-                  background: rgb(240, 239, 238);
-                }
-                padding: 4px 8px;
-                border-radius: 3px;
-                gap: 10px;
-                flex-direction: row;
+              .module-order {
+                grid-area: order;
+                display: grid;
+                justify-content: center;
                 align-items: center;
-
-                .lesson-order {
-                  grid-area: order;
-                  display: grid;
-                  justify-content: center;
-                  align-items: center;
-                  width: 24px;
-                  height: 24px;
-                  border-radius: 50%;
-                  background-color: rgb(225, 247, 254);
-                  font-weight: bold;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background-color: rgb(242, 232, 252);
+                &.intro {
+                  background-color: rgb(252, 251, 232);
                 }
+                font-weight: bold;
+              }
 
-                &:hover {
-                  .lesson-actions {
+              .module-name {
+                grid-area: name;
+                &.disabled {
+                  color: var(--disabled-color);
+                }
+              }
+
+              .module-actions {
+                display: none;
+                grid-area: actions;
+                grid-auto-flow: column;
+                justify-content: end;
+                align-items: center;
+                > i {
+                  cursor: pointer;
+                  bottom: unset;
+                  position: relative;
+                }
+              }
+
+              &:hover {
+                background: rgb(252, 252, 252);
+                .module-actions {
+                  display: grid;
+                }
+              }
+
+              &.closed {
+                > div.module-lessons {
+                  display: none;
+                }
+              }
+
+              .module-lessons {
+                grid-area: lessons;
+                display: grid;
+                gap: 4px;
+                border: solid 1px rgb(239, 238, 238);
+                padding: 5px 10px;
+                border-radius: 4px;
+
+                .module-lesson {
+                  display: flex;
+                  background: rgb(249, 248, 248);
+                  &:hover {
+                    background: rgb(240, 239, 238);
+                  }
+                  padding: 4px 8px;
+                  border-radius: 3px;
+                  gap: 10px;
+                  flex-direction: row;
+                  align-items: center;
+
+                  .lesson-order {
+                    grid-area: order;
                     display: grid;
-                    grid-auto-flow: column;
-                    justify-content: end;
-                    flex-grow: 1;
+                    justify-content: center;
+                    align-items: center;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    background-color: rgb(225, 247, 254);
+                    font-weight: bold;
+                  }
 
-                    > i {
-                      cursor: pointer;
-                      bottom: unset;
-                      position: relative;
+                  &:hover {
+                    .lesson-actions {
+                      display: grid;
+                      grid-auto-flow: column;
+                      justify-content: end;
+                      flex-grow: 1;
+
+                      > i {
+                        cursor: pointer;
+                        bottom: unset;
+                        position: relative;
+                      }
                     }
                   }
-                }
 
-                .lesson-name {
-                  &.disabled {
-                    color: var(--disabled-color);
+                  .lesson-name {
+                    &.disabled {
+                      color: var(--disabled-color);
+                    }
                   }
-                }
 
-                .lesson-actions {
-                  display: none;
-                  flex-direction: row;
+                  .lesson-actions {
+                    display: none;
+                    flex-direction: row;
+                  }
                 }
               }
             }
@@ -532,16 +597,19 @@ table.coupons {
 }
 
 .action-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(0,0,0,0.1);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
   border-top-color: #767676;
   animation: spin 1s ease-in-out infinite;
-  margin-left: 8px;
-  vertical-align: middle;
+  z-index: 9999; /* Ensure it appears above other elements */
 }
+
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }

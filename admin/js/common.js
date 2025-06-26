@@ -30,7 +30,11 @@ const COMMON = {
     return `.tab[data-tab='${tab}']`;
   },
 
-  wireDropdown: (selector, values, onChange, placeholder = '') => {
+  wireDropdown: (selector, values, onChange, placeholder = '', defaultValue, forceReload = false) => {
+    if (forceReload) {
+      jQuery(selector).dropdown('destroy');
+    }
+
     jQuery(selector).dropdown({
       clearable: true,
       placeholder: placeholder,
@@ -40,6 +44,12 @@ const COMMON = {
       },
       values: values
     });
+
+    if (defaultValue !== undefined) {
+
+      console.log(defaultValue)
+      jQuery(selector).dropdown('set selected', defaultValue);
+    }
   },
 
   //selector - css selector of input to wire
@@ -68,5 +78,31 @@ const COMMON = {
         }
       }
     });
+  },
+
+  showLoader: () => {
+    const loader = document.querySelector('.action-spinner');
+
+    if (!loader) {
+      console.error('Loader element not found');
+      return;
+    }
+
+    loader.style.position = 'fixed';
+    loader.style.top = '50%';
+    loader.style.left = '50%';
+    loader.style.transform = 'translate(-50%, -50%)';
+
+    loader.style.display = 'block';
+    document.body.style.pointerEvents = 'none';
+  },
+
+  hideLoader: () => {
+    const loader = document.querySelector('.action-spinner');
+
+    if (loader) {
+      loader.style.display = 'none';
+      document.body.style.pointerEvents = 'auto';
+    }
   }
 };
