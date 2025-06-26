@@ -204,6 +204,8 @@ body.school {
               .lesson-title {
                 font-size: 1rem;
                 font-weight: bold;
+                white-space: break-spaces;
+                line-height: 1.2rem;
               }
             }
 
@@ -221,7 +223,7 @@ body.school {
         border-left: 0;
         border-right: 0;
 
-        #current-lesson-title {
+        .current-lesson-title {
           position: relative;
           overflow: visible;
           display: flex;
@@ -233,6 +235,9 @@ body.school {
             font-size: 1rem;
             font-weight: bold;
             text-align: center;
+            width: min-content;
+            white-space: break-spaces;
+            line-height: 1.2rem;
           }
 
           .lesson-header {
@@ -302,6 +307,7 @@ body.school {
           iframe {
             height: 400px;
             width: calc(400px * 1.88235);
+            max-width: 100vw;
           }
 
           video {
@@ -926,6 +932,12 @@ body.school {
 
         &.show {
           display: block;
+          position: fixed;
+          top: 0;
+          height: 100vh;
+          left: 0;
+          overflow: scroll;
+          background: white;
         }
 
         .sidebar-header {
