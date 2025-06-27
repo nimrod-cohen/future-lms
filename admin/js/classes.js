@@ -16,6 +16,10 @@ class ClassesTab {
             this.editClass(e.target.closest('.class').dataset.classId);
         });
 
+        JSUtils.addGlobalEventListener('#classes-list', ".actionable[data-action='delete-class']", 'click', e =>
+            this.changeSchoolClassStatus(e, 'trash')
+        );
+
         document.querySelector('.action-bar [data-action="add-class"]').addEventListener('click', this.addClass);
     }
 
@@ -48,15 +52,13 @@ class ClassesTab {
             <label class='remodal-form-line-title'>Class Name</label>
             <input type='text' name='class_name' value='${selectedClass?.name || ''}'/>
         </div>
-        ${!classId ? `
             <div class='remodal-form-line'>
                 <label class='remodal-form-line-title'>Select Course</label>
-                <select name="class_course_id" class="remodal-form-select" disabled>
+                <select name="class_course_id" class="remodal-form-select " ${classId ? 'disabled' : ''}>
                     <option value="">Loading courses...</option>
                 </select>
                 <div class="remodal-loading-indicator"></div>
             </div>
-        ` : ''}
             <div class='remodal-form-line'>
             <label class='remodal-form-line-title'>Start Date & Time</label>
             <input type="datetime-local" 
@@ -104,27 +106,10 @@ class ClassesTab {
 
                 JSUtils.fetch(__futurelms.ajax_url, data).then(data => {
                     if (!data.error) {
-                        this.getClasses(this.currentCourseId).then(response => {
-                            this.renderClasses([response.classes[classId]]);
-
-                            const classesNameValue = this.mapClassesToNameValue(response);
-
-                            COMMON.wireDropdown(
-                                COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.ui.search.classes'),
-                                classesNameValue,
-                                classId => {
-                                    this.renderClasses([response.classes[classId]]);
-                                },
-                                'Select class',
-                                classId,
-                                true
-                            );
-
-                            COMMON.hideLoader();
-                            //show success notification
-                            window.notifications.show('Class saved successfully', 'success');
-                        });
-
+                        this.renderAllClasses(classId,
+                            true,
+                            false,
+                            () => {window.notifications.show('Class saved successfully', 'success')})
                     }
                 })
             }
@@ -151,21 +136,8 @@ class ClassesTab {
             coursesNameValue,
             courseId => {
                 classesTab.querySelector('.ui.search.classes > .text').textContent = 'Loading classes...';
-
-                this.getClasses(courseId).then(response => {
-                    const classesNameValue = this.mapClassesToNameValue(response);
-                    this.currentCourseId = courseId;
-
-                    COMMON.wireDropdown(
-                        classesTab.querySelector('.ui.search.classes'),
-                        classesNameValue,
-                        classId => {
-                            this.renderClasses([response.classes[classId]]);
-                        },
-                        'Select class',
-                    );
-
-                })
+                this.currentCourseId = courseId;
+                this.renderAllClasses(null, true, true, () => {});
             },
             'Select course'
         );
@@ -186,12 +158,6 @@ class ClassesTab {
             }))
             : [];
 
-        this.renderAllClasses();
-        this.setupClassEventListeners();
-        this.setupLessonEventListeners();
-    };
-
-    renderAllClasses() {
         document.querySelector('#classes-list').innerHTML = this.classesData
             .map(classItem => {
                 return `
@@ -206,6 +172,7 @@ class ClassesTab {
                             ${classItem.enabled
                     ? "<i class='pause icon red actionable' data-action='pause-class'></i>"
                     : "<i class='play icon green actionable' data-action='resume-class'></i>"}
+                            <i class="trash alternate outline icon red actionable" data-action='delete-class'></i>
                         </span>
                     </div>
                     <div class="class-modules">
@@ -213,7 +180,39 @@ class ClassesTab {
                     </div>
                 </div>`;
             }).join('');
-    }
+
+        this.setupClassEventListeners();
+        this.setupLessonEventListeners();
+    };
+
+    renderAllClasses = (classId, reloadDropdown = false, clearClasses = false, callback = null) => {
+
+        // clear all classes initially
+        if (clearClasses) this.renderClasses([]);
+
+        this.getClasses(this.currentCourseId).then(response => {
+            this.renderClasses([response.classes[classId]]);
+
+            if (reloadDropdown) {
+                const classesNameValue = this.mapClassesToNameValue(response);
+
+                COMMON.wireDropdown(
+                    COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.ui.search.classes'),
+                    classesNameValue,
+                    classId => {
+                        this.renderClasses([response.classes[classId]]);
+                    },
+                    'Select class',
+                    classId,
+                    true
+                );
+            }
+
+            COMMON.hideLoader();
+
+            if (callback) callback();
+        });
+    };
 
     renderModules(classItem) {
         const moduleIds = Object.keys(classItem.modules).sort((a, b) => {
@@ -258,8 +257,8 @@ class ClassesTab {
             return '<p class="no-lessons">No lessons found</p>';
         }
         return Object.keys(module.lessons)
-            .map((lessonId, idx) =>
-                this.renderLesson(module.lessons[lessonId], idx, classItem.lessons_json))
+            .map((lessonId, index) =>
+                this.renderLesson(module.lessons[lessonId], index, classItem.lessons_json, classItem.is_live_class))
             .join('');
     }
 
@@ -291,11 +290,13 @@ class ClassesTab {
           </span>
           
           <span class='lesson-actions action-bar disabled'>
-                ${
-            isOpen
-                ? "<i class='pause icon red actionable' data-action='pause-lesson'></i>"
-                : "<i class='play icon green actionable' data-action='resume-lesson'></i>"
-        }
+            ${isLiveClass
+                ? (isOpen
+                        ? "<i class='pause icon red actionable' data-action='pause-lesson'></i>"
+                        : "<i class='play icon green actionable' data-action='resume-lesson'></i>"
+                )
+                : "Recorded class"
+            }          
           </span>
         </div>`;
     };
@@ -336,15 +337,10 @@ class ClassesTab {
                     status: status
                 }).then(data => {
                     if (!data.error) {
-                        this.classesData = this.classesData.map(cls =>
-                            cls.id === schoolClassId
-                                ? {...cls, enabled: status === 'publish' ? true : false}
-                                : cls
-                        );
-
-                        COMMON.hideLoader();
-
-                        this.renderAllClasses();
+                        this.renderAllClasses(schoolClassId,
+                            true,
+                            status == 'trash' ? true : false,
+                            () => {window.notifications.show('Class ' + status  + 'ed' + ' successfully', 'success')});
                         this.setupClassEventListeners();
                         this.setupLessonEventListeners();
                     }
@@ -376,12 +372,10 @@ class ClassesTab {
                     is_class_live: isClassLive
                 }).then(data => {
                     if (!data.error) {
-                        // refresh current class
-                        this.getClasses(this.currentCourseId).then(response => {
-                            this.renderClasses([response.classes[classId]]);
-                        });
-
-                        COMMON.hideLoader();
+                        this.renderAllClasses(classId,
+                            false,
+                            false,
+                            () => {window.notifications.show('Lesson ' + status  + 'd' + ' successfully', 'success')});
                     }
                 })
             }
@@ -392,26 +386,28 @@ class ClassesTab {
         const courses = this.state.get('courses');
         if (!courses) return;
 
-        const selects = document.querySelectorAll('.remodal-form-select[name="class_course_id"]');
-        selects.forEach(select => {
-            const coursesArray = Object.keys(courses).map(id => ({
-                id: id,
-                ...courses[id]
-            }));
+        const select = document.querySelector('.remodal-form-select[name="class_course_id"]');
+        if (!select) return;
 
-            select.innerHTML = `
+        const coursesArray = Object.keys(courses).map(id => ({
+            id: id,
+            ...courses[id]
+        }));
+
+        select.innerHTML = `
             <option value="">-- Select a Course --</option>
             ${coursesArray
-                .map(
-                    course =>
-                        `<option value="${course.id}" ${selectedClass?.course === course.id ? 'selected' : ''}>
+            .map(
+                course =>
+                    `<option value="${course.id}" ${selectedClass?.course === course.id ? 'selected' : ''}>
                         ${course.name}
                     </option>`
-                )
-                .join('')}`;
-            select.disabled = false;
-        });
+            )
+            .join('')}`;
 
+        // Disable selection for edit class screen
+        if (!selectedClass)
+            select.disabled = false;
     };
 
     setupLessonEventListeners() {

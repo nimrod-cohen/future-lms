@@ -516,6 +516,4 @@ class CoursesTab {
       }
     });
   };
-
-
 }

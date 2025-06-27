@@ -51,7 +51,9 @@ class Admin {
 
       update_post_meta($classId, 'course', $courseId);
       update_post_meta($classId, 'start_date', $startDate);
-      update_post_meta($classId, 'lessons', stripslashes($lessons));
+
+      // clear up lessons array for recorded classes so they are all available from the start
+      update_post_meta($classId, 'lessons', $isLiveClass > 0 ?stripslashes($lessons) : "");
       update_post_meta($classId, 'is_live_class', $isLiveClass);
 
       wp_send_json(['error' => false]);

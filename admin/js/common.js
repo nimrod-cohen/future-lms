@@ -46,8 +46,6 @@ const COMMON = {
     });
 
     if (defaultValue !== undefined) {
-
-      console.log(defaultValue)
       jQuery(selector).dropdown('set selected', defaultValue);
     }
   },
