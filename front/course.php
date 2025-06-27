@@ -38,7 +38,7 @@ $images_dir_url = plugin_dir_url(__DIR__) . "assets/images";
     <div class="lesson-videos">
       <div class="lesson-videos-nav">
         <a class="prev-video" href="#"><?php _e("&rarr; Previous video", "future-lms"); ?></a>
-        <span id="current-lesson-title">
+        <span class="current-lesson-title">
           <span class="lesson-title"><?php echo $lesson->raw("title"); ?></span>
           <span class="multiple-video-indication hidden"></span>
           <button class="nav-lessons show-popover" type="button" aria-label="Choose Lesson" data-content="<?php _e("Choose lesson", "future-lms"); ?>">

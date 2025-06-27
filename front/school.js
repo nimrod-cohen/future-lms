@@ -221,10 +221,10 @@ class Classroom {
 
     if (current + add < 0 || current + add >= lesson.videos.length) return;
 
-    coursePage.querySelector('#current-lesson-title  > .lesson-title').innerText = `${lesson.title} (${
-      current + 1 + add
-    }/${lesson.videos.length})`;
-    const multiIndication = coursePage.querySelector('#current-lesson-title > .multiple-video-indication');
+    const lessonTitles = coursePage.querySelectorAll('.current-lesson-title .lesson-title');
+    lessonTitles.forEach(title => (title.innerText = `${lesson.title} (${current + 1 + add}/${lesson.videos.length})`));
+
+    const multiIndication = coursePage.querySelector('.lesson-videos .current-lesson-title .multiple-video-indication');
     multiIndication.innerText = 'שים לב, לשיעור זה מספר סרטונים';
     multiIndication.classList.remove('hidden');
     setTimeout(() => multiIndication.classList.add('hidden'), 8000);
@@ -285,7 +285,8 @@ class Classroom {
 
     this.state.set('show-videos', lesson.videos?.length);
 
-    coursePage.querySelector('#current-lesson-title  > .lesson-title').innerText = lesson.title;
+    const lessonTitles = coursePage.querySelectorAll('.current-lesson-title .lesson-title');
+    lessonTitles.forEach(title => (title.innerText = lesson.title));
 
     const vc = coursePage.querySelector('.video-container');
 
@@ -328,10 +329,12 @@ class Classroom {
       coursePage.querySelector('.toggle-videos').classList.remove('rotated');
 
       if (lesson.videos.length > 1) {
-        coursePage.querySelector('#current-lesson-title > .lesson-title').innerText = `${
+        coursePage.querySelector('.lesson-videos .current-lesson-title .lesson-title').innerText = `${
           lesson.videos[current].caption?.length ? lesson.videos[current].caption : lesson.title
         } (${current + 1}/${lesson.videos.length})`;
-        const multiIndication = coursePage.querySelector('#current-lesson-title > .multiple-video-indication');
+        const multiIndication = coursePage.querySelector(
+          '.lesson-videos .current-lesson-title .multiple-video-indication'
+        );
         multiIndication.innerText = 'שים לב, לשיעור זה מספר סרטונים';
         multiIndication.classList.remove('hidden');
         setTimeout(() => multiIndication.classList.add('hidden'), 8000);
