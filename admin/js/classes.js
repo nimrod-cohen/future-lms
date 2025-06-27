@@ -10,6 +10,7 @@ class ClassesTab {
         this.getCourses();
 
         this.currentCourseId = null;
+        this.currentClassId = null;
         this.classesData = [];
 
         JSUtils.addGlobalEventListener('#classes-list', ".actionable[data-action='edit-class']", 'click', e => {
@@ -106,10 +107,7 @@ class ClassesTab {
 
                 JSUtils.fetch(__futurelms.ajax_url, data).then(data => {
                     if (!data.error) {
-                        this.renderAllClasses(classId,
-                            true,
-                            false,
-                            () => {window.notifications.show('Class saved successfully', 'success')})
+                        this.getCourses(() => {window.notifications.show('Class saved successfully', 'success')})
                     }
                 })
             }
@@ -135,11 +133,12 @@ class ClassesTab {
             classesTab.querySelector('.ui.search.courses'),
             coursesNameValue,
             courseId => {
-                classesTab.querySelector('.ui.search.classes > .text').textContent = 'Loading classes...';
                 this.currentCourseId = courseId;
-                this.renderAllClasses(null, true, true, () => {});
+                this.renderAllClasses(this.currentClassId);
             },
-            'Select course'
+            'Select course',
+            this.currentCourseId,
+            true
         );
     };
 
@@ -185,32 +184,24 @@ class ClassesTab {
         this.setupLessonEventListeners();
     };
 
-    renderAllClasses = (classId, reloadDropdown = false, clearClasses = false, callback = null) => {
-
-        // clear all classes initially
-        if (clearClasses) this.renderClasses([]);
-
+    renderAllClasses = (classId) => {
         this.getClasses(this.currentCourseId).then(response => {
             this.renderClasses([response.classes[classId]]);
 
-            if (reloadDropdown) {
-                const classesNameValue = this.mapClassesToNameValue(response);
+            const classesNameValue = this.mapClassesToNameValue(response);
 
-                COMMON.wireDropdown(
-                    COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.ui.search.classes'),
-                    classesNameValue,
-                    classId => {
-                        this.renderClasses([response.classes[classId]]);
-                    },
-                    'Select class',
-                    classId,
-                    true
-                );
-            }
-
+            COMMON.wireDropdown(
+                COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.ui.search.classes'),
+                classesNameValue,
+                classId => {
+                    this.currentClassId = classId;
+                    this.renderClasses([response.classes[classId]]);
+                },
+                'Select class',
+                classId,
+                true
+            );
             COMMON.hideLoader();
-
-            if (callback) callback();
         });
     };
 
@@ -256,8 +247,14 @@ class ClassesTab {
         if (Object.keys(module.lessons).length === 0) {
             return '<p class="no-lessons">No lessons found</p>';
         }
-        return Object.keys(module.lessons)
-            .map((lessonId, index) =>
+
+        // sort lessons by their set order
+        let lessonIds = Object.keys(module.lessons);
+        lessonIds = lessonIds.sort((a, b) => {
+            return module.lessons[a].order - module.lessons[b].order;
+        });
+
+        return lessonIds.map((lessonId, index) =>
                 this.renderLesson(module.lessons[lessonId], index, classItem.lessons_json, classItem.is_live_class))
             .join('');
     }
@@ -301,12 +298,13 @@ class ClassesTab {
         </div>`;
     };
 
-    getCourses = async () => {
+    getCourses = async (callback) => {
         const data = await JSUtils.fetch(__futurelms.ajax_url, {
             action: 'get_all_courses'
         });
 
         this.state.set('courses', data.courses);
+        if (callback) callback();
     };
 
     getClasses = async (courseId) => {
@@ -337,10 +335,7 @@ class ClassesTab {
                     status: status
                 }).then(data => {
                     if (!data.error) {
-                        this.renderAllClasses(schoolClassId,
-                            true,
-                            status == 'trash' ? true : false,
-                            () => {window.notifications.show('Class ' + status  + 'ed' + ' successfully', 'success')});
+                        this.getCourses(() => {window.notifications.show('Class ' + status  + 'ed' + ' successfully', 'success')});
                         this.setupClassEventListeners();
                         this.setupLessonEventListeners();
                     }
@@ -372,10 +367,7 @@ class ClassesTab {
                     is_class_live: isClassLive
                 }).then(data => {
                     if (!data.error) {
-                        this.renderAllClasses(classId,
-                            false,
-                            false,
-                            () => {window.notifications.show('Lesson ' + status  + 'd' + ' successfully', 'success')});
+                        this.getCourses(() => {window.notifications.show('Lesson ' + status  + 'd' + ' successfully', 'success')});
                     }
                 })
             }

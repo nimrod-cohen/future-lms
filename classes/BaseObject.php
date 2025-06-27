@@ -114,8 +114,6 @@ class BaseObject
       return false;
   }
 
-
-
   /**
    * Query items
    */
@@ -292,6 +290,10 @@ class BaseObject
       return $this->save_post();
     }
 
+    if ($this->is_taxonomy()) {
+      return $this->save_term();
+    }
+
     return false;
   }
 
@@ -363,6 +365,14 @@ class BaseObject
     }
   }
 
+  private function is_post_type() {
+    return post_type_exists($this->pod_name);
+  }
+
+  private function is_taxonomy() {
+    return taxonomy_exists($this->pod_name);
+  }
+
   /**
    * Collection methods
    */
@@ -408,6 +418,7 @@ class BaseObject
     $this->current_item = null;
     return false;
   }
+
   /**
    * Reset the collection pointer
    */
