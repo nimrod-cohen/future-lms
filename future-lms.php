@@ -119,7 +119,7 @@ class FutureLMS {
     add_action("wp_ajax_get_students", [$this, "get_students"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
     add_action("wp_ajax_remove_payment", [$this, "remove_payment"]);
-    add_action("wp_ajax_add_stodent_to_class", [$this, "add_student_to_class"]);
+    add_action("wp_ajax_add_student_to_class", [$this, "add_student_to_class"]);
     add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
     add_action("wp_ajax_future_lms_get_settings", [$this, "get_settings"]);
@@ -637,45 +637,62 @@ class FutureLMS {
 
   public function get_class_lessons() {
     try {
-      $classId = $_REQUEST["class_id"];
+      $class_id = $_REQUEST["class_id"];
 
-      $class = new SchoolClass($classId);
+      $class = new SchoolClass($class_id);
       if (!$class) {
           throw new Exception('cannot find class by id');
       }
 
-      $classLessons = $class->raw("lessons") ?? '[]';
-      $classLessons = json_decode($classLessons, true);
-      $classLessons = is_array($classLessons) ? $classLessons : [];
-      
-      $courseId = $class->raw("course");
+      $is_live = $class->raw("is_live_class") == "1";
 
-      $modules = BaseObject::factory("module", ["where" => "course.id = " . $courseId, "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
+      if(!$is_live) {
+        $class_lessons = [];
+      } else {
+        $class_lessons = $class->raw("lessons") ?? '[]';
+        $class_lessons = json_decode($class_lessons, true);
+        $class_lessons = is_array($class_lessons) ? $class_lessons : [];
+      }
+
+      $course_id = $class->raw("course");
+
+      $modules = BaseObject::factory("module", ["where" => "course.id = " . $course_id, "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
       while ($module = $modules->fetch()) {
-        $moduleId = $module->raw('ID');
+        $module_id = $module->raw('ID');
 
-        $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $moduleId, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
+        $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $module_id, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
         while ($lesson = $lessons->fetch()) {
-          $open = true;
-          $pos = array_search($lesson->raw("ID"), array_column($classLessons, 'id'));
-          if (false !== $pos) {
-            $open = $classLessons[$pos]["open"] ?? true;
+          $open = !$is_live; //if live class, all lessons are closed by default
+          $lesson_id = $lesson->raw("ID");
+          if($is_live) {
+            $pos = array_search($lesson_id, array_column($class_lessons, 'id'));
+            if (false !== $pos) {
+              $open = $class_lessons[$pos]["open"] ?? false;
+            }
           }
 
           $result[] = [
-            "module_id" => $moduleId,
+            "module_id" => $module_id,
             "module_title" => $module->raw("name", true),
             "module_order" => $module->raw("order", true),
             "intro_module" => $module->raw("intro_module", true),
             "lesson_number" => $lesson->raw("lesson_number", true),
-            "id" => $lesson->raw("ID", true),
+            "id" => $lesson_id,
             "title" => stripslashes($lesson->raw("title", true)),
             "open" => $open
           ];
         }
       }
+
+      //order by module order and lesson number
+      usort($result, function ($a, $b) {
+        if ($a["module_order"] == $b["module_order"]) {
+          return $a["lesson_number"] <=> $b["lesson_number"];
+        }
+        return $a["module_order"] <=> $b["module_order"];
+      });
       wp_send_json($result);
     } catch (Exception $ex) {
         wp_send_json(["error" => $ex->getMessage()]);

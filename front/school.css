@@ -6,8 +6,6 @@
   --selected-color: #d0d7df;
   --link-color: #176eb6;
   --sidebar-module-background-color: #f2f4f5;
-  --header-height: 0;
-  --footer-height: 0;
 }
 
 body.school {
@@ -42,7 +40,7 @@ body.school {
   }
 
   .school-container.classroom {
-    min-height: calc(100vh - var(--header-height) - var(--footer-height));
+    min-height: 100vh;
 
     width: 100%;
     display: grid;
@@ -151,6 +149,28 @@ body.school {
             height: 20px;
             border-radius: 50%;
           }
+
+          &.locked {
+            &,
+            * {
+              color: #b0b0b0;
+              cursor: not-allowed;
+            }
+            pointer-events: none;
+            grid-template-columns: 20px 1fr 20px;
+
+            &::before {
+              content: '';
+              display: inline-block;
+              width: 18px;
+              height: 18px;
+              background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 1024 1024"><path fill="%23ababab" d="M800 384h-32V261.872C768 115.024 661.744 0 510.816 0C359.28 0 256 117.472 256 261.872V384h-32c-70.592 0-128 57.408-128 128v384c0 70.592 57.408 128 128 128h576c70.592 0 128-57.408 128-128V512c0-70.592-57.408-128-128-128zM320 261.872C320 152.784 394.56 64 510.816 64C625.872 64 704 150.912 704 261.872V384H320V261.872zM864.001 896c0 35.28-28.72 64-64 64h-576c-35.28 0-64-28.72-64-64V512c0-35.28 28.72-64 64-64h576c35.28 0 64 28.72 64 64v384zm-352-320c-35.344 0-64 28.656-64 64c0 23.632 12.96 44.032 32 55.12V800c0 17.664 14.336 32 32 32s32-14.336 32-32V695.12c19.04-11.088 32-31.504 32-55.12c0-35.344-28.656-64-64-64z"/></svg>');
+              background-size: contain;
+              background-repeat: no-repeat;
+              background-position: center;
+              color: #ababab;
+            }
+          }
         }
 
         &.open {
@@ -171,7 +191,7 @@ body.school {
     }
 
     .lesson {
-      height: calc(100vh - var(--header-height) - var(--footer-height));
+      height: 100vh;
       display: grid;
       grid-template-rows: 450px 1fr;
 
@@ -483,7 +503,7 @@ body.school {
   }
 
   .school-container.lobby {
-    min-height: calc(100vh - var(--header-height) - var(--footer-height));
+    min-height: 100vh;
 
     margin: 0 auto;
 
@@ -888,10 +908,6 @@ body.school {
 }
 
 @media screen and (max-width: 900px) {
-  :root {
-    --header-height: 58px;
-  }
-
   body.school {
     .school-container.classroom {
       .nav-lessons {

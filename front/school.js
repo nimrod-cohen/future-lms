@@ -551,7 +551,7 @@ class Classroom {
       if (!lessonDiv) {
         currModule.insertAdjacentHTML(
           'beforeend',
-          `<div class="sidebar-lesson ${isCurrent ? 'selected' : ''}" 
+          `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}" 
           course-id="${this.state.get('courseId')}"
           module-id="${lesson.module_id}" 
           lesson-id="${lesson.id}">
