@@ -18,14 +18,14 @@ add_action('init', 'register_course_post_type');
 
 // Register meta box
 add_action('add_meta_boxes', function () {
-    add_meta_box(
-        'course_details',
-        'Course Details',
-        'render_course_meta_box',
-        'course',
-        'normal',
-        'high'
-    );
+  add_meta_box(
+    'course_details',
+    'Course Details',
+    'render_course_meta_box',
+    'course',
+    'normal',
+    'high'
+  );
 });
 
 // Render meta box
@@ -103,6 +103,11 @@ function render_course_meta_box($post)
             <label><strong>Short Name:</strong></label>
             <input type="text" name="short_name" value="<?= esc_attr($meta['short_name'][0] ?? '') ?>">
         </p>
+        <!-- Course Duration -->
+        <p>
+            <label><strong>Course Duration (hours):</strong></label>
+            <input type="text" name="course_duration" value="<?= esc_attr($meta['course_duration'][0] ?? '') ?>">
+        </p>
         <!-- Charge URL -->
         <p>
             <label><strong>Charge URL:</strong></label>
@@ -112,6 +117,14 @@ function render_course_meta_box($post)
         <p>
             <label><strong>Short Description:</strong></label>
             <textarea name="short_description" style="height:100px;"><?= esc_textarea($meta['short_description'][0] ?? '') ?></textarea>
+        </p>
+        <!-- What You'll Learn -->
+        <p>
+            <label for="what_you_learn"><strong>What You will Learn:</strong></label>
+            <div style="display: flex; flex-direction: column;">
+              <textarea id="what_you_learn" name="what_you_learn" style="height:100px;"><?= esc_textarea($meta['what_you_learn'][0] ?? '') ?></textarea>
+              <p class="description">Please enter each point on a new line.</p>
+            </div>
         </p>
         <!-- Tags -->
         <p>
@@ -140,14 +153,16 @@ add_action('save_post_course', function ($post_id, $post) {
         'course_page_url',
         'short_name',
         'charge_url',
+        'course_duration',
         'short_description',
+        'what_you_learn',
         'tags',
         'color'
     ];
 
     foreach ($fields as $field) {
         if (isset($_POST[$field])) {
-            update_post_meta($post_id, $field, sanitize_text_field($_POST[$field]));
+            update_post_meta($post_id, $field, sanitize_textarea_field($_POST[$field]));
         }
     }
   }

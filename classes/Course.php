@@ -188,6 +188,12 @@ class Course extends BaseObject {
     return in_array($tag, $tags);
   }
 
+  public static function get_courses_by_author($author_id) {
+    global $wpdb;
+    $sql = "SELECT ID FROM ".$wpdb->prefix."posts WHERE post_type = 'course' AND post_status = 'publish' AND post_author = %d";
+    return $wpdb->get_col($wpdb->prepare($sql, $author_id));
+  }
+
   public function get_featured_image($size = 'thumbnail') {
     $image = $this->field('_thumbnail_id');
     $genericImage = plugin_dir_url(__FILE__) . 'assets/images/generic-course-placeholder.png';
