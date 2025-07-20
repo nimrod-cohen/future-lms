@@ -393,8 +393,13 @@ body.school {
 
         .lesson-content-viewer {
           padding: 0.8rem;
+          line-height: 1.4rem;
           height: 100%;
           overflow: scroll;
+
+          pre {
+            line-height: 1.4rem;
+          }
 
           img {
             max-width: 100%;

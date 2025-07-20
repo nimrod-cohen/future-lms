@@ -448,7 +448,7 @@ class Classroom {
     let navs = document.querySelectorAll('.lesson-materials-nav li');
     navs.forEach(nav => nav.classList.remove('selected'));
     document.querySelector(`.lesson-materials-nav li[tab-id='${tab}']`).classList.add('selected');
-    coursePage.querySelector('.lesson-content-viewer').innerHTML = content;
+    coursePage.querySelector('.lesson-content-viewer').innerHTML = `<pre>${content}</pre>`;
 
     if (document.querySelector('table.screeners.table')) {
       window.screeners.init();
