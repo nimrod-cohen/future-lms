@@ -549,18 +549,44 @@ class Classroom {
 
       var lessonDiv = currModule.querySelector(`[lesson-id='${lesson.id}']`);
       if (!lessonDiv) {
-        currModule.insertAdjacentHTML(
-          'beforeend',
-          `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}" 
-          course-id="${this.state.get('courseId')}"
-          module-id="${lesson.module_id}" 
-          lesson-id="${lesson.id}">
-          <label>${lesson.title}</label>
-          <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
-            showPlay ? 'play' : 'text'
-          }.svg" style='background:${background}' />
-        </div>`
-        );
+        //check if currModule contains lessons and add in the right order
+        const lessons = currModule.querySelectorAll('.sidebar-lesson');
+        let insertBefore = null;
+        lessons.forEach(l => {
+          if (parseInt(l.getAttribute('order')) > parseInt(lesson.lesson_number)) {
+            insertBefore = l;
+          }
+        });
+
+        if (!insertBefore) {
+          currModule.insertAdjacentHTML(
+            'beforeend',
+            `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}" 
+            course-id="${this.state.get('courseId')}"
+            module-id="${lesson.module_id}"
+            order="${lesson.lesson_number}"
+            lesson-id="${lesson.id}">
+            <label>${lesson.title}</label>
+            <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
+              showPlay ? 'play' : 'text'
+            }.svg" style='background:${background}' />
+          </div>`
+          );
+        } else {
+          insertBefore.insertAdjacentHTML(
+            'beforebegin',
+            `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}" 
+            course-id="${this.state.get('courseId')}"
+            module-id="${lesson.module_id}"
+            order="${lesson.lesson_number}"
+            lesson-id="${lesson.id}">
+            <label>${lesson.title}</label>
+            <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
+              showPlay ? 'play' : 'text'
+            }.svg" style='background:${background}' />
+          </div>`
+          );
+        }
 
         //lesson selection
         lessonDiv = currModule.querySelector(`[lesson-id='${lesson.id}']`);
