@@ -61,6 +61,8 @@ class FutureLMS {
     add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
     add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
     add_action('plugins_loaded', [$this,'future_lms_load_textdomain']);
+
+    $this->load_woocommerce_integration();
   }
 
   function future_lms_load_textdomain() {
@@ -887,6 +889,13 @@ class FutureLMS {
 
     include $template;
   }
+
+	private function load_woocommerce_integration() {
+		$integration_file = plugin_dir_path( __FILE__ ) . 'includes/woocommerce-integration.php';
+		if ( file_exists( $integration_file ) ) {
+			include_once $integration_file;
+		}
+	}
 }
 
 $directory = __DIR__ . '/classes';
