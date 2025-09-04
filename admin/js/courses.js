@@ -64,10 +64,7 @@ class CoursesTab {
     );
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='add-lesson']", 'click', this.addLesson);
 
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson'", 'click', e => {
-      const lessonId = e.target.closest('.module-lesson').dataset.lessonId;
-      window.open(`/wp-admin/post.php?post=${lessonId}&action=edit`, '_blank');
-    });
+    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', this.editLesson);
 
     document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
     document.querySelector('.action-bar [data-action="add-class"]').addEventListener('click', this.addClass);
@@ -316,6 +313,160 @@ class CoursesTab {
         }
       }
     });
+  };
+
+  editLesson = async e => {
+    const lessonId = e.target.closest('.module-lesson').dataset.lessonId;
+    const moduleEl = e.target.closest('.course-module');
+    const courseEl = e.target.closest('.course');
+    const courseId = courseEl?.dataset?.courseId;
+
+    const lesson = await JSUtils.fetch(__futurelms.ajax_url, {
+      action: 'get_lesson_details',
+      lesson_id: lessonId
+    });
+
+    if (lesson.error) {
+      notifications.show(lesson.message || 'Failed to load lesson', 'error');
+      return;
+    }
+
+    const videosToTextarea = arr => (arr && arr.length ? arr.join('\n') : '');
+
+    remodaler.show({
+      title: 'Edit Lesson',
+      message: `
+        <div class='lesson-editor-modal'>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Lesson name</label>
+          <input type='text' name='lesson_name' value='${lesson.name || ''}'/>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Module</label>
+          <select name='lesson_module' class='remodal-form-select'>
+            <option value=''>Loading...</option>
+          </select>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Lesson number</label>
+          <input type='number' min='1' name='lesson_number' value='${lesson.lesson_number || 1}'/>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Teaser</label>
+          <input type='text' name='lesson_teaser' value='${lesson.teaser || ''}'/>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Presentation</label>
+          <div class='presentation-picker'>
+            <input type='hidden' name='lesson_presentation' value='${lesson.presentation_id || 0}' />
+            <div class='ui mini image file-preview'>
+              ${lesson.presentation_url
+                ? (lesson.presentation_mime && lesson.presentation_mime.startsWith('image/')
+                    ? `<img src='${lesson.presentation_url}' />`
+                    : `<img src='${lesson.presentation_icon || ''}' /><span class='file-name'>${lesson.presentation_filename || ''}</span>`)
+                : ''}
+            </div>
+            <button type='button' class='ui tiny button select-presentation'>Select File</button>
+          </div>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Videos (one per line)</label>
+          <textarea name='lesson_videos' style='height:120px;'>${videosToTextarea(lesson.videos)}</textarea>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Homework</label>
+          <textarea class='trumbo' name='lesson_homework' style='height:180px;'></textarea>
+        </div>
+        <div class='remodal-form-line'>
+          <label class='remodal-form-line-title'>Additional files</label>
+          <textarea class='trumbo' name='lesson_additional_files' style='height:180px;'></textarea>
+        </div>
+        </div>
+      `,
+      type: remodaler.types.FORM,
+      confirmText: 'Save',
+      confirm: async vals => {
+        if (!vals.lesson_name?.length) {
+          notifications.show('Lesson name cannot be empty', 'error');
+          return false;
+        }
+
+        const videos = (vals.lesson_videos || '')
+          .split(/\r?\n/)
+          .map(v => v.trim())
+          .filter(Boolean)
+          .map(v => ({ video_id: v }));
+
+        const $ = window.jQuery;
+        const homeworkHtml = $ && $.fn.trumbowyg ? jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html') : (vals.lesson_homework || '');
+        const additionalHtml = $ && $.fn.trumbowyg ? jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html') : (vals.lesson_additional_files || '');
+
+        const payload = {
+          action: 'edit_lesson',
+          lesson_id: lessonId,
+          module_id: vals.lesson_module || lesson.module_id,
+          lesson_number: vals.lesson_number,
+          name: vals.lesson_name,
+          teaser: vals.lesson_teaser || '',
+          video_list: JSON.stringify(videos),
+          homework: homeworkHtml,
+          additional_files: additionalHtml,
+          presentation: vals.lesson_presentation || 0
+        };
+
+        const result = await JSUtils.fetch(__futurelms.ajax_url, payload);
+        if (!result.error) {
+          this.getCourses();
+        }
+      }
+    });
+
+    const select = document.querySelector('.remodal-form-select[name="lesson_module"]');
+    if (select) {
+      const courses = this.state.get('courses');
+      const currentCourse = courses[courseId];
+      const options = Object.keys(currentCourse.modules)
+        .map(mid => ({ id: mid, name: currentCourse.modules[mid].name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      select.innerHTML = options
+        .map(o => `<option value="${o.id}" ${String(o.id) === String(lesson.module_id) ? 'selected' : ''}>${o.name}</option>`)
+        .join('');
+    }
+
+    if (window.jQuery && jQuery.fn.trumbowyg) {
+      jQuery('.trumbo').trumbowyg({ lang: 'he' });
+      jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html', lesson.homework || '');
+      jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html', lesson.additional_files || '');
+    }
+
+    if (window.wp && wp.media) {
+      const btn = document.querySelector('.select-presentation');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const frame = wp.media({ title: 'Select Presentation', multiple: false });
+          frame.on('select', function () {
+            const attachment = frame.state().get('selection').first().toJSON();
+            const input = document.querySelector('input[name="lesson_presentation"]');
+            const imgWrap = btn.parentElement.querySelector('.ui.image.file-preview');
+            if (input) input.value = attachment.id;
+            if (imgWrap) {
+              const isImage = (attachment.type && attachment.type.startsWith('image')) || /\.(png|jpe?g|gif|webp|svg)$/i.test(attachment.url);
+              if (isImage) {
+                imgWrap.innerHTML = `<img src='${attachment.url}' />`;
+              } else {
+                const icon = attachment.icon || '';
+                const filename = attachment.filename || '';
+                imgWrap.innerHTML = `${icon ? `<img src='${icon}' />` : ''}<span class='file-name'>${filename}</span>`;
+              }
+            }
+          });
+          frame.open();
+        });
+      }
+    }
+
+    const modalRoot = document.querySelector('.lesson-editor-modal')?.closest('.remodal');
+    if (modalRoot) modalRoot.classList.add('remodal-large');
   };
 
   openModule = e => {
