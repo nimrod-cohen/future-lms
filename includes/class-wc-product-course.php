@@ -30,7 +30,8 @@ class WC_Product_Course extends WC_Product {
 	}
 
 	public function get_linked_course_id() {
-		return $this->get_meta( '_linked_course_id' );
+		$val = $this->get_meta( '_linked_course_id' );
+		return is_numeric( $val ) ? (int) $val : 0;
 	}
 
 	public function get_auto_enroll() {
@@ -38,7 +39,8 @@ class WC_Product_Course extends WC_Product {
 	}
 
 	public function get_default_class_id() {
-		return $this->get_meta( '_default_class_id' );
+		$val = $this->get_meta( '_default_class_id' );
+		return is_numeric( $val ) ? (int) $val : 0;
 	}
 
 	public function is_purchasable() {

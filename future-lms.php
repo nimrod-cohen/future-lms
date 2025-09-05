@@ -349,25 +349,11 @@ class FutureLMS {
     $paymentMethod = $_REQUEST["method"];
     $transactionId = $_REQUEST["transactionId"];
 
-    $student = null;
-    if (isset($studentId)) { //try by id first
-      $student = get_user_by('id', $studentId);
+    $studentObj = Student::create($email, '', $email);
+    if (!$studentObj) {
+      wp_send_json(['error' => true, 'message' => 'Failed to create or load student']);
     }
-    if (!$student) { //make sure user not already exist by mail
-      $student = get_user_by('email', $email);
-    }
-    if (!$student) { //new email
-      $password = wp_generate_password(12, true);
-      $studentId = wp_create_user($email, $password, $email);
-      $student = new WP_User($studentId);
-      $student->remove_role('subscriber');
-      $student->add_role('student');
-      //TODO:: change to an action hook, let the platform decide what to do with new student
-      wp_new_user_notification($studentId, null, 'both');
-    } else {
-      $student->add_role('student'); //make sure user has student role
-      $studentId = $student->ID;
-    }
+    $studentId = $studentObj->get_id();
 
     //filter email and phone as some systems may want it in a specific format
     $email = apply_filters('future-lms/student_email', $email);

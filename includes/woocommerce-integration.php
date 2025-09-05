@@ -5,11 +5,14 @@
  * This file handles the integration between WooCommerce and Future LMS
  * - Links courses to WooCommerce products
  * - Automatically enrolls students when they purchase courses
- * - Creates student accounts if they don't exist
  * - Assigns students to appropriate classes
  */
 
 namespace FutureLMS\includes;
+
+use FutureLMS\classes\Student;
+use FutureLMS\FutureLMS;
+use FutureLMS\classes\Course;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -55,17 +58,30 @@ class WooCommerceIntegration {
 	}
 
 	private function init_hooks() {
-		add_action( 'init', [ $this, 'load_custom_product_class' ], 20 );
 
 		add_filter( 'product_type_selector', [ $this, 'add_course_product_type' ], 10 );
 		add_filter( 'woocommerce_product_data_tabs', [ $this, 'add_course_product_tab' ], 10 );
 		add_action( 'woocommerce_product_data_panels', [ $this, 'add_course_product_settings' ], 10 );
 		add_action( 'woocommerce_process_product_meta', [ $this, 'save_course_product_meta' ], 10 );
 		add_action( 'woocommerce_process_product_meta', [ $this, 'sync_course_price' ], 20 );
-		add_filter( 'woocommerce_product_class', [ $this, 'load_course_product_class' ], 10, 2 );
-		add_action( 'woocommerce_single_product_summary', [ $this, 'force_course_add_to_cart' ], 30 );
+		add_filter( 'woocommerce_product_class', [ $this, 'add_course_product_class' ], 10, 2 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_styles' ] );
 
+		// Enroll students when order is completed (virtual product / card payment)
+		add_action( 'woocommerce_order_status_completed', [ $this, 'enroll_order_items' ], 10, 1 );
+	}
+
+	public function add_course_product_class( $classname, $product_type ) {
+		if ( $product_type === 'course' ) {
+			// Load the class file if not already loaded
+			$class_file = plugin_dir_path( __FILE__ ) . 'class-wc-product-course.php';
+			if ( file_exists( $class_file ) && ! class_exists( 'WC_Product_Course' ) ) {
+				include_once $class_file;
+			}
+			return 'WC_Product_Course';
+		}
+
+		return $classname;
 	}
 
 	public function add_course_product_type( $types ) {
@@ -87,6 +103,7 @@ class WooCommerceIntegration {
 
 	public function add_course_product_settings() {
 		global $post;
+		$product = wc_get_product( $post->ID );
 		?>
       <div id="course_product_data" class="panel woocommerce_options_panel">
         <div class="options_group">
@@ -99,7 +116,7 @@ class WooCommerceIntegration {
 				'order'          => 'ASC'
 			] );
 
-			$selected_course = get_post_meta( $post->ID, '_linked_course_id', true );
+			$selected_course = $product->get_linked_course_id();
 
 			woocommerce_wp_select( [
 				'id'          => '_linked_course_id',
@@ -116,7 +133,7 @@ class WooCommerceIntegration {
 				'label'       => __( 'Auto-enroll on purchase', 'future-lms' ),
 				'description' => __( 'Automatically enroll students in the course when purchased', 'future-lms' ),
 				'desc_tip'    => true,
-				'value'       => get_post_meta( $post->ID, '_auto_enroll', true )
+				'value'       => ( $product->get_auto_enroll() ? 'yes' : 'no' )
 			] );
 
 			// Default class selection
@@ -132,7 +149,7 @@ class WooCommerceIntegration {
 					]
 				] );
 
-				$default_class = get_post_meta( $post->ID, '_default_class_id', true );
+				$default_class = $product->get_default_class_id();
 
 				woocommerce_wp_select( [
 					'id'          => '_default_class_id',
@@ -171,90 +188,50 @@ class WooCommerceIntegration {
 
 	public function save_course_product_meta( $post_id ) {
 
-		if ( isset( $_POST['_linked_course_id'] ) ) {
-			update_post_meta( $post_id, '_linked_course_id', sanitize_text_field( $_POST['_linked_course_id'] ) );
-		}
-
-		$auto_enroll = isset( $_POST['_auto_enroll'] ) ? 'yes' : 'no';
-		update_post_meta( $post_id, '_auto_enroll', $auto_enroll );
-
-		if ( isset( $_POST['_default_class_id'] ) ) {
-			update_post_meta( $post_id, '_default_class_id', sanitize_text_field( $_POST['_default_class_id'] ) );
-		}
-	}
-
-	public function sync_course_price( $post_id ) {
-
-		$product_type = get_post_meta( $post_id, '_product_type', true );
-		if ( $product_type !== 'course' ) {
+		$product = wc_get_product( $post_id );
+		if ( ! $product ) {
 			return;
 		}
 
-		$linked_course_id = get_post_meta( $post_id, '_linked_course_id', true );
+		if ( isset( $_POST['_linked_course_id'] ) ) {
+			$product->update_meta_data( '_linked_course_id', sanitize_text_field( $_POST['_linked_course_id'] ) );
+		}
+
+		$auto_enroll = isset( $_POST['_auto_enroll'] ) ? 'yes' : 'no';
+		$product->update_meta_data( '_auto_enroll', $auto_enroll );
+
+		if ( isset( $_POST['_default_class_id'] ) ) {
+			$product->update_meta_data( '_default_class_id', sanitize_text_field( $_POST['_default_class_id'] ) );
+		}
+
+		$product->save();
+	}
+
+	public function sync_course_price( $post_id ) {
+		$product = wc_get_product( $post_id );
+		if ( ! $product || $product->get_type() !== 'course' ) {
+			return;
+		}
+
+		$linked_course_id = $product->get_meta( '_linked_course_id' );
 		if ( ! $linked_course_id ) {
 			return;
 		}
 
 		$course_price = get_post_meta( $linked_course_id, 'full_price', true );
 		if ( ! empty( $course_price ) ) {
-			update_post_meta( $post_id, '_regular_price', $course_price );
-			update_post_meta( $post_id, '_price', $course_price );
+			$product->update_meta_data( '_regular_price', $course_price );
+			$product->update_meta_data( '_price', $course_price );
 
 			$discount_price = get_post_meta( $linked_course_id, 'discount_price', true );
 			if ( ! empty( $discount_price ) && $discount_price < $course_price ) {
-				update_post_meta( $post_id, '_sale_price', $discount_price );
-				update_post_meta( $post_id, '_price', $discount_price );
+				$product->update_meta_data( '_sale_price', $discount_price );
+				$product->update_meta_data( '_price', $discount_price );
 			}
+			$product->save();
 		}
 	}
 
-	public function load_course_product_class( $classname, $product_type ) {
-		if ( $product_type === 'course' ) {
-			return 'WC_Product_Course';
-		}
-
-		return $classname;
-	}
-
-	public function load_custom_product_class() {
-		if ( ! $this->is_woocommerce_active() ) {
-			return;
-		}
-
-		$class_file = plugin_dir_path( __FILE__ ) . 'class-wc-product-course.php';
-		if ( file_exists( $class_file ) ) {
-			include_once $class_file;
-		}
-	}
-
-	public function force_course_add_to_cart() {
-		global $product;
-
-		if ( ! $product || $product->get_type() !== 'course' ) {
-			return;
-		}
-
-		error_log( 'WooCommerce Integration: Forcing add to cart form for course product ' . $product->get_id() );
-
-		// Remove default add to cart
-		remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30 );
-
-		// Add our custom add to cart form
-		?>
-      <form class="cart"
-            action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>"
-            method="post" enctype='multipart/form-data'>
-		  <?php do_action( 'woocommerce_before_add_to_cart_button' ); ?>
-
-        <button type="submit" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>"
-                class="single_add_to_cart_button button alt wp-element-button">
-			<?php echo esc_html( __( 'Add to Cart', 'woocommerce' ) ); ?>
-        </button>
-
-		  <?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
-      </form>
-		<?php
-	}
 
 	public function enqueue_admin_styles( $hook ) {
 		global $post_type;
@@ -279,6 +256,125 @@ class WooCommerceIntegration {
           }
       </style>
 		<?php
+	}
+
+	public function enroll_order_items( $order_id ) {
+		// prevent duplicate processing when status changes multiple times
+		if ( get_post_meta( $order_id, '_future_lms_enrollment_done', true ) === 'yes' ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		$email = $order->get_billing_email();
+		if ( empty( $email ) ) {
+			return;
+		}
+
+		$phone      = $order->get_billing_phone();
+		$first_name = trim( (string) $order->get_billing_first_name() );
+		$last_name  = trim( (string) $order->get_billing_last_name() );
+		$name       = trim( $first_name . ' ' . $last_name );
+
+		// allow filtering of email/phone 
+		$email = apply_filters( 'future-lms/student_email', $email );
+		$phone = apply_filters( 'future-lms/student_phone', $phone );
+
+		$student = Student::create( $email, '', $email );
+		if ( ! $student ) {
+			return;
+		}
+		$student_id = $student->get_id();
+
+		if ( ! empty( $name ) ) {
+			wp_update_user( [ 'ID' => $student_id, 'display_name' => $name ] );
+		}
+		if ( ! empty( $phone ) ) {
+			update_user_meta( $student_id, 'user_phone', $phone );
+		}
+
+		$student   = $student;
+		$processed = [];
+
+	  foreach ( $order->get_items() as $item_id => $item ) {
+		  $product = $item->get_product();
+		  if ( ! $product ) {
+			  continue;
+		  }
+
+		  $is_course_type = ( method_exists( $product, 'get_type' ) && $product->get_type() === 'course' );
+		  $course_id      = $product->get_linked_course_id();
+
+		  if ( ! $is_course_type && ! $course_id ) {
+			  continue; // not a course product, skip
+		  }
+
+		  $auto_enroll = $product->get_auto_enroll();
+
+		  if ( ! $course_id || ! $auto_enroll ) {
+			  continue;
+		  }
+		  if ( isset( $processed[ $course_id ] ) ) {
+			  continue; // already processed this course for this order
+		  }
+
+		  $class_id = $product->get_default_class_id();
+	    if ( ! $class_id ) {
+		    $classes = Course::get_classes( $course_id, null );
+		    if ( ! empty( $classes ) && ! empty( $classes[0]['id'] ) ) {
+			    $class_id = (int) $classes[0]['id'];
+		    }
+	    }
+
+	    if ( $class_id ) {
+			  $old_class = $student->get_class( $course_id );
+
+			  if ( ! $old_class ) {
+				  $student->subscribe_to_class( $class_id, true );
+			  } elseif ( (int) $old_class['id'] !== $class_id ) {
+				  $student->subscribe_to_class( (int) $old_class['id'], false );
+				  $student->subscribe_to_class( $class_id, true );
+			  }
+
+			  $sum = (float) $item->get_total();
+			  $transaction_id = $order->get_transaction_id();
+			  if ( ! $transaction_id ) {
+				  $transaction_id = 'order-' . $order_id . '-item-' . $item_id;
+			  }
+			  $method  = (string) $order->get_payment_method();
+			  $comment = sprintf( 'Order #%d - %s', $order_id, $item->get_name() );
+
+			  $payment_id = $student->save_payment( $course_id, $class_id, $sum, $transaction_id, $method, $comment );
+
+			  do_action( 'future-lms/payment_notification', [
+				  'course_id'      => $course_id,
+				  'student_id'     => $student_id,
+				  'class_id'       => $class_id,
+				  'sum'            => $sum,
+				  'transaction_id' => $transaction_id,
+				  'payment_id'     => $payment_id,
+				  'payment_method' => $method,
+				  'comment'        => $comment,
+			  ] );
+
+			  // mark the order item as enrolled for reference using the item API
+			  $item->add_meta_data( '_future_lms_enrolled', 'yes', true );
+			  $item->save();
+		  } else {
+			  // No default class configured -> skip enrollment but log for debugging
+			  if ( class_exists( '\\FutureLMS\\FutureLMS' ) ) {
+				  FutureLMS::log( 'No default class set for course product ' . $product->get_id() . ' (course ' . $course_id . '). Skipping enrollment.' );
+			  }
+		  }
+
+			$processed[ $course_id ] = true;
+		}
+
+		$order->update_meta_data( '_future_lms_enrollment_done', 'yes' );
+		$order->save();
 	}
 }
 
