@@ -364,10 +364,11 @@ class WooCommerceIntegration {
 			  $item->add_meta_data( '_future_lms_enrolled', 'yes', true );
 			  $item->save();
 		  } else {
-			  // No default class configured -> skip enrollment but log for debugging
-			  if ( class_exists( '\\FutureLMS\\FutureLMS' ) ) {
-				  FutureLMS::log( 'No default class set for course product ' . $product->get_id() . ' (course ' . $course_id . '). Skipping enrollment.' );
-			  }
+			// No default class configured -> notify admins and skip enrollment
+			FutureLMS::notify_admins(
+				'Enrollment skipped: no default class',
+				'No class found for course product ' . $product->get_id() . ' (course ' . $course_id . ') Order ID:' . $order_id . '. Skipping enrollment.'
+			);
 		  }
 
 			$processed[ $course_id ] = true;
