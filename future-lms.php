@@ -876,7 +876,7 @@ class FutureLMS {
   }
 
 	private function load_woocommerce_integration() {
-		$integration_file = plugin_dir_path( __FILE__ ) . 'woocommerce/Integration.php';
+		$integration_file = plugin_dir_path( __FILE__ ) . 'woocommerce/WCIntegration.php';
 		if ( file_exists( $integration_file ) ) {
 			include_once $integration_file;
 		}

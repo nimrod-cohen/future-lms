@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Integration {
+class WCIntegration {
 
 	public function __construct() {
 		if ( ! $this->is_woocommerce_active() ) {
@@ -450,4 +450,4 @@ class Integration {
 	}
 }
 
-new Integration();
+new WCIntegration();
