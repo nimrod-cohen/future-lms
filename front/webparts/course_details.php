@@ -3,17 +3,19 @@
 // Get course details and present them as a sales page
 
 use FutureLMS\FutureLMS;
+use FutureLMS\woocommerce\Integration;
 
+$courseId = intval($course->raw('ID'));
 $courseTitle = $course->display("name");
 $courseDescription = $course->display("short_description");
 $coursePrice = $course->display("full_price");
-$chargeUrl = $course->field("charge_url");
-$chargeUrl = add_query_arg(['sum' => $coursePrice], $chargeUrl); //will replace if exists.
 
 $author = get_the_author_meta('display_name', $course->post_author);
 $courseImage = $course->get_featured_image('full');
 
 $user = wp_get_current_user();
+
+$wcProductId = Integration::get_linked_product_id_for_course($courseId);
 ?>
 <div class="course-details">
   <div class="course-details">
@@ -26,28 +28,17 @@ $user = wp_get_current_user();
       <?php echo apply_filters('future-lms/post_course_description', '', [$courseId]); ?>
     </span>
     <?php FutureLMS::get_template_part('price_box.php', ['course' => $course]); ?>
-    <form id="buy-course-form" method="POST" action=#">
-      <input type='hidden' id="course-description" value="<?php echo $courseTitle; ?>">
-      <input type="hidden" name="charge-url" id="charge-url" value="<?php echo $chargeUrl; ?>">
-      <button class='buy-now'>קנה עכשיו</button>
-    </form>
+    <?php if (!empty($wcProductId)) { ?>
+      <form class="cart" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', get_permalink() ) ); ?>" method="post" enctype="multipart/form-data">
+        <button type="submit" name="add-to-cart" value="<?php echo esc_attr($wcProductId); ?>" class='buy-now button'>
+          <?php _e('קנה עכשיו','future-lms'); ?>
+        </button>
+      </form>
+    <?php } else { ?>
+      <button class='buy-now' disabled><?php _e('Not available','future-lms'); ?></button>
+    <?php } ?>
   </div>
   <div class="course-content">
     <?php echo $course->post_content; ?>
   </div>
-  <script>
-    JSUtils.domReady(()=>{
-      document.querySelector('#buy-course-form .buy-now').addEventListener('click', (e) => {
-        e.preventDefault();
-
-        const form = document.getElementById('buy-course-form');
-
-        window.doCharge({
-          email: '<?php echo $user->user_email; ?>',
-          name: '<?php echo $user->display_name; ?>',
-          phone: '<?php echo get_user_meta($user->ID, 'user_phone', true); ?>',
-          course_id:  '<?php echo $courseId; ?>',
-        }, form);
-      });
-    });
-  </script>
+  

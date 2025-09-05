@@ -95,12 +95,11 @@ class FutureLMS {
       return;
     }
     //if request is POST and course_id is set, redirect to course page
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['course_id'])) {
+    if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['course_id'], $_POST['class_id'], $_POST['lesson_id']) ) {
       require_once plugin_dir_path(__FILE__) . 'front/course.php';
     } else {
       require_once plugin_dir_path(__FILE__) . 'front/lobby.php';
     }
-
   }
 
   public function init_hooks() {
@@ -877,7 +876,7 @@ class FutureLMS {
   }
 
 	private function load_woocommerce_integration() {
-		$integration_file = plugin_dir_path( __FILE__ ) . 'includes/woocommerce-integration.php';
+		$integration_file = plugin_dir_path( __FILE__ ) . 'woocommerce/Integration.php';
 		if ( file_exists( $integration_file ) ) {
 			include_once $integration_file;
 		}
