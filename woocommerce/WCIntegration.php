@@ -231,6 +231,11 @@ class WCIntegration {
 			$product->update_meta_data( '_default_class_id', sanitize_text_field( $_POST['_default_class_id'] ) );
 		}
 
+
+		if ( $product->get_type() === 'course' ) {
+			$product->update_meta_data( '_sold_individually', 'yes' );
+		}
+
 		$product->save();
 	}
 

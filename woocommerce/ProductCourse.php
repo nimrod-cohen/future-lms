@@ -26,6 +26,7 @@ class WC_Product_Course extends WC_Product {
 
 	public function save() {
 		update_post_meta( $this->get_id(), '_product_type', 'course' );
+		update_post_meta( $this->get_id(), '_sold_individually', 'yes' );
 		parent::save();
 	}
 
@@ -47,5 +48,9 @@ class WC_Product_Course extends WC_Product {
 
 	public function get_stock_status( $context = 'view' ) {
 		return 'instock';
+	}
+
+	public function is_sold_individually() {
+		return true;
 	}
 }
