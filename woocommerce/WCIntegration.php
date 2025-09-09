@@ -69,8 +69,21 @@ class WCIntegration {
 		add_action( 'woocommerce_process_product_meta', [ $this, 'sync_course_price' ], 20 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_styles' ] );
 
+		// Add Products list column for linked course
+		add_filter( 'manage_edit-product_columns', [ $this, 'add_products_list_course_column' ], 20 );
+		add_action( 'manage_product_posts_custom_column', [ $this, 'render_products_list_course_column' ], 10, 2 );
+
 		// Enroll students when order is completed (virtual product / card payment)
 		add_action( 'woocommerce_order_status_completed', [ $this, 'enroll_order_items' ], 10, 1 );
+
+		// Redirect WooCommerce catalog pages away from public access
+		add_action( 'template_redirect', [ $this, 'redirect_woocommerce_catalog_pages' ] );
+
+		// Point cart item link to the representing course page
+		add_filter( 'woocommerce_cart_item_permalink', [ $this, 'override_cart_item_permalink' ], 10, 3 );
+
+		// Replace cart item NAME to course title and link
+		add_filter( 'woocommerce_cart_item_name', [ $this, 'override_cart_item_name' ], 10, 3 );
 	}
 
 	public function load_course_product_class() {
@@ -122,11 +135,7 @@ class WCIntegration {
 
 			$selected_course = 0;
 			if ( $product ) {
-				if ( method_exists( $product, 'get_linked_course_id' ) ) {
-					$selected_course = (int) $product->get_linked_course_id();
-				} else {
-					$selected_course = (int) $product->get_meta( '_linked_course_id' );
-				}
+				$selected_course = (int) $product->get_meta( '_linked_course_id' );
 			}
 
 			woocommerce_wp_select( [
@@ -141,11 +150,7 @@ class WCIntegration {
 			// Auto-enrollment checkbox
 			$auto_enroll_val = 'no';
 			if ( $product ) {
-				if ( method_exists( $product, 'get_auto_enroll' ) ) {
-					$auto_enroll_val = ( $product->get_auto_enroll() ? 'yes' : 'no' );
-				} else {
-					$auto_enroll_val = ( $product->get_meta( '_auto_enroll' ) === 'yes' ? 'yes' : 'no' );
-				}
+				$auto_enroll_val = ( $product->get_meta( '_auto_enroll' ) === 'yes' ? 'yes' : 'no' );
 			}
 			woocommerce_wp_checkbox( [
 				'id'          => '_auto_enroll',
@@ -170,11 +175,7 @@ class WCIntegration {
 
 				$default_class = 0;
 				if ( $product ) {
-					if ( method_exists( $product, 'get_default_class_id' ) ) {
-						$default_class = (int) $product->get_default_class_id();
-					} else {
-						$default_class = (int) $product->get_meta( '_default_class_id' );
-					}
+					$default_class = (int) $product->get_meta( '_default_class_id' );
 				}
 
 				woocommerce_wp_select( [
@@ -313,7 +314,7 @@ class WCIntegration {
 		if ( ! $student ) {
 			return;
 		}
-		$student_id = $student->get_id();
+		$student_id = (int) $student->get_id();
 
 		if ( ! empty( $name ) ) {
 			wp_update_user( [ 'ID' => $student_id, 'display_name' => $name ] );
@@ -322,8 +323,7 @@ class WCIntegration {
 			update_user_meta( $student_id, 'user_phone', $phone );
 		}
 
-		$student   = $student;
-		$processed = [];
+	  	$processed = [];
 
 		foreach ( $order->get_items() as $item_id => $item ) {
 			$product = $item->get_product();
@@ -331,14 +331,14 @@ class WCIntegration {
 				continue;
 			}
 
-			$is_course_type = ( method_exists( $product, 'get_type' ) && $product->get_type() === 'course' );
-			$course_id      = method_exists( $product, 'get_linked_course_id' ) ? (int) $product->get_linked_course_id() : (int) $product->get_meta( '_linked_course_id' );
+			$is_course_type = ( $product->get_type() === 'course' );
+			$course_id = (int) $product->get_meta( '_linked_course_id' );
 
 			if ( ! $is_course_type && ! $course_id ) {
 				continue; // not a course product, skip
 			}
 
-			$auto_enroll = method_exists( $product, 'get_auto_enroll' ) ? (bool) $product->get_auto_enroll() : ( $product->get_meta( '_auto_enroll' ) === 'yes' );
+			$auto_enroll = ( $product->get_meta( '_auto_enroll' ) === 'yes' );
 
 			if ( ! $course_id || ! $auto_enroll ) {
 				continue;
@@ -347,7 +347,7 @@ class WCIntegration {
 				continue; // already processed this course for this order
 			}
 
-			$class_id = method_exists( $product, 'get_default_class_id' ) ? (int) $product->get_default_class_id() : (int) $product->get_meta( '_default_class_id' );
+			$class_id = (int) $product->get_meta( '_default_class_id' );
 			if ( ! $class_id ) {
 				$classes = Course::get_classes( $course_id, null );
 				if ( ! empty( $classes ) && ! empty( $classes[0]['id'] ) ) {
@@ -404,25 +404,52 @@ class WCIntegration {
 		$order->save();
 	}
 
-	public static function get_linked_product_id_for_course( int $course_id ): int {
+	public function add_products_list_course_column( $columns ) {
+		$new_columns = [];
+
+		foreach ( $columns as $key => $label ) {
+			$new_columns[ $key ] = $label;
+			if ( $key === 'name' ) {
+				$new_columns['linked_course'] = __( 'Course', 'future-lms' );
+			}
+		}
+
+		if ( ! isset( $new_columns['linked_course'] ) ) {
+			$new_columns['linked_course'] = __( 'Course', 'future-lms' );
+		}
+
+		return $new_columns;
+	}
+
+	public function render_products_list_course_column( $column, $post_id ) {
+		if ( $column !== 'linked_course' ) {
+			return;
+		}
+
+		$product = wc_get_product( $post_id );
+
+		if ( ! $product ) {
+			echo '—';
+			return;
+		}
+
+		$course_id = (int) $product->get_meta( '_linked_course_id' );
+		
+		if ( $course_id ) {
+			$title = get_the_title( $course_id );
+			if ( $title ) {
+				echo esc_html( $title );
+			} else {
+				echo $course_id;
+			}
+		} else {
+			echo '—';
+		}
+	}
+
+	public static function get_linked_product_for_course( int $course_id ): int {
 		if ( ! $course_id ) {
 			return 0;
-		}
-		if ( function_exists( 'wc_get_products' ) ) {
-			$products = wc_get_products( [
-				'type'      => 'course',
-				'limit'     => 1,
-				'orderby'   => 'date',
-				'order'     => 'DESC',
-				'status'    => 'publish',
-				'meta_key'  => '_linked_course_id',
-				'meta_value'=> $course_id,
-			] );
-			if ( ! empty( $products ) ) {
-				try {
-					return (int) $products[0]->get_id();
-				} catch ( \Throwable $e ) {}
-			}
 		}
 		$posts = get_posts( [
 			'post_type'      => 'product',
@@ -440,13 +467,62 @@ class WCIntegration {
 		return ! empty( $posts ) ? (int) $posts[0] : 0;
 	}
 
-	public static function get_buy_now_url( int $course_id, int $quantity = 1, string $destination = 'cart' ): string {
-		$product_id = self::get_linked_product_id_for_course( $course_id );
-		if ( ! $product_id ) {
-			return '';
+	public function redirect_woocommerce_catalog_pages() {
+		if ( is_shop() || is_product() || is_product_category() || is_product_tag() ) {
+			if ( is_front_page() ) {
+				return;
+			}
+			
+			$destination = apply_filters( 'future_lms/woocommerce_redirect_destination', home_url() );
+			wp_safe_redirect( $destination );
+			exit;
 		}
-		$base_url = ( $destination === 'checkout' && function_exists( 'wc_get_checkout_url' ) ) ? wc_get_checkout_url() : wc_get_cart_url();
-		return add_query_arg( [ 'add-to-cart' => $product_id, 'quantity' => max( 1, $quantity ) ], $base_url );
+	}
+
+	public function override_cart_item_permalink( $permalink, $cart_item, $cart_item_key ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+		if ( ! $product ) {
+			return $permalink;
+		}
+
+		$course_id = (int) $product->get_meta( '_linked_course_id' );
+
+		if ( ! $course_id ) {
+			return $permalink;
+		}
+
+		$course_url = get_post_meta( $course_id, 'course_page_url', true );
+		if ( empty( $course_url ) ) {
+			$course_url = get_permalink( $course_id );
+		}
+
+		return $course_url ?: $permalink;
+	}
+
+	public function override_cart_item_name( $name, $cart_item, $cart_item_key ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+		if ( ! $product ) {
+			return $name;
+		}
+
+		$course_id = (int) $product->get_meta( '_linked_course_id' );
+		if ( ! $course_id ) {
+			return $name;
+		}
+
+		$course_title = get_the_title( $course_id );
+		if ( ! $course_title ) {
+			return $name;
+		}
+
+		$course_url = get_post_meta( $course_id, 'course_page_url', true );
+		if ( empty( $course_url ) ) {
+			$course_url = get_permalink( $course_id );
+		}
+
+		return $course_url
+			? sprintf( '<a href="%s">%s</a>', esc_url( $course_url ), esc_html( $course_title ) )
+			: esc_html( $course_title );
 	}
 }
 

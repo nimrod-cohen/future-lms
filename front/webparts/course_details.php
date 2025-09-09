@@ -15,7 +15,7 @@ $courseImage = $course->get_featured_image('full');
 
 $user = wp_get_current_user();
 
-$wcProductId = WCIntegration::get_linked_product_id_for_course($courseId);
+$wcProductId = WCIntegration::get_linked_product_for_course($courseId);
 ?>
 <div class="course-details">
   <div class="course-details">
