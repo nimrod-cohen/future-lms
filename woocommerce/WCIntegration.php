@@ -82,13 +82,16 @@ class WCIntegration {
 		// Override product name and permalink to show course information
 		add_filter( 'woocommerce_product_get_name', [ $this, 'override_product_name' ], 10, 2 );
 		add_filter( 'woocommerce_product_get_permalink', [ $this, 'override_product_permalink' ], 10, 2 );
+		
+		// Override WordPress post title for course products
+		add_filter( 'the_title', [ $this, 'override_post_title' ], 10, 2 );
+		add_filter( 'woocommerce_product_title', [ $this, 'override_product_title' ], 10, 2 );
 
-		// Override for cart items
+		// Override for cart item permalinks
 		add_filter( 'woocommerce_cart_item_permalink', [ $this, 'override_cart_item_permalink' ], 10, 3 );
-		add_filter( 'woocommerce_cart_item_name', [ $this, 'override_cart_item_name' ], 10, 3 );
 
 		// Redirect to cart when trying to add course that's already in cart
-		add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate_course_add_to_cart' ], 10, 5 );
+		add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate_course_add_to_cart' ], 10, 2 );
 	}
 
 	public function load_course_product_class() {
@@ -541,33 +544,8 @@ class WCIntegration {
 		return $course_url ?: $permalink;
 	}
 
-	public function override_cart_item_name( $name, $cart_item, $cart_item_key ) {
-		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
-		if ( ! $product ) {
-			return $name;
-		}
 
-		$course_id = (int) $product->get_meta( '_linked_course_id' );
-		if ( ! $course_id ) {
-			return $name;
-		}
-
-		$course_title = get_the_title( $course_id );
-		if ( ! $course_title ) {
-			return $name;
-		}
-
-		$course_url = get_post_meta( $course_id, 'course_page_url', true );
-		if ( empty( $course_url ) ) {
-			$course_url = get_permalink( $course_id );
-		}
-
-		return $course_url
-			? sprintf( '<a href="%s">%s</a>', esc_url( $course_url ), esc_html( $course_title ) )
-			: esc_html( $course_title );
-	}
-
-	public function validate_course_add_to_cart( $passed, $product_id, $quantity, $variation_id = 0, $cart_item_data = array() ) {
+	public function validate_course_add_to_cart( $passed, $product_id) {
 		$product = wc_get_product( $product_id );
 		if ( ! $product ) {
 			return $passed;
@@ -591,6 +569,40 @@ class WCIntegration {
 		}
 
 		return $passed;
+	}
+
+	public function override_post_title( $title, $post_id ) {
+		// Only override for product posts
+		if ( get_post_type( $post_id ) !== 'product' ) {
+			return $title;
+		}
+
+		$product = wc_get_product( $post_id );
+		if ( ! $product ) {
+			return $title;
+		}
+
+		$course_id = (int) $product->get_meta( '_linked_course_id' );
+		if ( ! $course_id ) {
+			return $title;
+		}
+
+		$course_title = get_the_title( $course_id );
+		return $course_title ?: $title;
+	}
+
+	public function override_product_title( $title, $product ) {
+		if ( ! $product ) {
+			return $title;
+		}
+
+		$course_id = (int) $product->get_meta( '_linked_course_id' );
+		if ( ! $course_id ) {
+			return $title;
+		}
+
+		$course_title = get_the_title( $course_id );
+		return $course_title ?: $title;
 	}
 }
 
