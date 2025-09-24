@@ -323,6 +323,7 @@ class Admin {
       $page_url = $_POST["page_url"];
       $charge_url = $_POST["charge_url"];
       $tags = $_POST["tags"];
+      $default_class = $_POST["default_class"];
 
       if (empty($courseId)) {
         //create new course, a course is a wp_post with post_type = course
@@ -341,6 +342,7 @@ class Admin {
       update_post_meta($courseId, 'course_page_url', $page_url);
       update_post_meta($courseId, 'charge_url', $charge_url);
       update_post_meta($courseId, 'tags', $tags);
+      update_post_meta($courseId, 'default_class', $default_class);
 
       wp_send_json(['error' => false]);
     } catch (Exception $e) {

@@ -269,30 +269,30 @@ class CoursesTab {
     const courseData = courses[courseId];
     const module = moduleId ? courseData.modules[moduleId] : null;
 
-    remodaler.show({
+    slideout.show({
       title: moduleId ? 'Edit Module' : 'Add Module',
-      message: `<div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Module name</label>
+      message: `<div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Module name</label>
         <input type='text' name='module_name' value='${module?.name || ''}'/>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='count_progress'>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' for='count_progress'>
           <input type='checkbox' id='count_progress' name='count_progress' ${module?.count_progress ? 'checked' : ''}/>
           Counts towards progress
         </label>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='teaser'>Teaser</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' for='teaser'>Teaser</label>
         <input type='text' id='teaser' name='teaser' value='${module?.teaser}'/>
         <small class='desc' style='font-size:0.8rem;'>A less revealing teaser text for course pages</small>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='intro_module'>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' for='intro_module'>
           <input type='checkbox' id='intro_module' name='intro_module' ${module?.intro_module ? 'checked' : ''}/>
           Intro module (will not be numbered)
         </label>        
       </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: 'Save',
       confirm: async vals => {
         if (!vals.module_name?.length) {
@@ -350,13 +350,13 @@ class CoursesTab {
     const module = e.target.closest('.course-module');
     const moduleId = module.dataset.moduleId;
 
-    remodaler.show({
+    slideout.show({
       title: 'Add Lesson',
-      message: `<div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Lesson name</label>
+      message: `<div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Lesson name</label>
         <input type='text' name='lesson_name' />
       </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: 'Create Lesson',
       confirm: async vals => {
         if (!vals.lesson_name?.length) {
@@ -468,29 +468,35 @@ class CoursesTab {
 
   editCourse = courseId => {
     const course = courseId ? this.state.get('courses')[courseId] : null;
-    remodaler.show({
+    slideout.show({
       title: courseId ? 'Edit Course' : 'Add Course',
-      message: `<div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Course name</label>
+      message: `<div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course name</label>
         <input type='text' name='course_name' value='${course?.name || ''}'/>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Price</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Price</label>
         <input type='number' name='course_price' value='${course?.price || ''}' />
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Course page Url</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course page Url</label>
         <input type='text' name='course_page_url' value='${course?.course_page_url || ''}' />
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Charge Url</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Charge Url</label>
         <input type='text' name='course_charge_url' value='${course?.charge_url || ''}' />
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Tags</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Tags</label>
         <input type='text' name='course_tags' value='${course?.tags || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Default Class</label>
+        <select name="course_default_class" class="course-default-class slideout-form-select">
+          <option value="">No default class selected</option>
+        </select>
       </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: courseId ? 'Update' : 'Create',
       confirm: async vals => {
         if (!vals.course_name?.length) {
@@ -509,6 +515,7 @@ class CoursesTab {
           price: vals.course_price,
           page_url: encodeURI(vals.course_page_url),
           tags: encodeURIComponent(vals.course_tags),
+          default_class: vals.course_default_class,
           charge_url: encodeURIComponent(vals.course_charge_url)
         };
 
@@ -520,6 +527,27 @@ class CoursesTab {
         }
       }
     });
+
+    if (courseId) {
+      JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'search_classes',
+        course_id: courseId
+      }).then(data => {
+        let select = document.querySelector('.slideout-panel select.course-default-class');
+
+        data.results.forEach(item => {
+          let option = document.createElement('option');
+          option.value = item.id;
+          option.textContent = item.title;
+
+          if (course?.default_class && parseInt(course.default_class) === parseInt(item.id)) {
+            option.selected = true;
+          }
+
+          select.appendChild(option);
+        });
+      });
+    }
   };
 
   editClass = async classId => {
@@ -541,33 +569,33 @@ class CoursesTab {
       }
     };
 
-    remodaler.show({
+    slideout.show({
       title: classId ? 'Edit Class' : 'Add Class',
       message: `
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Class Name</label>
+        <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Class Name</label>
             <input type='text' name='class_name' value='${selectedClass?.name || ''}'/>
         </div>
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Select Course</label>
-            <select name="class_course_id" class="remodal-form-select" disabled>
+        <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Select Course</label>
+            <select name="class_course_id" class="slideout-form-select" disabled>
                 <option value="">Loading courses...</option>
             </select>
-            <div class="remodal-loading-indicator"></div>
+            <div class="slideout-loading-indicator"></div>
         </div>
-            <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Start Date & Time</label>
+            <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Start Date & Time</label>
             <input type="datetime-local" 
                    name="class_start_date" 
                    value="${formatDateTimeForInput(selectedClass?.start_date)}" 
-                   class="remodal-datetime-input"
+                   class="slideout-datetime-input"
                    step="300" min="${new Date().toISOString().slice(0, 16)}">
         </div>
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Lessons</label>
+        <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Lessons</label>
             <input type='text' name='class_lessons' value='${selectedClass?.lessons || ''}' />
         </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: classId ? 'Update' : 'Create',
       confirm: async vals => {
         var data = {
@@ -594,7 +622,7 @@ class CoursesTab {
       ...courses[id]
     }));
 
-    const select = document.querySelector('.remodal-form-select[name="class_course_id"]');
+    const select = document.querySelector('.slideout-panel select[name="class_course_id"]');
     if (select) {
       select.innerHTML = `
                 <option value="">-- Select a Course --</option>
