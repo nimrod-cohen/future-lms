@@ -364,6 +364,10 @@ div.error {
   }
 }
 
+.remodal.remodal-large {
+  width: 90vw;
+  max-width: 1100px;
+}
 .ui-popover {
   z-index: 100;
 }

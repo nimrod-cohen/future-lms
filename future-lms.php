@@ -335,6 +335,11 @@ class FutureLMS {
     if ("toplevel_page_future-lms-settings" != $hook) {
       return;
     }
+
+    if (function_exists('wp_enqueue_media')) {
+      wp_enqueue_media();
+    }
+    
     wp_enqueue_script('future-lms-semantic-js', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.js');
     wp_enqueue_style('future-lms-semantic-css', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.css');
 
