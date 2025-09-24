@@ -64,7 +64,7 @@ class CoursesTab {
     );
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='add-lesson']", 'click', this.addLesson);
 
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', this.editLesson);
+    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', (e) => this.editLesson(e));
 
     document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
     document.querySelector('.action-bar [data-action="add-class"]').addEventListener('click', this.addClass);
@@ -309,22 +309,46 @@ class CoursesTab {
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
+          notifications.show('Module updated successfully', 'success');
           this.getCourses();
+        } else {
+          notifications.show(result.message || 'Failed to update module', 'error');
         }
       }
     });
   };
 
-  editLesson = async e => {
-    const lessonId = e.target.closest('.module-lesson').dataset.lessonId;
-    const moduleEl = e.target.closest('.course-module');
+  editLesson = async (e, lessonId = null, moduleId = null) => {
+    // If lessonId is provided, we're editing; otherwise we're creating
+    if (lessonId === null) {
+      const lessonEl = e.target.closest('.module-lesson');
+      if (lessonEl) {
+        lessonId = lessonEl.dataset.lessonId;
+      }
+    }
+    
     const courseEl = e.target.closest('.course');
     const courseId = courseEl?.dataset?.courseId;
 
-    const lesson = await JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'get_lesson_details',
-      lesson_id: lessonId
-    });
+    let lesson = null;
+    if (lessonId) {
+      lesson = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'get_lesson_details',
+        lesson_id: lessonId
+      });
+    } else {
+      lesson = {
+        error: false,
+        name: '',
+        teaser: '',
+        lesson_number: 1,
+        presentation_id: 0,
+        videos: [],
+        homework: '',
+        additional_files: '',
+        module_id: moduleId
+      };
+    }
 
     if (lesson.error) {
       notifications.show(lesson.message || 'Failed to load lesson', 'error');
@@ -333,30 +357,29 @@ class CoursesTab {
 
     const videosToTextarea = arr => (arr && arr.length ? arr.join('\n') : '');
 
-    remodaler.show({
-      title: 'Edit Lesson',
+    slideout.show({
+      title: lessonId ? 'Edit Lesson' : 'Add Lesson',
       message: `
-        <div class='lesson-editor-modal'>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Lesson name</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Lesson name</label>
           <input type='text' name='lesson_name' value='${lesson.name || ''}'/>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Module</label>
-          <select name='lesson_module' class='remodal-form-select'>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Module</label>
+          <select name='lesson_module' class='slideout-form-select'>
             <option value=''>Loading...</option>
           </select>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Lesson number</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Lesson number</label>
           <input type='number' min='1' name='lesson_number' value='${lesson.lesson_number || 1}'/>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Teaser</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Teaser</label>
           <input type='text' name='lesson_teaser' value='${lesson.teaser || ''}'/>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Presentation</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Presentation</label>
           <div class='presentation-picker'>
             <input type='hidden' name='lesson_presentation' value='${lesson.presentation_id || 0}' />
             <div class='ui mini image file-preview'>
@@ -369,22 +392,21 @@ class CoursesTab {
             <button type='button' class='ui tiny button select-presentation'>Select File</button>
           </div>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Videos (one per line)</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Videos (one per line)</label>
           <textarea name='lesson_videos' style='height:120px;'>${videosToTextarea(lesson.videos)}</textarea>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Homework</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Homework</label>
           <textarea class='trumbo' name='lesson_homework' style='height:180px;'></textarea>
         </div>
-        <div class='remodal-form-line'>
-          <label class='remodal-form-line-title'>Additional files</label>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Additional files</label>
           <textarea class='trumbo' name='lesson_additional_files' style='height:180px;'></textarea>
         </div>
-        </div>
       `,
-      type: remodaler.types.FORM,
-      confirmText: 'Save',
+      type: slideout.types.FORM,
+      confirmText: lessonId ? 'Save' : 'Create Lesson',
       confirm: async vals => {
         if (!vals.lesson_name?.length) {
           notifications.show('Lesson name cannot be empty', 'error');
@@ -416,12 +438,15 @@ class CoursesTab {
 
         const result = await JSUtils.fetch(__futurelms.ajax_url, payload);
         if (!result.error) {
+          notifications.show(lessonId ? 'Lesson updated successfully' : 'Lesson created successfully', 'success');
           this.getCourses();
+        } else {
+          notifications.show(result.message || (lessonId ? 'Failed to update lesson' : 'Failed to create lesson'), 'error');
         }
       }
     });
 
-    const select = document.querySelector('.remodal-form-select[name="lesson_module"]');
+    const select = document.querySelector('.slideout-form-select[name="lesson_module"]');
     if (select) {
       const courses = this.state.get('courses');
       const currentCourse = courses[courseId];
@@ -465,8 +490,6 @@ class CoursesTab {
       }
     }
 
-    const modalRoot = document.querySelector('.lesson-editor-modal')?.closest('.remodal');
-    if (modalRoot) modalRoot.classList.add('remodal-large');
   };
 
   openModule = e => {
@@ -500,33 +523,7 @@ class CoursesTab {
   addLesson = e => {
     const module = e.target.closest('.course-module');
     const moduleId = module.dataset.moduleId;
-
-    slideout.show({
-      title: 'Add Lesson',
-      message: `<div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Lesson name</label>
-        <input type='text' name='lesson_name' />
-      </div>`,
-      type: slideout.types.FORM,
-      confirmText: 'Create Lesson',
-      confirm: async vals => {
-        if (!vals.lesson_name?.length) {
-          notifications.show('Lesson name cannot be empty', 'error');
-          return false;
-        }
-
-        var data = {
-          action: 'add_lesson',
-          module_id: moduleId,
-          name: vals.lesson_name
-        };
-
-        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
-        if (!result.error) {
-          this.getCourses();
-        }
-      }
-    });
+    this.editLesson(e, null, moduleId);
   };
 
   addCourse = () => {
@@ -675,6 +672,8 @@ class CoursesTab {
           //show success notification
           window.notifications.show('Course saved successfully', 'success');
           this.getCourses();
+        } else {
+          notifications.show(result.message || 'Failed to save course', 'error');
         }
       }
     });
@@ -762,6 +761,9 @@ class CoursesTab {
         if (!result.error) {
           //show success notification
           window.notifications.show('Class saved successfully', 'success');
+          this.getCourses(); // Refresh the courses data
+        } else {
+          notifications.show(result.message || 'Failed to save class', 'error');
         }
       }
     });

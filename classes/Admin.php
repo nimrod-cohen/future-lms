@@ -17,14 +17,13 @@ class Admin {
     add_action("wp_ajax_edit_course", [$this, "edit_course"]);
     add_action("wp_ajax_change_course_status", [$this, "change_course_status"]);
     add_action("wp_ajax_change_module_status", [$this, "change_module_status"]);
-    add_action("wp_ajax_change_lesson_status", [$this, "chane_lesson_status"]);
+    add_action("wp_ajax_change_lesson_status", [$this, "change_lesson_status"]);
     add_action("wp_ajax_edit_module", [$this, "edit_module"]);
     add_action("wp_ajax_reorder_module", [$this, "reorder_module"]);
     add_action("wp_ajax_reorder_lesson", [$this, "reorder_lesson"]);
-	  add_action("wp_ajax_edit_class", [$this, "edit_class"]);
-	  add_action("wp_ajax_get_lesson_details", [$this, "get_lesson_details"]);
-	  add_action("wp_ajax_add_lesson", [$this, "add_lesson"]);
-	  add_action("wp_ajax_edit_lesson", [$this, "edit_lesson"]);
+	  add_action( "wp_ajax_edit_class", [ $this, "edit_class" ] );
+	  add_action( "wp_ajax_get_lesson_details", [ $this, "get_lesson_details" ] );
+	  add_action( "wp_ajax_edit_lesson", [ $this, "edit_lesson" ] );
   }
 
   public function edit_class() {
@@ -59,35 +58,6 @@ class Admin {
     }
   }
 
-  public function add_lesson() {
-    global $wpdb;
-
-    $moduleId = intval($_POST["module_id"]);
-    $name = stripslashes($_POST["name"]);
-
-    $wpdb->insert($wpdb->prefix."posts", [
-      "post_title" => $name,
-      "post_status" => "draft",
-      "post_type" => "lesson",
-      "post_parent" => $moduleId
-    ]);
-
-    $lessonId = $wpdb->insert_id;
-    $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned int)),0)
-    from ".$wpdb->prefix."postmeta pm1
-    inner join ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $moduleId
-    where pm1.meta_key = 'lesson_number'
-    and pm2.post_id = pm1.post_id");
-    update_post_meta($lessonId, 'lesson_number', intval($order) + 1);
-    update_post_meta($lessonId, 'video_list', '');
-    update_post_meta($lessonId, 'additional_files', '');
-    update_post_meta($lessonId, 'homework', '');
-    $lesson = new Lesson($lessonId);
-    $lesson->field('module', $moduleId);
-    $lesson->save();
-
-    wp_send_json(['error' => false]);
-  }
 
   public function get_lesson_details() {
     try {
@@ -156,15 +126,31 @@ class Admin {
       $lessonNumber = isset($_POST["lesson_number"]) ? intval($_POST["lesson_number"]) : null;
       $presentationId = isset($_POST["presentation"]) ? intval($_POST["presentation"]) : 0;
 
-      if (empty($lessonId)) {
-        wp_send_json(['error' => true, 'message' => 'Invalid lesson id']);
+      $isNewLesson = empty($lessonId);
+      
+      if ($isNewLesson) {
+        // Create new lesson
+        if (empty($newModuleId) || empty($name)) {
+          wp_send_json(['error' => true, 'message' => 'Module ID and lesson name are required']);
+        }
+        
+        $lessonId = wp_insert_post([
+          'post_title' => $name,
+          'post_status' => 'draft',
+          'post_type' => 'lesson',
+          'post_parent' => $newModuleId
+        ]);
+        
+        if (is_wp_error($lessonId)) {
+          wp_send_json(['error' => true, 'message' => 'Failed to create lesson']);
+        }
+      } else {
+        // Update existing lesson title
+        wp_update_post([
+          'ID' => $lessonId,
+          'post_title' => $name
+        ]);
       }
-
-      // Update title
-      wp_update_post([
-        'ID' => $lessonId,
-        'post_title' => $name
-      ]);
 
       // Normalize and save meta
       update_post_meta($lessonId, 'teaser', sanitize_text_field($teaser));
@@ -180,27 +166,44 @@ class Admin {
       update_post_meta($lessonId, 'presentation', $presentationId);
 
 
-      $oldModuleId = intval(get_post_meta($lessonId, 'module', true));
-      $targetModuleId = $newModuleId !== null ? $newModuleId : $oldModuleId;
-
-      if ($targetModuleId !== $oldModuleId && $targetModuleId > 0) {
-        update_post_meta($lessonId, 'module', $targetModuleId);
+      if ($isNewLesson) {
+        // For new lessons, set module and lesson number
+        update_post_meta($lessonId, 'module', $newModuleId);
         if ($lessonNumber === null || $lessonNumber < 1) {
           global $wpdb;
           $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned)),0)
             from " . $wpdb->prefix . "postmeta pm1
-            inner join " . $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $targetModuleId
+            inner join " . $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $newModuleId
             where pm1.meta_key = 'lesson_number'
             and pm2.post_id = pm1.post_id");
           $lessonNumber = intval($order) + 1;
         }
         update_post_meta($lessonId, 'lesson_number', $lessonNumber);
-        $this->fix_lessons_order($oldModuleId);
-        $this->fix_lessons_order($targetModuleId);
+        $this->fix_lessons_order($newModuleId);
       } else {
-        if ($lessonNumber !== null && $lessonNumber > 0) {
+        // For existing lessons, handle module changes
+        $oldModuleId = intval(get_post_meta($lessonId, 'module', true));
+        $targetModuleId = $newModuleId !== null ? $newModuleId : $oldModuleId;
+
+        if ($targetModuleId !== $oldModuleId && $targetModuleId > 0) {
+          update_post_meta($lessonId, 'module', $targetModuleId);
+          if ($lessonNumber === null || $lessonNumber < 1) {
+            global $wpdb;
+            $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned)),0)
+              from " . $wpdb->prefix . "postmeta pm1
+              inner join " . $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $targetModuleId
+              where pm1.meta_key = 'lesson_number'
+              and pm2.post_id = pm1.post_id");
+            $lessonNumber = intval($order) + 1;
+          }
           update_post_meta($lessonId, 'lesson_number', $lessonNumber);
+          $this->fix_lessons_order($oldModuleId);
           $this->fix_lessons_order($targetModuleId);
+        } else {
+          if ($lessonNumber !== null && $lessonNumber > 0) {
+            update_post_meta($lessonId, 'lesson_number', $lessonNumber);
+            $this->fix_lessons_order($targetModuleId);
+          }
         }
       }
 
