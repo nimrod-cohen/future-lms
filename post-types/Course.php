@@ -166,5 +166,4 @@ add_action('save_post_course', function ($post_id, $post) {
         }
     }
   }
-  do_action('future-lms/course_saved', $post_id, $post);
 }, 10, 2);

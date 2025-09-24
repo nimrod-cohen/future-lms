@@ -344,6 +344,11 @@ class Admin {
       update_post_meta($courseId, 'tags', $tags);
       update_post_meta($courseId, 'default_class', $default_class);
 
+      // Trigger WooCommerce product creation/update after response is sent
+      add_action('shutdown', function() use ($courseId) {
+        do_action('future-lms/course_saved', $courseId, get_post($courseId));
+      });
+
       wp_send_json(['error' => false]);
     } catch (Exception $e) {
       wp_send_json(['error' => true, 'message' => $e->getMessage()]);

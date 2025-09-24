@@ -93,8 +93,6 @@ class WCIntegration {
 		// Redirect to cart when trying to add course that's already in cart
 		add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate_course_add_to_cart' ], 10, 2 );
 
-		// AJAX handler for getting classes
-		add_action( 'wp_ajax_future_lms_get_classes', [ $this, 'ajax_get_classes' ] );
 	}
 
 	public function load_course_product_class() {
@@ -171,33 +169,8 @@ class WCIntegration {
 				'value'       => $auto_enroll_val
 			] );
 			
-			$classes = [];
-			$default_class_title = null;
-			$default_class = '';
 
-			if ( $course ) {
-				$data = $this->get_course_classes_data( $course );
-
-				foreach ( $data['classes'] as $class_data ) {
-					$classes[] = (object) [
-						'ID' => $class_data['id'],
-						'post_title' => $class_data['title']
-					];
-				}
-				
-				$default_class_title = $data['default_class_title'];
-				$default_class = $product ? $product->get_meta( '_default_class_id' ) : '';
-			}
-
-			woocommerce_wp_select( [
-				'id'          => '_default_class_id',
-				'label'       => __( 'Enroll to class', 'future-lms' ),
-				'description' => __( 'Select the default class for enrollment (optional)', 'future-lms' ),
-				'desc_tip'    => true,
-				'options'     => $this->get_classes_options( $classes, $default_class_title ),
-				'value'       => $default_class,
-				'wrapper_class' => 'form-field _default_class_id_field'
-			] );
+			echo '<p class="description">Default class will be automatically set from the linked course.</p>';
 			?>
         </div>
       </div>
@@ -214,21 +187,6 @@ class WCIntegration {
 		return $options;
 	}
 
-	private function get_classes_options( $classes, $default_class_title = null ) {
-		$default_class_name = __( 'Default Class', 'future-lms' );
-		
-		if ( $default_class_title ) {
-			$default_class_name = sprintf( __( 'Default Class (%s)', 'future-lms' ), $default_class_title );
-		}
-		
-		$options = [ '' => $default_class_name ];
-
-		foreach ( $classes as $class ) {
-			$options[ $class->ID ] = $class->post_title;
-		}
-
-		return $options;
-	}
 
 	public function save_course_product_meta( $post_id ) {
 
@@ -243,10 +201,6 @@ class WCIntegration {
 
 		$auto_enroll = isset( $_POST['_auto_enroll'] ) ? 'yes' : 'no';
 		$product->update_meta_data( '_auto_enroll', $auto_enroll );
-
-		if ( isset( $_POST['_default_class_id'] ) ) {
-			$product->update_meta_data( '_default_class_id', sanitize_text_field( $_POST['_default_class_id'] ) );
-		}
 
 
 		if ( $product->get_type() === 'course' ) {
@@ -293,19 +247,6 @@ class WCIntegration {
 			'1.0.0' 
 		);
 
-		// Enqueue scripts
-		wp_enqueue_script( 
-			'future-lms-woocommerce', 
-			plugin_dir_url( dirname( __FILE__ ) ) . 'admin/js/woocommerce.js', 
-			[ 'jquery' ], 
-			'1.0.0', 
-			true 
-		);
-		
-		// Localize script with nonce
-		wp_localize_script( 'future-lms-woocommerce', 'futureLmsAdmin', [
-			'nonce' => wp_create_nonce( 'future_lms_get_classes' )
-		] );
 	}
 
 	public function enroll_order_items( $order_id ) {
@@ -616,41 +557,6 @@ class WCIntegration {
 	}
 
 
-	private function get_course_classes_data( $course_id ) {
-		$classes_data = Course::get_classes( $course_id, null );
-		$classes = [];
-		$default_class_title = null;
-		
-		foreach ( $classes_data as $class_data ) {
-			$classes[] = [
-				'id' => $class_data['id'],
-				'title' => $class_data['title']
-			];
-			
-			if ( $class_data['is_default'] ) {
-				$default_class_title = $class_data['title'];
-			}
-		}
-		
-		// If no default class found, use the newest (first in the list)
-		$default_class_title = $default_class_title ?: ( ! empty( $classes_data ) ? $classes_data[0]['title'] : null );
-
-		return [
-			'classes' => $classes,
-			'default_class_title' => $default_class_title
-		];
-	}
-
-	public function ajax_get_classes() {
-		$course_id = (int) $_POST['course_id'];
-		
-		if ( ! $course_id ) {
-			wp_send_json_error( 'Invalid course ID' );
-		}
-
-		$data = $this->get_course_classes_data( $course_id );
-		wp_send_json_success( $data );
-	}
 }
 
 new WCIntegration();
