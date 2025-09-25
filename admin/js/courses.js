@@ -382,13 +382,6 @@ class CoursesTab {
           <label class='slideout-form-line-title'>Presentation</label>
           <div class='presentation-picker'>
             <input type='hidden' name='lesson_presentation' value='${lesson.presentation_id || 0}' />
-            <div class='ui mini image file-preview'>
-              ${lesson.presentation_url
-                ? (lesson.presentation_mime && lesson.presentation_mime.startsWith('image/')
-                    ? `<img src='${lesson.presentation_url}' />`
-                    : `<img src='${lesson.presentation_icon || ''}' /><span class='file-name'>${lesson.presentation_filename || ''}</span>`)
-                : ''}
-            </div>
             <button type='button' class='ui tiny button select-presentation'>Select File</button>
           </div>
         </div>
@@ -472,18 +465,7 @@ class CoursesTab {
           frame.on('select', function () {
             const attachment = frame.state().get('selection').first().toJSON();
             const input = document.querySelector('input[name="lesson_presentation"]');
-            const imgWrap = btn.parentElement.querySelector('.ui.image.file-preview');
             if (input) input.value = attachment.id;
-            if (imgWrap) {
-              const isImage = (attachment.type && attachment.type.startsWith('image')) || /\.(png|jpe?g|gif|webp|svg)$/i.test(attachment.url);
-              if (isImage) {
-                imgWrap.innerHTML = `<img src='${attachment.url}' />`;
-              } else {
-                const icon = attachment.icon || '';
-                const filename = attachment.filename || '';
-                imgWrap.innerHTML = `${icon ? `<img src='${icon}' />` : ''}<span class='file-name'>${filename}</span>`;
-              }
-            }
           });
           frame.open();
         });
@@ -623,20 +605,51 @@ class CoursesTab {
         <input type='text' name='course_name' value='${course?.name || ''}'/>
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Price</label>
-        <input type='number' name='course_price' value='${course?.price || ''}' />
+        <label class='slideout-form-line-title'>Full Price</label>
+        <input type='text' name='course_full_price' value='${course?.full_price || ''}' />
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Course page Url</label>
-        <input type='text' name='course_page_url' value='${course?.course_page_url || ''}' />
+        <label class='slideout-form-line-title'>Discount Price</label>
+        <input type='text' name='course_discount_price' value='${course?.discount_price || ''}' />
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Charge Url</label>
-        <input type='text' name='course_charge_url' value='${course?.charge_url || ''}' />
+        <label class='slideout-form-line-title'>Third Party Reference</label>
+        <input type='text' name='course_third_party_reference' value='${course?.third_party_reference || ''}' />
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Tags</label>
+        <label class='slideout-form-line-title'>Course page URL</label>
+        <input type='url' name='course_page_url' value='${course?.course_page_url || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Short Name</label>
+        <input type='text' name='course_short_name' value='${course?.short_name || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course Duration (hours)</label>
+        <input type='text' name='course_duration' value='${course?.course_duration || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Charge URL</label>
+        <input type='url' name='course_charge_url' value='${course?.charge_url || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Short Description</label>
+        <textarea name='course_short_description' style='height:100px;'>${course?.short_description || ''}</textarea>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>What You will Learn</label>
+        <textarea name='course_what_you_learn' style='height:100px;'>${course?.what_you_learn || ''}</textarea>
+        <small class='desc' style='font-size:0.8rem;'>Please enter each point on a new line.</small>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Tags (comma separated)</label>
         <input type='text' name='course_tags' value='${course?.tags || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Color</label>
+        <span style="display: flex; align-items: center; gap: 16px;">
+          <input type='color' name='course_color' value='${course?.color || '#aabbcc'}' style="position: relative; z-index: 9999;" />
+        </span>
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Default Class</label>
@@ -651,8 +664,8 @@ class CoursesTab {
           notifications.show('Course name cannot be empty', 'error');
           return false;
         }
-        if (!vals.course_price?.length) {
-          notifications.show('Course price cannot be empty', 'error');
+        if (!vals.course_full_price?.length && !vals.course_discount_price?.length) {
+          notifications.show('At least one price (Full Price or Discount Price) must be provided', 'error');
           return false;
         }
 
@@ -660,11 +673,19 @@ class CoursesTab {
           action: 'edit_course',
           course_id: courseId || '',
           name: vals.course_name,
-          price: vals.course_price,
-          page_url: encodeURI(vals.course_page_url),
-          tags: encodeURIComponent(vals.course_tags),
-          default_class: vals.course_default_class,
-          charge_url: encodeURIComponent(vals.course_charge_url)
+          price: vals.course_full_price || '',
+          full_price: vals.course_full_price || '',
+          discount_price: vals.course_discount_price || '',
+          third_party_reference: vals.course_third_party_reference || '',
+          page_url: encodeURI(vals.course_page_url || ''),
+          short_name: vals.course_short_name || '',
+          course_duration: vals.course_duration || '',
+          charge_url: encodeURIComponent(vals.course_charge_url || ''),
+          short_description: vals.course_short_description || '',
+          what_you_learn: vals.course_what_you_learn || '',
+          tags: encodeURIComponent(vals.course_tags || ''),
+          color: vals.course_color || '#aabbcc',
+          default_class: vals.course_default_class
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
@@ -698,6 +719,9 @@ class CoursesTab {
         });
       });
     }
+    
+    // init color picker
+    document.querySelector('.slideout-panel input[name="course_color"]')?.addEventListener('click', (e) => e.stopPropagation(), true);
   };
 
   editClass = async classId => {

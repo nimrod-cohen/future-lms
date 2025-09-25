@@ -464,11 +464,25 @@ class Admin {
           'post_title' => $name
         ]);
       }
-      update_post_meta($courseId, 'full_price', $price);
-      update_post_meta($courseId, 'course_page_url', $page_url);
-      update_post_meta($courseId, 'charge_url', $charge_url);
-      update_post_meta($courseId, 'tags', $tags);
-      update_post_meta($courseId, 'default_class', $default_class);
+
+      $meta_fields = [
+        'full_price' => $price, 
+        'course_page_url' => $page_url,
+        'charge_url' => $charge_url,
+        'tags' => $tags,
+        'default_class' => $default_class,
+        'discount_price' => $_POST["discount_price"] ?? '',
+        'third_party_reference' => $_POST["third_party_reference"] ?? '',
+        'short_name' => $_POST["short_name"] ?? '',
+        'course_duration' => $_POST["course_duration"] ?? '',
+        'short_description' => $_POST["short_description"] ?? '',
+        'what_you_learn' => $_POST["what_you_learn"] ?? '',
+        'color' => $_POST["color"] ?? '#aabbcc'
+      ];
+      
+      foreach ($meta_fields as $key => $value) {
+        update_post_meta($courseId, $key, $value);
+      }
 
       // Trigger WooCommerce product creation/update after response is sent
       add_action('shutdown', function() use ($courseId) {
