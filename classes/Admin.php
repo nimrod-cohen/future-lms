@@ -483,6 +483,10 @@ class Admin {
       foreach ($meta_fields as $key => $value) {
         update_post_meta($courseId, $key, $value);
       }
+      
+      if (isset($_POST["course_image"])) {
+        set_post_thumbnail($courseId, $_POST["course_image"]);
+      }
 
       // Trigger WooCommerce product creation/update after response is sent
       add_action('shutdown', function() use ($courseId) {

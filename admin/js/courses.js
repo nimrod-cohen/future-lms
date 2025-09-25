@@ -646,6 +646,17 @@ class CoursesTab {
         <input type='text' name='course_tags' value='${course?.tags || ''}' />
       </div>
       <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Featured Image</label>
+        <div class='featured-image-picker'>
+          <input type='hidden' name='course_image' value='${course?._thumbnail_id || 0}' />
+          <div class='ui mini image featured-image-preview'>
+            ${course?.course_image ? `<img src='${course.course_image}' />` : ''}
+          </div>
+          <button type='button' class='ui tiny button select-course-image'>Select Image</button>
+          <button type='button' class='ui tiny button remove-course-image' style='display: ${course?.course_image ? 'inline-block' : 'none'};'>Remove</button>
+        </div>
+      </div>
+      <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Color</label>
         <span style="display: flex; align-items: center; gap: 16px;">
           <input type='color' name='course_color' value='${course?.color || '#aabbcc'}' style="position: relative; z-index: 9999;" />
@@ -685,12 +696,12 @@ class CoursesTab {
           what_you_learn: vals.course_what_you_learn || '',
           tags: encodeURIComponent(vals.course_tags || ''),
           color: vals.course_color || '#aabbcc',
+          course_image: vals.course_image || 0,
           default_class: vals.course_default_class
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
-          //show success notification
           window.notifications.show('Course saved successfully', 'success');
           this.getCourses();
         } else {
@@ -722,6 +733,51 @@ class CoursesTab {
     
     // init color picker
     document.querySelector('.slideout-panel input[name="course_color"]')?.addEventListener('click', (e) => e.stopPropagation(), true);
+    
+    // init featured image picker
+    this.initFeaturedImagePicker();
+  };
+
+  initFeaturedImagePicker = () => {
+    if (!window.wp || !window.wp.media) return;
+
+    const selectBtn = document.querySelector('.select-course-image');
+    const removeBtn = document.querySelector('.remove-course-image');
+    
+    if (selectBtn) {
+      selectBtn.addEventListener('click', () => {
+        const frame = wp.media({ 
+          title: 'Select Featured Image', 
+          multiple: false,
+          library: { type: 'image' }
+        });
+        
+        frame.on('select', () => {
+          const attachment = frame.state().get('selection').first().toJSON();
+          const input = document.querySelector('input[name="course_image"]');
+          const preview = document.querySelector('.featured-image-preview');
+          
+          if (input) input.value = attachment.id;
+          if (preview) {
+            preview.innerHTML = `<img src='${attachment.url}' />`;
+          }
+          if (removeBtn) removeBtn.style.display = 'inline-block';
+        });
+        
+        frame.open();
+      });
+    }
+    
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        const input = document.querySelector('input[name="course_image"]');
+        const preview = document.querySelector('.featured-image-preview');
+        
+        if (input) input.value = '0';
+        if (preview) preview.innerHTML = '';
+        removeBtn.style.display = 'none';
+      });
+    }
   };
 
   editClass = async classId => {
