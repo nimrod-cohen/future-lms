@@ -45,8 +45,6 @@ use FutureLMS\classes\SchoolClass;
 use FutureLMS\classes\Settings;
 
 class FutureLMS {
-  public $coupons = null;
-
   function __construct() {
     VersionManager::install_version();
 
@@ -56,8 +54,6 @@ class FutureLMS {
     add_shortcode('flms_school_lobby', [$this, 'show_school_lobby']);
     add_filter('body_class', [$this,'add_school_class_to_body']);
 
-    add_filter('manage_course_posts_columns', [$this, 'addCoursesColumns']);
-    add_action('manage_course_posts_custom_column', [$this, 'fillCoursesColumns'], 10, 2);
     add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
     add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
     add_action('plugins_loaded', [$this,'future_lms_load_textdomain']);
@@ -107,8 +103,6 @@ class FutureLMS {
     add_action("wp_enqueue_scripts", [$this, 'enqueueSchoolScripts']);
     add_action("wp_ajax_search_students", [$this, "search_students"]);
     add_action("wp_ajax_get_all_courses", [$this, "get_all_Courses"]);
-    add_action("wp_ajax_get_course_charge_url", [$this, "get_course_charge_url"]);
-    add_action("wp_ajax_get_all_payments", [$this, "get_all_payments"]);
     add_action("wp_ajax_search_classes", [$this, "search_classes"]);
     add_action("wp_ajax_get_classes", [$this, "get_student_classes"]);
     add_action("wp_ajax_get_lessons", [$this, "get_class_lessons"]);
@@ -118,7 +112,6 @@ class FutureLMS {
     add_action("wp_ajax_set_student_progress", [$this, "set_student_progress"]);
     add_action("wp_ajax_get_students", [$this, "get_students"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
-    add_action("wp_ajax_remove_payment", [$this, "remove_payment"]);
     add_action("wp_ajax_add_student_to_class", [$this, "add_student_to_class"]);
     add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
@@ -179,26 +172,6 @@ class FutureLMS {
     $result = preg_replace("/, $/", "", $result);
 
     echo $result;
-  }
-
-  public function addCoursesColumns($columns) {
-    $columns["full_price"] = "Full Price";
-    $columns["discount_price"] = "Discount Price";
-
-    return $columns;
-  }
-
-  public function fillCoursesColumns($column, $post_id) {
-    if (!in_array($column, ['full_price','discount_price'])) {
-      return;
-    }
-
-    $course = new Course($post_id);
-    $fmt = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
-    $price = $course->field($column)?? 0;
-    $price = empty($price) ? 0 : floatval($price);
-    $currency = Settings::get("store_currency");
-    echo $fmt->formatCurrency($price, $currency);
   }
 
   public function get_settings() {
@@ -309,9 +282,8 @@ class FutureLMS {
     wp_enqueue_script('future-lms-admin-common-js', plugin_dir_url(__FILE__) . 'admin/js/common.js?time=' . date('Y_m_d_H'));
     wp_enqueue_script('future-lms-admin-students-js', plugin_dir_url(__FILE__) . 'admin/js/students.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
     wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
-    wp_enqueue_script('future-lms-admin-coupons-js', plugin_dir_url(__FILE__) . 'admin/js/coupons.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
     wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
-    wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js', 'future-lms-admin-coupons-js']);
+    wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js']);
     wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css']);
 
     wp_localize_script('future-lms-admin-js', '__futurelms', [
@@ -333,8 +305,6 @@ class FutureLMS {
     require_once __DIR__ . DIRECTORY_SEPARATOR . 'admin/admin.php';
   }
 
-  //called when sum is 0, or payment is not by credit card.
-  //TODO: remove user creation from here, or ask if create user
   public function add_student_to_class() {
     $courseId = $_REQUEST["course_id"];
     $studentId = $_REQUEST["student_id"];
@@ -342,10 +312,6 @@ class FutureLMS {
     $name = $_REQUEST["name"];
     $phone = $_REQUEST["phone"];
     $email = $_REQUEST["email"];
-    $sum = $_REQUEST["sum"];
-    $comment = $_REQUEST["comment"];
-    $paymentMethod = $_REQUEST["method"];
-    $transactionId = $_REQUEST["transactionId"];
 
     $student = null;
     if (isset($studentId)) { //try by id first
@@ -390,40 +356,6 @@ class FutureLMS {
       $student->subscribe_to_class($old_class["id"], false);
       $student->subscribe_to_class($classId, true);
     }
-    //save payment
-    $paymentId = $student->save_payment($courseId, $classId, $sum, $transactionId, $paymentMethod, $comment);
-
-    //do actions after payment future-lms/payment_notification
-    do_action('future-lms/payment_notification', [
-      "course_id" => $courseId,
-      "student_id" => $studentId,
-      "class_id" => $classId,
-      "sum" => $sum,
-      "transaction_id" => $transactionId,
-      "payment_id" => $paymentId,
-      "payment_method" => $paymentMethod,
-      "comment" => $comment
-    ]);
-
-    wp_send_json([]);
-  }
-
-  public function remove_payment() {
-    $paymentId = $_REQUEST["payment_id"];
-
-    $payment = Student::get_payment($paymentId);
-
-    Student::delete_payment($paymentId);
-
-    do_action('future-lms/payment_removed', [
-      "course_id" => $payment["course_id"],
-      "student_id" => $payment["student_id"],
-      "class_id" => $payment["class_id"],
-      "sum" => $payment["sum"],
-      "transaction_id" => $payment["transaction_ref"],
-      "payment_method" => $payment["method"],
-      "comment" => $payment["comment"]
-    ]);
 
     wp_send_json([]);
   }
@@ -777,22 +709,6 @@ class FutureLMS {
     $lessons = json_encode($lessons);
     $class->save('lessons', $lessons);
     wp_send_json([]);
-  }
-
-  public function get_all_payments() {
-    $month = intval($_REQUEST["month"]);
-    $year = intval($_REQUEST["year"]);
-    $results = Student::get_payments($year, $month);
-    wp_send_json($results);
-  }
-
-  public function get_course_charge_url() {
-    $course = BaseObject::factory('Course', intval($_REQUEST["course_id"]));
-    $chargeUrl = $course->field('charge_url');
-    $fullPrice = $course->field('full_price');
-    $chargeUrl = add_query_arg(['sum' => $fullPrice], $chargeUrl); //will replace if exists.
-    $chargeUrl = add_query_arg(['pdesc' => urlencode($course->field('title'))], $chargeUrl);
-    wp_send_json(['charge_url' => $chargeUrl]);
   }
 
   public function get_all_Courses() {

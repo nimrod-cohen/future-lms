@@ -166,7 +166,6 @@ class CoursesTab {
           <div class="course-header">
             <span class='course-id'>${cid}</span>
             <h3 class='course-name ${course.enabled === true ? '' : 'disabled'}'>${course.name}</h3>
-            <small class='course-price'> ${JSUtils.formatCurrency({ sum: course.price })}</small>
             <span class='course-actions action-bar'>
               <i class="edit icon blue actionable" data-action='edit-course'></i>
               ${
@@ -475,16 +474,8 @@ class CoursesTab {
         <input type='text' name='course_name' value='${course?.name || ''}'/>
       </div>
       <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Price</label>
-        <input type='number' name='course_price' value='${course?.price || ''}' />
-      </div>
-      <div class='remodal-form-line'>
         <label class='remodal-form-line-title'>Course page Url</label>
         <input type='text' name='course_page_url' value='${course?.course_page_url || ''}' />
-      </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Charge Url</label>
-        <input type='text' name='course_charge_url' value='${course?.charge_url || ''}' />
       </div>
       <div class='remodal-form-line'>
         <label class='remodal-form-line-title'>Tags</label>
@@ -497,19 +488,13 @@ class CoursesTab {
           notifications.show('Course name cannot be empty', 'error');
           return false;
         }
-        if (!vals.course_price?.length) {
-          notifications.show('Course price cannot be empty', 'error');
-          return false;
-        }
 
         var data = {
           action: 'edit_course',
           course_id: courseId || '',
           name: vals.course_name,
-          price: vals.course_price,
           page_url: encodeURI(vals.course_page_url),
-          tags: encodeURIComponent(vals.course_tags),
-          charge_url: encodeURIComponent(vals.course_charge_url)
+          tags: encodeURIComponent(vals.course_tags)
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);

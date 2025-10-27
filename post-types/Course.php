@@ -77,21 +77,11 @@ function render_course_meta_box($post)
         }
     </style>
     <div class="future-lms-meta-box">
-        <!-- Full Price -->
-        <p>
-            <label class="future-lms-meta-box-label"><strong>Full Price:</strong></label>
-            <input type="text" name="full_price" value="<?= esc_attr($meta['full_price'][0] ?? '') ?>">
-        </p>
-        <!-- Discount Price -->
-        <p>
-            <label class="future-lms-meta-box-label"><strong>Discount Price:</strong></label>
-            <input type="text" name="discount_price" value="<?= esc_attr($meta['discount_price'][0] ?? '') ?>">
-        </p>
         <!-- Third Party Reference -->
         <p>
-            <label><strong>Third Party Reference:</strong></label>
-            <input type="text" name="third_party_reference"
-                   value="<?= esc_attr($meta['third_party_reference'][0] ?? '') ?>">
+            <label><strong>Course Code:</strong></label>
+            <input type="text" name="course_code"
+                   value="<?= esc_attr($meta['course_code'][0] ?? '') ?>">
         </p>
         <!-- Course Page URL -->
         <p>
@@ -107,11 +97,6 @@ function render_course_meta_box($post)
         <p>
             <label><strong>Course Duration (hours):</strong></label>
             <input type="text" name="course_duration" value="<?= esc_attr($meta['course_duration'][0] ?? '') ?>">
-        </p>
-        <!-- Charge URL -->
-        <p>
-            <label><strong>Charge URL:</strong></label>
-            <input type="url" name="charge_url" value="<?= esc_url($meta['charge_url'][0] ?? '') ?>">
         </p>
         <!-- Short Description -->
         <p>
@@ -146,13 +131,10 @@ function render_course_meta_box($post)
 add_action('save_post_course', function ($post_id, $post) {
   if (isset($_POST['_course_nonce']) && wp_verify_nonce($_POST['_course_nonce'], 'course_meta_nonce')) {
     $fields = [
-        'full_price',
-        'discount_price',
         'currency',
-        'third_party_reference',
+        'course_code',
         'course_page_url',
         'short_name',
-        'charge_url',
         'course_duration',
         'short_description',
         'what_you_learn',

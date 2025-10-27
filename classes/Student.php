@@ -81,54 +81,6 @@ class Student
         $wpdb->query($sql);
     }
 
-    public static function get_payments($year, $month)
-    {
-        global $wpdb;
-
-        $sql = "SELECT p.*, u.user_email, um.meta_value as affiliate_id, aff.display_name as affiliate_name, course.post_title as course_name
-    FROM " .   FutureLMS::TABLE_PREFIX() . "payments p
-    LEFT OUTER JOIN ".$wpdb->prefix."users u on u.ID = p.student_id
-    LEFT OUTER JOIN ".$wpdb->prefix."usermeta um on u.ID = um.user_id and um.meta_key = 'affiliate_id'
-    LEFT OUTER JOIN ".$wpdb->prefix."users aff on aff.ID = um.meta_value
-    LEFT OUTER JOIN ".$wpdb->prefix."posts course ON course.id = p.course_id
-    WHERE year(payment_date) = %d
-    AND month(payment_date) = %d
-    AND deleted = 0";
-        $sql = $wpdb->prepare($sql, $year, $month);
-        return $wpdb->get_results($sql, ARRAY_A);
-    }
-
-    public function save_payment($courseId, $classId, $sum, $transRef, $processor, $comment)
-    {
-        global $wpdb;
-        $sql = "INSERT INTO " . FutureLMS::TABLE_PREFIX() . "payments (student_id, course_id, class_id, payment_date, transaction_ref, sum, processor, comment, deleted)
-          values (%d, %d, %d, CURRENT_TIMESTAMP, '%s', %f, '%s', '%s', 0)";
-        $sql = $wpdb->prepare($sql, $this->_studentId, $courseId, $classId, $transRef, $sum, $processor, $comment);
-        $wpdb->query($sql);
-        return $wpdb->insert_id;
-    }
-
-    public static function get_payment($paymentId)
-    {
-        global $wpdb;
-        $sql = "SELECT p.*, u.user_email, um.meta_value as affiliate_id, aff.display_name as affiliate_name
-    FROM " . FutureLMS::TABLE_PREFIX() . "payments p
-    LEFT OUTER JOIN ".$wpdb->prefix."users u on u.ID = p.student_id
-    LEFT OUTER JOIN ".$wpdb->prefix."usermeta um on u.ID = um.user_id and um.meta_key = 'affiliate_id'
-    LEFT OUTER JOIN ".$wpdb->prefix."users aff on aff.ID = um.meta_value
-    WHERE p.id = %d";
-        $sql = $wpdb->prepare($sql, $paymentId);
-        return $wpdb->get_row($sql, ARRAY_A);
-    }
-
-    public static function delete_payment($paymentId)
-    {
-        global $wpdb;
-        $sql = "UPDATE " . FutureLMS::TABLE_PREFIX() . "payments SET deleted = 1 WHERE id = %d";
-        $sql = $wpdb->prepare($sql, $paymentId);
-        $wpdb->query($sql);
-    }
-
     //check if the user attends this course
     public function is_attending_class($courseId, $classId)
     {

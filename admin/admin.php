@@ -21,8 +21,6 @@ use FutureLMS\classes\VersionManager;
         </span>
     </a>
     <a class="item" data-tab="mailer">Email</a>
-    <a class="item" data-tab="billing">Billing</a>
-    <a class="item" data-tab="coupons">Coupons</a>
     <a class="item" data-tab="settings">Settings</a>
     <div>Future LMS
         <span class="version"><?php echo get_option(VersionManager::SCHOOL_VERSION, 0); ?></span>
@@ -50,19 +48,6 @@ use FutureLMS\classes\VersionManager;
         <p class="description">Send email to class students</p>
     </div>
     <?php include_once 'mailer.php'?>
-</div>
-<div class="ui bottom attached tab segment" data-tab="billing">
-    <div class='tab-header'>
-        <h4 class="ui header">Monthly deals</h4>
-        <p class="description">List of student payments</p>
-    </div>
-    <?php include_once 'billing.php'?>
-</div>
-<div class="ui bottom attached tab segment" data-tab="coupons">
-    <div class='tab-header'>
-        <h4 class="ui header">Coupon Generator</h4>
-        <?php include_once 'coupons.php'?>
-    </div>
 </div>
 <div class="ui bottom attached tab segment" data-tab="settings">
     <div class='tab-header'>

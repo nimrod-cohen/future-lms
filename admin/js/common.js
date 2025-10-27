@@ -4,9 +4,7 @@ const COMMON = {
     COURSES: 'courses',
     STUDENTS: 'students',
     MAILER: 'mailer',
-    BILLING: 'billing',
-    COUPONS: 'coupons',
-    SETTNGS: 'settings'
+    SETTINGS: 'settings'
   },
 
   htmlRTL: str => {

@@ -9,7 +9,6 @@
 13. sendEmail function - add teacher email to course, and send as sender.
 14. move static functions from Student class to School/Class/Course etc'.
 15. check if open/closed class lessons are enforced in student area
-16. get rid of course charge url, find a way to subscribe a user to a course without it.
 17. review add_student_to_class and see if we can clean it up from code that is not LMS related.
 18. check if get_course_price_box works
 19. addCoursesColumns,fillCoursesColumns,addLessonsColumns,fillLessonsColumns  
@@ -22,7 +21,7 @@
 23. add ability to measure video hours and show hours in single-course.php. search: <!-- • 3.5 שעות-->
 24. export/import course tree to JSON
 25. check that the get_template_part works with theme overriding the plugin webparts
-26. add maximum payments to course settings
+26. maximum payments - control in commerce plugin.
 27. mark course as featured without tags, and allow i18n "Popular" for featured courses
 28. start versioning and deploying via git
 29. Add support to multi currency store

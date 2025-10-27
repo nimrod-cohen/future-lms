@@ -10,7 +10,6 @@ class StudentsTab {
     this.render = this.render.bind(this);
     this.removeStudentFromClass = this.removeStudentFromClass.bind(this);
     this.addStudentToClass = this.addStudentToClass.bind(this);
-    this.registerStudentToClass = this.registerStudentToClass.bind(this);
     this.clickNext = this.clickNext.bind(this);
     this.clickPrev = this.clickPrev.bind(this);
     this.showAddStudent = this.showAddStudent.bind(this);
@@ -126,18 +125,6 @@ class StudentsTab {
       inps = step1.querySelectorAll(`#${selector} .input`);
       inps.forEach(inp => inp.classList.remove('disabled'));
     });
-
-    let step2 = modal.querySelector('.step-2');
-
-    //hide comments & trans ref for credit payment
-    radios = step2.querySelectorAll('.payment-method input[type=radio]');
-    radios.forEach(radio =>
-      radio.addEventListener('change', e => {
-        let details = step2.querySelector('.payment-details');
-        if (e.target.value === 'credit') details.classList.add('hidden');
-        else details.classList.remove('hidden');
-      })
-    );
   }
 
   validateStep(step) {
@@ -174,13 +161,6 @@ class StudentsTab {
           }
         }
         break;
-      case 2:
-        let sum = modal.querySelector('.step-2 .field input[name=payment-sum]');
-        let sumValue = sum.value.trim();
-        if (sumValue.length === 0 || isNaN(sumValue)) {
-          sum.closest('.input').classList.add('error');
-          failed = true;
-        }
     }
 
     return !failed;
@@ -244,8 +224,6 @@ class StudentsTab {
       if (step === this.LAST_STEP) {
         let tab = COMMON.getTab(COMMON.TABS.STUDENTS);
 
-        let sum = parseFloat(modal.querySelector('.ui.input input[name=payment-sum]').value);
-
         let userData = {};
 
         if (this.state.get('add-student-is-existing')) {
@@ -269,19 +247,8 @@ class StudentsTab {
 
         let step2 = modal.querySelector('.content.step-2');
 
-        let invoiceTo = step2.querySelector('input#invoice-to').value.trim();
-        userData.invoiceTo = invoiceTo.length ? invoiceTo : userData.name;
-
-        let paymentMethod = step2.querySelector('input[name=payment-method]:checked').value;
-
-        if (sum === 0 || paymentMethod !== 'credit') {
-          userData.comment = step2.querySelector('textarea#payment-comment').value;
-          userData.transactionId = step2.querySelector('input#transaction-ref').value;
-          userData.method = paymentMethod;
-          this.addStudentToClass(courseId, userData, sum);
-        } else {
-          this.registerStudentToClass(courseId, userData, sum);
-        }
+        userData.comment = step2.querySelector('textarea#comment').value;
+        this.addStudentToClass(courseId, userData, sum);
       }
     } catch (ex) {
       alert(ex.message);
@@ -416,8 +383,7 @@ class StudentsTab {
       course_id: courseId,
       class_id: userData.class_id,
       sum: sum,
-      comment: userData.comment,
-      transactionId: userData.transactionId
+      comment: userData.comment
     }).then(() => {
       jQuery('#add-student-modal').modal('hide');
       this.fetchStudents();
@@ -433,36 +399,6 @@ class StudentsTab {
       class_id: classId
     }).then(() => {
       this.fetchStudents();
-    });
-  }
-
-  // registering a new user to a course.
-  // we still dont select a specific class,
-  // it will be automatically selected to the newest)
-  registerStudentToClass(courseId, userData, sum) {
-    JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'get_course_charge_url',
-      course_id: courseId
-    }).then(data => {
-      let container = document.querySelector('#add-student-modal .content.step-3');
-
-      let p = new URLSearchParams(data.charge_url.substring(data.charge_url.indexOf('?') + 1));
-      p.set('sum', sum); //update or insert
-      p.set('contact', encodeURIComponent(userData.invoiceTo));
-      userData = JSON.stringify(userData);
-      p.set('user_id', btoa(encodeURIComponent(userData)));
-      p.set('product_id', courseId);
-      let url = data.charge_url.substring(0, data.charge_url.indexOf('?') + 1) + p.toString();
-
-      console.log('charge url is ', url);
-
-      //this is to circumvent lazy loading plugins which damage the result.
-      let iframeTag = 'iframe';
-
-      let html = '<' + iframeTag + " style='height:400px' src='" + url + "'></" + iframeTag + '>';
-
-      container.innerHTML = '';
-      container.insertAdjacentHTML('beforeend', html);
     });
   }
 }

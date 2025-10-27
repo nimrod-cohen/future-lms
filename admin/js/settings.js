@@ -2,7 +2,7 @@ class SettingsTab {
   tab = null;
 
   constructor() {
-    this.tab = COMMON.getTab(COMMON.TABS.SETTNGS);
+    this.tab = COMMON.getTab(COMMON.TABS.SETTINGS);
     this.getSettings();
 
     document.querySelector('#save-settings').addEventListener('click', this.setSettings);

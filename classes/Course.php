@@ -39,28 +39,13 @@ class Course extends BaseObject {
       return $result;
   }
 
-  public function price() {
-    $discount_price = $this->raw("discount_price");
-    $discount_price = !empty($discount_price) ? floatval($discount_price) : false;
-
-    if ($discount_price) {
-      return $discount_price;
-    }
-
-    $full_price = $this->raw("full_price");
-    $full_price = !empty($full_price) ? floatval($full_price) : false;
-    return $full_price;
-  }
-
   public static function get_courses_tree($courses = null, $enabledOnly = true) {
     global $wpdb;
 
     $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
-    pmprice.meta_value AS full_price, pmurl.meta_value AS course_page_url, pmcurl.meta_value AS charge_url
+    pmurl.meta_value AS course_page_url
     FROM ".$wpdb->prefix."posts pcourse
-    INNER JOIN ".$wpdb->prefix."postmeta pmprice ON pmprice.post_id = pcourse.id AND pmprice.meta_key = 'full_price'
     LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmurl ON pmurl.post_id = pcourse.id AND pmurl.meta_key = 'course_page_url'
-    LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmcurl ON pmcurl.post_id = pcourse.id AND pmcurl.meta_key = 'charge_url'
     WHERE pcourse.post_type = 'course'
     AND pcourse.post_status <> 'trash' ";
 
@@ -91,9 +76,7 @@ class Course extends BaseObject {
       $result[$course_id]["ID"] = $course_id;
       $result[$course_id]["enabled"] = $row["post_status"] == "publish";
       $result[$course_id]["name"] = $row["course_name"];
-      $result[$course_id]["price"] = $row["full_price"];
       $result[$course_id]["course_page_url"] = empty($row["course_page_url"]) ? get_permalink($course_id) : $row["course_page_url"];
-      $result[$course_id]["charge_url"] = $row["charge_url"];
       $result[$course_id]["course_image"] = !empty($course_meta["_thumbnail_id"]) ? wp_get_attachment_image_url($course_meta["_thumbnail_id"], 'full') : null;
 
       $course = &$result[$course_id];

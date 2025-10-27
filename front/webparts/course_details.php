@@ -7,8 +7,7 @@ use FutureLMS\FutureLMS;
 $courseTitle = $course->display("name");
 $courseDescription = $course->display("short_description");
 $coursePrice = $course->display("full_price");
-$chargeUrl = $course->field("charge_url");
-$chargeUrl = add_query_arg(['sum' => $coursePrice], $chargeUrl); //will replace if exists.
+$chargeUrl = 'https://example.com/charge'; // get charge URL from commerce plugin
 
 $author = get_the_author_meta('display_name', $course->post_author);
 $courseImage = $course->get_featured_image('full');

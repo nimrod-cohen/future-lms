@@ -3,7 +3,6 @@ class AdminManager {
   currentClassName = null;
   state = window.StateManagerFactory();
   studentsTab = new StudentsTab();
-  couponsTab = new CouponsTab();
   settingsTab = new SettingsTab();
   coursesTab = new CoursesTab();
 
@@ -18,7 +17,6 @@ class AdminManager {
 
     //tabs
     this.wireMailerScreen = this.wireMailerScreen.bind(this);
-    this.wireBillingScreen = this.wireBillingScreen.bind(this);
     this.wireClassesScreen = this.wireClassesScreen.bind(this);
 
     //wire events
@@ -33,108 +31,6 @@ class AdminManager {
         this.currentTab = tab;
         console.log(this.currentTab);
       }
-    });
-  }
-
-  /*
-   * BILLING TAB
-   */
-  wireBillingScreen() {
-    const billingTab = COMMON.getTab(COMMON.TABS.BILLING);
-
-    jQuery(billingTab.querySelector('#bill_month')).calendar({
-      type: 'month',
-      onChange: date => {
-        date = new Date(date);
-        this.renderPayments(date);
-      }
-    });
-  }
-
-  renderPayments(date) {
-    JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'get_all_payments',
-      month: date.getMonth() + 1,
-      year: date.getFullYear()
-    }).then(payments => {
-      let paymentsTable = COMMON.getTab(COMMON.TABS.BILLING).querySelector('table.payments tbody');
-      paymentsTable.innerHTML = '';
-
-      if (payments.length === 0) {
-        paymentsTable.insertAdjacentHTML('beforeend', "<tr><td colspan='10'>No results</td></tr>");
-        COMMON.getTab(COMMON.TABS.BILLING).querySelector('.result-count').innerText = '0 payments';
-      }
-
-      let totalPayments = payments.reduce((agg, curr) => (agg += parseFloat(curr.sum)), 0);
-      totalPayments = new Intl.NumberFormat('he-IL', {
-        style: 'currency',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-        currency: __futurelms.store_currency
-      }).format(totalPayments);
-
-      COMMON.getTab(COMMON.TABS.BILLING).querySelector(
-        '.result-count'
-      ).innerText = `${payments.length} payments, total: ${totalPayments}`;
-
-      payments.forEach(payment => {
-        //add row
-        let aff = parseInt(payment.affiliate_id);
-        if (aff && !isNaN(aff) && aff !== -1) {
-          aff = `<a href='/wp-admin/admin.php?page=affiliates-management&subpage=edit-affiliate&id=${payment.affiliate_id}'>${payment.affiliate_name}</a>`;
-        } else {
-          aff = '';
-        }
-
-        paymentsTable.insertAdjacentHTML(
-          'beforeend',
-          `<tr data-id=${payment.id}>
-            <td>${payment.id}</td>
-            <td><a href='/wp-admin/user-edit.php?user_id=${payment.student_id}'>${payment.user_email}</a></td>
-            <td><nobr>${aff}</nobr></td>
-            <td data-course-id='${payment.course_id}'>${payment.course_name}</td>
-            <td>${payment.payment_date}</td>
-            <td>${payment.sum}</td>
-            <td>${payment.transaction_ref}</td>
-            <td>${payment.processor}</td>
-            <td>${payment.comment}</td>
-            <td><span data-inverted='' data-position='top right' data-tooltip='Remove payment'><i class="minus red circle icon clickable"></i></span></td>
-          </tr>`
-        );
-
-        //attach removal event
-        let td = paymentsTable.querySelector(`tr[data-id='${payment.id}'] td:last-child`);
-        let minus = td.querySelector('i.minus');
-
-        const removePaymentClick = e => {
-          remodaler.show({
-            type: remodaler.types.CONFIRM,
-            title: `Delete payment ${payment.id}`,
-            message: 'Are you sure?',
-            confirmText: 'Yes, Delete',
-            confirm: () => {
-              minus.removeEventListener('click', removePaymentClick);
-              td.innerHTML = "<div class='ui active tiny inline loader'></div>";
-              this.removePayment(payment.id);
-            }
-          });
-        };
-
-        minus.addEventListener('click', removePaymentClick);
-      });
-    });
-  }
-
-  // the course id is required to ensure the student is not related to another class of this course.
-  removePayment(paymentId) {
-    JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'remove_payment',
-      payment_id: paymentId
-    }).then(data => {
-      console.log('removed');
-      const billingTab = COMMON.getTab(COMMON.TABS.BILLING);
-      const month = jQuery('#bill_month').calendar('get date');
-      this.renderPayments(month);
     });
   }
 
@@ -309,7 +205,6 @@ class AdminManager {
   wireEvents() {
     this.wireClassesScreen();
     this.wireMailerScreen();
-    this.wireBillingScreen();
   }
 }
 

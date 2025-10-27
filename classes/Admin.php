@@ -319,9 +319,7 @@ class Admin {
     try {
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
       $name = $_POST["name"];
-      $price = $_POST["price"];
       $page_url = $_POST["page_url"];
-      $charge_url = $_POST["charge_url"];
       $tags = $_POST["tags"];
 
       if (empty($courseId)) {
@@ -337,9 +335,7 @@ class Admin {
           'post_title' => $name
         ]);
       }
-      update_post_meta($courseId, 'full_price', $price);
       update_post_meta($courseId, 'course_page_url', $page_url);
-      update_post_meta($courseId, 'charge_url', $charge_url);
       update_post_meta($courseId, 'tags', $tags);
 
       wp_send_json(['error' => false]);
