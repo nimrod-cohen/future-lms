@@ -483,7 +483,7 @@ class Admin {
         set_post_thumbnail($courseId, $_POST["course_image"]);
       }
 
-      // Trigger WooCommerce product creation/update after response is sent
+      // Trigger product creation/update after response is sent
       add_action('shutdown', function() use ($courseId) {
         do_action('future-lms/course_saved', $courseId, get_post($courseId));
       });
