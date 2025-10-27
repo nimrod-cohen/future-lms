@@ -2,6 +2,7 @@
 
 namespace FutureLMS\classes;
 use FutureLMS\FutureLMS;
+use WP_User;
 
 class Student
 {
@@ -11,6 +12,68 @@ class Student
     function __construct($studentId)
     {
         $this->_studentId = $studentId;
+    }
+
+    /**
+     * Create or ensure a WordPress user with the 'student' role.
+     * Signature: create($username, $password, $email)
+     * - If $password is empty, a strong password is generated.
+     * - If user with email or username exists, adds a Student role to it
+     * - Returns a Student instance on success, or null on failure.
+     * - Fires 'future-lms/student_created' action on new user creation.
+     */
+    public static function create($username, $password, $email)
+    {
+        $username = trim((string)$username);
+        $email = trim((string)$email);
+        $password = (string)$password;
+
+        if (empty($username) || empty($email)) {
+            return null;
+        }
+
+        $isNewStudent = false;
+
+        $student = get_user_by('email', $email);
+        if (!$student) {
+            $student = get_user_by('login', $username);
+        }
+
+        if (!$student) {
+            if (empty($password)) {
+                $password = wp_generate_password();
+            }
+
+            $studentId = wp_create_user($username, $password, $email);
+            if (is_wp_error($studentId)) {
+                return null;
+            }
+
+            $student = new WP_User($studentId);
+            $isNewStudent = true;
+        } else {
+            $studentId = $student->ID;
+        }
+
+        // Ensure role
+        if ($student instanceof WP_User) {
+            $student->add_role('student');
+        }
+
+        if ($isNewStudent) {
+            do_action('future-lms/student_created', [
+                'student_id' => $studentId,
+                'username' => $username,
+                'email' => $email
+            ]);
+        }
+
+        return new self($studentId);
+    }
+
+    public function get_id()
+    {
+        return $this->_studentId;
     }
 
     public function attendence_info()

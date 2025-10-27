@@ -17,12 +17,13 @@ class Admin {
     add_action("wp_ajax_edit_course", [$this, "edit_course"]);
     add_action("wp_ajax_change_course_status", [$this, "change_course_status"]);
     add_action("wp_ajax_change_module_status", [$this, "change_module_status"]);
-    add_action("wp_ajax_change_lesson_status", [$this, "chane_lesson_status"]);
+    add_action("wp_ajax_change_lesson_status", [$this, "change_lesson_status"]);
     add_action("wp_ajax_edit_module", [$this, "edit_module"]);
     add_action("wp_ajax_reorder_module", [$this, "reorder_module"]);
     add_action("wp_ajax_reorder_lesson", [$this, "reorder_lesson"]);
-    add_action("wp_ajax_add_lesson", [$this, "add_lesson"]);
-    add_action("wp_ajax_edit_class", [$this, "edit_class"]);
+	  add_action( "wp_ajax_edit_class", [ $this, "edit_class" ] );
+	  add_action( "wp_ajax_get_lesson_details", [ $this, "get_lesson_details" ] );
+	  add_action( "wp_ajax_edit_lesson", [ $this, "edit_lesson" ] );
   }
 
   public function edit_class() {
@@ -57,34 +58,159 @@ class Admin {
     }
   }
 
-  public function add_lesson() {
-    global $wpdb;
 
-    $moduleId = intval($_POST["module_id"]);
-    $name = stripslashes($_POST["name"]);
+  public function get_lesson_details() {
+    try {
+      $lessonId = intval($_POST["lesson_id"]);
 
-    $wpdb->insert($wpdb->prefix."posts", [
-      "post_title" => $name,
-      "post_status" => "draft",
-      "post_type" => "lesson",
-      "post_parent" => $moduleId
-    ]);
+      $lesson = new Lesson($lessonId);
+      if (!$lesson || !$lesson->exists()) {
+        wp_send_json(['error' => true, 'message' => 'Lesson not found']);
+      }
 
-    $lessonId = $wpdb->insert_id;
-    $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned int)),0)
-    from ".$wpdb->prefix."postmeta pm1
-    inner join ".$wpdb->prefix."postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $moduleId
-    where pm1.meta_key = 'lesson_number'
-    and pm2.post_id = pm1.post_id");
-    update_post_meta($lessonId, 'lesson_number', intval($order) + 1);
-    update_post_meta($lessonId, 'video_list', '');
-    update_post_meta($lessonId, 'additional_files', '');
-    update_post_meta($lessonId, 'homework', '');
-    $lesson = new Lesson($lessonId);
-    $lesson->field('module', $moduleId);
-    $lesson->save();
+      $videoListRaw = $lesson->field('video_list');
+      $videos = [];
+      if (!empty($videoListRaw)) {
+        $decoded = json_decode($videoListRaw, true);
+        if (is_array($decoded)) {
+          foreach ($decoded as $item) {
+            if (is_array($item) && isset($item['video_id'])) {
+              $videos[] = $item['video_id'];
+            }
+          }
+        } else {
+          // Fallback: support legacy newline-separated values
+          $lines = preg_split("/(\r\n|\n|\r)/", $videoListRaw);
+          $videos = array_values(array_filter(array_map('trim', $lines)));
+        }
+      }
 
-    wp_send_json(['error' => false]);
+      $moduleId = intval(get_post_meta($lessonId, 'module', true));
+      $lessonNumber = intval(get_post_meta($lessonId, 'lesson_number', true));
+      $presentationId = intval(get_post_meta($lessonId, 'presentation', true));
+      $presentationUrl = $presentationId ? wp_get_attachment_url($presentationId) : '';
+      $presentationIcon = $presentationId ? wp_mime_type_icon($presentationId) : '';
+      $presentationFilename = $presentationUrl ? wp_basename($presentationUrl) : '';
+      $presentationMime = $presentationId ? get_post_mime_type($presentationId) : '';
+
+      wp_send_json([
+        'error' => false,
+        'id' => $lessonId,
+        'name' => $lesson->raw('title'),
+        'teaser' => $lesson->raw('teaser') ?? '',
+        'videos' => $videos,
+        'homework' => $lesson->raw('homework') ?? '',
+        'additional_files' => $lesson->raw('additional_files') ?? '',
+        'module_id' => $moduleId,
+        'lesson_number' => $lessonNumber,
+        'presentation_id' => $presentationId,
+        'presentation_url' => $presentationUrl,
+        'presentation_icon' => $presentationIcon,
+        'presentation_filename' => $presentationFilename,
+        'presentation_mime' => $presentationMime
+      ]);
+    } catch (Exception $e) {
+      wp_send_json(['error' => true, 'message' => $e->getMessage()]);
+    }
+  }
+
+  public function edit_lesson() {
+    try {
+      $lessonId = intval($_POST["lesson_id"]);
+      $name = isset($_POST["name"]) ? stripslashes($_POST["name"]) : '';
+      $teaser = isset($_POST["teaser"]) ? stripslashes($_POST["teaser"]) : '';
+      $videoListJson = isset($_POST["video_list"]) ? stripslashes($_POST["video_list"]) : '[]';
+      $homework = isset($_POST["homework"]) ? stripslashes($_POST["homework"]) : '';
+      $additional_files = isset($_POST["additional_files"]) ? stripslashes($_POST["additional_files"]) : '';
+      $newModuleId = isset($_POST["module_id"]) ? intval($_POST["module_id"]) : null;
+      $lessonNumber = isset($_POST["lesson_number"]) ? intval($_POST["lesson_number"]) : null;
+      $presentationId = isset($_POST["presentation"]) ? intval($_POST["presentation"]) : 0;
+
+      $isNewLesson = empty($lessonId);
+      
+      if ($isNewLesson) {
+        // Create new lesson
+        if (empty($newModuleId) || empty($name)) {
+          wp_send_json(['error' => true, 'message' => 'Module ID and lesson name are required']);
+        }
+        
+        $lessonId = wp_insert_post([
+          'post_title' => $name,
+          'post_status' => 'draft',
+          'post_type' => 'lesson',
+          'post_parent' => $newModuleId
+        ]);
+        
+        if (is_wp_error($lessonId)) {
+          wp_send_json(['error' => true, 'message' => 'Failed to create lesson']);
+        }
+      } else {
+        // Update existing lesson title
+        wp_update_post([
+          'ID' => $lessonId,
+          'post_title' => $name
+        ]);
+      }
+
+      // Normalize and save meta
+      update_post_meta($lessonId, 'teaser', sanitize_text_field($teaser));
+
+      $decoded = json_decode($videoListJson, true);
+      if (!is_array($decoded)) {
+        $decoded = [];
+      }
+      update_post_meta($lessonId, 'video_list', wp_json_encode($decoded));
+
+      update_post_meta($lessonId, 'homework', wp_kses_post($homework));
+      update_post_meta($lessonId, 'additional_files', wp_kses_post($additional_files));
+      update_post_meta($lessonId, 'presentation', $presentationId);
+
+
+      if ($isNewLesson) {
+        // For new lessons, set module and lesson number
+        update_post_meta($lessonId, 'module', $newModuleId);
+        if ($lessonNumber === null || $lessonNumber < 1) {
+          global $wpdb;
+          $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned)),0)
+            from " . $wpdb->prefix . "postmeta pm1
+            inner join " . $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $newModuleId
+            where pm1.meta_key = 'lesson_number'
+            and pm2.post_id = pm1.post_id");
+          $lessonNumber = intval($order) + 1;
+        }
+        update_post_meta($lessonId, 'lesson_number', $lessonNumber);
+        $this->fix_lessons_order($newModuleId);
+      } else {
+        // For existing lessons, handle module changes
+        $oldModuleId = intval(get_post_meta($lessonId, 'module', true));
+        $targetModuleId = $newModuleId !== null ? $newModuleId : $oldModuleId;
+
+        if ($targetModuleId !== $oldModuleId && $targetModuleId > 0) {
+          update_post_meta($lessonId, 'module', $targetModuleId);
+          if ($lessonNumber === null || $lessonNumber < 1) {
+            global $wpdb;
+            $order = $wpdb->get_var("select ifnull(max(cast(pm1.meta_value as unsigned)),0)
+              from " . $wpdb->prefix . "postmeta pm1
+              inner join " . $wpdb->prefix . "postmeta pm2 on pm2.meta_key = 'module' and pm2.meta_value = $targetModuleId
+              where pm1.meta_key = 'lesson_number'
+              and pm2.post_id = pm1.post_id");
+            $lessonNumber = intval($order) + 1;
+          }
+          update_post_meta($lessonId, 'lesson_number', $lessonNumber);
+          $this->fix_lessons_order($oldModuleId);
+          $this->fix_lessons_order($targetModuleId);
+        } else {
+          if ($lessonNumber !== null && $lessonNumber > 0) {
+            update_post_meta($lessonId, 'lesson_number', $lessonNumber);
+            $this->fix_lessons_order($targetModuleId);
+          }
+        }
+      }
+
+      wp_send_json(['error' => false]);
+    } catch (Exception $e) {
+      wp_send_json(['error' => true, 'message' => $e->getMessage()]);
+    }
   }
 
   public function reorder_lesson() {
@@ -321,6 +447,7 @@ class Admin {
       $name = $_POST["name"];
       $page_url = $_POST["page_url"];
       $tags = $_POST["tags"];
+      $default_class = $_POST["default_class"];
 
       if (empty($courseId)) {
         //create new course, a course is a wp_post with post_type = course
@@ -335,8 +462,31 @@ class Admin {
           'post_title' => $name
         ]);
       }
-      update_post_meta($courseId, 'course_page_url', $page_url);
-      update_post_meta($courseId, 'tags', $tags);
+
+      $meta_fields = [
+        'course_page_url' => $page_url,
+        'tags' => $tags,
+        'default_class' => $default_class,
+        'course_code' => $_POST["course_code"] ?? '',
+        'short_name' => $_POST["short_name"] ?? '',
+        'course_duration' => $_POST["course_duration"] ?? '',
+        'short_description' => $_POST["short_description"] ?? '',
+        'what_you_learn' => $_POST["what_you_learn"] ?? '',
+        'color' => $_POST["color"] ?? '#aabbcc'
+      ];
+      
+      foreach ($meta_fields as $key => $value) {
+        update_post_meta($courseId, $key, $value);
+      }
+      
+      if (isset($_POST["course_image"])) {
+        set_post_thumbnail($courseId, $_POST["course_image"]);
+      }
+
+      // Trigger WooCommerce product creation/update after response is sent
+      add_action('shutdown', function() use ($courseId) {
+        do_action('future-lms/course_saved', $courseId, get_post($courseId));
+      });
 
       wp_send_json(['error' => false]);
     } catch (Exception $e) {

@@ -64,10 +64,9 @@ class CoursesTab {
     );
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='add-lesson']", 'click', this.addLesson);
 
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson'", 'click', e => {
-      const lessonId = e.target.closest('.module-lesson').dataset.lessonId;
-      window.open(`/wp-admin/post.php?post=${lessonId}&action=edit`, '_blank');
-    });
+    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', e =>
+      this.editLesson(e)
+    );
 
     document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
     document.querySelector('.action-bar [data-action="add-class"]').addEventListener('click', this.addClass);
@@ -268,30 +267,30 @@ class CoursesTab {
     const courseData = courses[courseId];
     const module = moduleId ? courseData.modules[moduleId] : null;
 
-    remodaler.show({
+    slideout.show({
       title: moduleId ? 'Edit Module' : 'Add Module',
-      message: `<div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Module name</label>
+      message: `<div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Module name</label>
         <input type='text' name='module_name' value='${module?.name || ''}'/>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='count_progress'>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' for='count_progress'>
           <input type='checkbox' id='count_progress' name='count_progress' ${module?.count_progress ? 'checked' : ''}/>
           Counts towards progress
         </label>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='teaser'>Teaser</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' for='teaser'>Teaser</label>
         <input type='text' id='teaser' name='teaser' value='${module?.teaser}'/>
         <small class='desc' style='font-size:0.8rem;'>A less revealing teaser text for course pages</small>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title' for='intro_module'>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' for='intro_module'>
           <input type='checkbox' id='intro_module' name='intro_module' ${module?.intro_module ? 'checked' : ''}/>
           Intro module (will not be numbered)
         </label>        
       </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: 'Save',
       confirm: async vals => {
         if (!vals.module_name?.length) {
@@ -311,10 +310,180 @@ class CoursesTab {
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
+          notifications.show('Module updated successfully', 'success');
           this.getCourses();
+        } else {
+          notifications.show(result.message || 'Failed to update module', 'error');
         }
       }
     });
+  };
+
+  editLesson = async (e, lessonId = null, moduleId = null) => {
+    // If lessonId is provided, we're editing; otherwise we're creating
+    if (lessonId === null) {
+      const lessonEl = e.target.closest('.module-lesson');
+      if (lessonEl) {
+        lessonId = lessonEl.dataset.lessonId;
+      }
+    }
+
+    const courseEl = e.target.closest('.course');
+    const courseId = courseEl?.dataset?.courseId;
+
+    let lesson = null;
+    if (lessonId) {
+      lesson = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'get_lesson_details',
+        lesson_id: lessonId
+      });
+    } else {
+      lesson = {
+        error: false,
+        name: '',
+        teaser: '',
+        lesson_number: 1,
+        presentation_id: 0,
+        videos: [],
+        homework: '',
+        additional_files: '',
+        module_id: moduleId
+      };
+    }
+
+    if (lesson.error) {
+      notifications.show(lesson.message || 'Failed to load lesson', 'error');
+      return;
+    }
+
+    const videosToTextarea = arr => (arr && arr.length ? arr.join('\n') : '');
+
+    slideout.show({
+      title: lessonId ? 'Edit Lesson' : 'Add Lesson',
+      message: `
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Lesson name</label>
+          <input type='text' name='lesson_name' value='${lesson.name || ''}'/>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Module</label>
+          <select name='lesson_module' class='slideout-form-select'>
+            <option value=''>Loading...</option>
+          </select>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Lesson number</label>
+          <input type='number' min='1' name='lesson_number' value='${lesson.lesson_number || 1}'/>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Teaser</label>
+          <input type='text' name='lesson_teaser' value='${lesson.teaser || ''}'/>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Presentation</label>
+          <div class='presentation-picker'>
+            <input type='hidden' name='lesson_presentation' value='${lesson.presentation_id || 0}' />
+            <button type='button' class='ui tiny button select-presentation'>Select File</button>
+          </div>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Videos (one per line)</label>
+          <textarea name='lesson_videos' style='height:120px;'>${videosToTextarea(lesson.videos)}</textarea>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Homework</label>
+          <textarea class='trumbo' name='lesson_homework' style='height:180px;'></textarea>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Additional files</label>
+          <textarea class='trumbo' name='lesson_additional_files' style='height:180px;'></textarea>
+        </div>
+      `,
+      type: slideout.types.FORM,
+      confirmText: lessonId ? 'Save' : 'Create Lesson',
+      confirm: async vals => {
+        if (!vals.lesson_name?.length) {
+          notifications.show('Lesson name cannot be empty', 'error');
+          return false;
+        }
+
+        const videos = (vals.lesson_videos || '')
+          .split(/\r?\n/)
+          .map(v => v.trim())
+          .filter(Boolean)
+          .map(v => ({ video_id: v }));
+
+        const $ = window.jQuery;
+        const homeworkHtml =
+          $ && $.fn.trumbowyg
+            ? jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html')
+            : vals.lesson_homework || '';
+        const additionalHtml =
+          $ && $.fn.trumbowyg
+            ? jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html')
+            : vals.lesson_additional_files || '';
+
+        const payload = {
+          action: 'edit_lesson',
+          lesson_id: lessonId,
+          module_id: vals.lesson_module || lesson.module_id,
+          lesson_number: vals.lesson_number,
+          name: vals.lesson_name,
+          teaser: vals.lesson_teaser || '',
+          video_list: JSON.stringify(videos),
+          homework: homeworkHtml,
+          additional_files: additionalHtml,
+          presentation: vals.lesson_presentation || 0
+        };
+
+        const result = await JSUtils.fetch(__futurelms.ajax_url, payload);
+        if (!result.error) {
+          notifications.show(lessonId ? 'Lesson updated successfully' : 'Lesson created successfully', 'success');
+          this.getCourses();
+        } else {
+          notifications.show(
+            result.message || (lessonId ? 'Failed to update lesson' : 'Failed to create lesson'),
+            'error'
+          );
+        }
+      }
+    });
+
+    const select = document.querySelector('.slideout-form-select[name="lesson_module"]');
+    if (select) {
+      const courses = this.state.get('courses');
+      const currentCourse = courses[courseId];
+      const options = Object.keys(currentCourse.modules)
+        .map(mid => ({ id: mid, name: currentCourse.modules[mid].name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      select.innerHTML = options
+        .map(
+          o =>
+            `<option value="${o.id}" ${String(o.id) === String(lesson.module_id) ? 'selected' : ''}>${o.name}</option>`
+        )
+        .join('');
+    }
+
+    if (window.jQuery && jQuery.fn.trumbowyg) {
+      jQuery('.trumbo').trumbowyg({ lang: 'he' });
+      jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html', lesson.homework || '');
+      jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html', lesson.additional_files || '');
+    }
+
+    if (window.wp && wp.media) {
+      const btn = document.querySelector('.select-presentation');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const frame = wp.media({ title: 'Select Presentation', multiple: false });
+          frame.on('select', function () {
+            const attachment = frame.state().get('selection').first().toJSON();
+            const input = document.querySelector('input[name="lesson_presentation"]');
+            if (input) input.value = attachment.id;
+          });
+          frame.open();
+        });
+      }
+    }
   };
 
   openModule = e => {
@@ -348,33 +517,7 @@ class CoursesTab {
   addLesson = e => {
     const module = e.target.closest('.course-module');
     const moduleId = module.dataset.moduleId;
-
-    remodaler.show({
-      title: 'Add Lesson',
-      message: `<div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Lesson name</label>
-        <input type='text' name='lesson_name' />
-      </div>`,
-      type: remodaler.types.FORM,
-      confirmText: 'Create Lesson',
-      confirm: async vals => {
-        if (!vals.lesson_name?.length) {
-          notifications.show('Lesson name cannot be empty', 'error');
-          return false;
-        }
-
-        var data = {
-          action: 'add_lesson',
-          module_id: moduleId,
-          name: vals.lesson_name
-        };
-
-        let result = await JSUtils.fetch(__futurelms.ajax_url, data);
-        if (!result.error) {
-          this.getCourses();
-        }
-      }
-    });
+    this.editLesson(e, null, moduleId);
   };
 
   addCourse = () => {
@@ -467,21 +610,65 @@ class CoursesTab {
 
   editCourse = courseId => {
     const course = courseId ? this.state.get('courses')[courseId] : null;
-    remodaler.show({
+    slideout.show({
       title: courseId ? 'Edit Course' : 'Add Course',
-      message: `<div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Course name</label>
+      message: `<div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course name</label>
         <input type='text' name='course_name' value='${course?.name || ''}'/>
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Course page Url</label>
-        <input type='text' name='course_page_url' value='${course?.course_page_url || ''}' />
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course Code</label>
+        <input type='text' name='course_code' value='${course?.code || ''}' />
       </div>
-      <div class='remodal-form-line'>
-        <label class='remodal-form-line-title'>Tags</label>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course page URL</label>
+        <input type='url' name='course_page_url' value='${course?.course_page_url || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Course Duration (hours)</label>
+        <input type='text' name='course_duration' value='${course?.course_duration || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Short Description</label>
+        <textarea name='course_short_description' style='height:100px;'>${course?.short_description || ''}</textarea>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>What You will Learn</label>
+        <textarea name='course_what_you_learn' style='height:100px;'>${course?.what_you_learn || ''}</textarea>
+        <small class='desc' style='font-size:0.8rem;'>Please enter each point on a new line.</small>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Tags (comma separated)</label>
         <input type='text' name='course_tags' value='${course?.tags || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Featured Image</label>
+        <div class='featured-image-picker'>
+          <input type='hidden' name='course_image' value='${course?._thumbnail_id || 0}' />
+          <div class='ui mini image featured-image-preview'>
+            ${course?.course_image ? `<img src='${course.course_image}' />` : ''}
+          </div>
+          <button type='button' class='ui tiny button select-course-image'>Select Image</button>
+          <button type='button' class='ui tiny button remove-course-image' style='display: ${
+            course?.course_image ? 'inline-block' : 'none'
+          };'>Remove</button>
+        </div>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Color</label>
+        <span style="display: flex; align-items: center; gap: 16px;">
+          <input type='color' name='course_color' value='${
+            course?.color || '#aabbcc'
+          }' style="position: relative; z-index: 9999;" />
+        </span>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Default Class</label>
+        <select name="course_default_class" class="course-default-class slideout-form-select">
+          <option value="">No default class selected</option>
+        </select>
       </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: courseId ? 'Update' : 'Create',
       confirm: async vals => {
         if (!vals.course_name?.length) {
@@ -493,18 +680,97 @@ class CoursesTab {
           action: 'edit_course',
           course_id: courseId || '',
           name: vals.course_name,
-          page_url: encodeURI(vals.course_page_url),
-          tags: encodeURIComponent(vals.course_tags)
+          course_code: vals.course_code || '',
+          page_url: encodeURI(vals.course_page_url || ''),
+          course_duration: vals.course_duration || '',
+          short_description: vals.course_short_description || '',
+          what_you_learn: vals.course_what_you_learn || '',
+          tags: encodeURIComponent(vals.course_tags || ''),
+          color: vals.course_color || '#aabbcc',
+          course_image: vals.course_image || 0,
+          default_class: vals.course_default_class
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
         if (!result.error) {
-          //show success notification
           window.notifications.show('Course saved successfully', 'success');
           this.getCourses();
+        } else {
+          window.notifications.show(result.message || 'Failed to save course', 'error');
         }
       }
     });
+
+    if (courseId) {
+      JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'search_classes',
+        course_id: courseId
+      }).then(data => {
+        let select = document.querySelector('.slideout-panel select.course-default-class');
+
+        data.results.forEach(item => {
+          let option = document.createElement('option');
+          option.value = item.id;
+          option.textContent = item.title;
+
+          if (course?.default_class && parseInt(course.default_class) === parseInt(item.id)) {
+            option.selected = true;
+          }
+
+          select.appendChild(option);
+        });
+      });
+    }
+
+    // init color picker
+    document
+      .querySelector('.slideout-panel input[name="course_color"]')
+      ?.addEventListener('click', e => e.stopPropagation(), true);
+
+    // init featured image picker
+    this.initFeaturedImagePicker();
+  };
+
+  initFeaturedImagePicker = () => {
+    if (!window.wp || !window.wp.media) return;
+
+    const selectBtn = document.querySelector('.select-course-image');
+    const removeBtn = document.querySelector('.remove-course-image');
+
+    if (selectBtn) {
+      selectBtn.addEventListener('click', () => {
+        const frame = wp.media({
+          title: 'Select Featured Image',
+          multiple: false,
+          library: { type: 'image' }
+        });
+
+        frame.on('select', () => {
+          const attachment = frame.state().get('selection').first().toJSON();
+          const input = document.querySelector('input[name="course_image"]');
+          const preview = document.querySelector('.featured-image-preview');
+
+          if (input) input.value = attachment.id;
+          if (preview) {
+            preview.innerHTML = `<img src='${attachment.url}' />`;
+          }
+          if (removeBtn) removeBtn.style.display = 'inline-block';
+        });
+
+        frame.open();
+      });
+    }
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        const input = document.querySelector('input[name="course_image"]');
+        const preview = document.querySelector('.featured-image-preview');
+
+        if (input) input.value = '0';
+        if (preview) preview.innerHTML = '';
+        removeBtn.style.display = 'none';
+      });
+    }
   };
 
   editClass = async classId => {
@@ -526,33 +792,33 @@ class CoursesTab {
       }
     };
 
-    remodaler.show({
+    slideout.show({
       title: classId ? 'Edit Class' : 'Add Class',
       message: `
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Class Name</label>
+        <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Class Name</label>
             <input type='text' name='class_name' value='${selectedClass?.name || ''}'/>
         </div>
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Select Course</label>
-            <select name="class_course_id" class="remodal-form-select" disabled>
+        <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Select Course</label>
+            <select name="class_course_id" class="slideout-form-select" disabled>
                 <option value="">Loading courses...</option>
             </select>
-            <div class="remodal-loading-indicator"></div>
+            <div class="slideout-loading-indicator"></div>
         </div>
-            <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Start Date & Time</label>
+            <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Start Date & Time</label>
             <input type="datetime-local" 
                    name="class_start_date" 
                    value="${formatDateTimeForInput(selectedClass?.start_date)}" 
-                   class="remodal-datetime-input"
+                   class="slideout-datetime-input"
                    step="300" min="${new Date().toISOString().slice(0, 16)}">
         </div>
-        <div class='remodal-form-line'>
-            <label class='remodal-form-line-title'>Lessons</label>
+        <div class='slideout-form-line'>
+            <label class='slideout-form-line-title'>Lessons</label>
             <input type='text' name='class_lessons' value='${selectedClass?.lessons || ''}' />
         </div>`,
-      type: remodaler.types.FORM,
+      type: slideout.types.FORM,
       confirmText: classId ? 'Update' : 'Create',
       confirm: async vals => {
         var data = {
@@ -568,6 +834,9 @@ class CoursesTab {
         if (!result.error) {
           //show success notification
           window.notifications.show('Class saved successfully', 'success');
+          this.getCourses(); // Refresh the courses data
+        } else {
+          notifications.show(result.message || 'Failed to save class', 'error');
         }
       }
     });
@@ -579,7 +848,7 @@ class CoursesTab {
       ...courses[id]
     }));
 
-    const select = document.querySelector('.remodal-form-select[name="class_course_id"]');
+    const select = document.querySelector('.slideout-panel select[name="class_course_id"]');
     if (select) {
       select.innerHTML = `
                 <option value="">-- Select a Course --</option>

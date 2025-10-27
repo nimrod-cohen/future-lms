@@ -22,6 +22,8 @@ class Course extends BaseObject {
 
   public static function get_classes($courseId, $search)
   {
+    $defaultClassId = get_post_meta($courseId, 'default_class', true);
+
       $where = 'course.id = ' . $courseId;
       if ($search) {
           $where .= " AND t.post_title like '%" . $search . "%'";
@@ -32,7 +34,8 @@ class Course extends BaseObject {
       foreach ($classes->results() as $row) {
         $result[] = [
             'id' => $row->ID,
-            'title' => $row->post_title
+            'title' => $row->post_title,
+            'is_default' => ($row->ID == $defaultClassId)
         ];
       }
 
