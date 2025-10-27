@@ -57,8 +57,6 @@ class FutureLMS {
     add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
     add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
     add_action('plugins_loaded', [$this,'future_lms_load_textdomain']);
-
-    $this->load_woocommerce_integration();
   }
 
   function future_lms_load_textdomain() {
@@ -118,7 +116,6 @@ class FutureLMS {
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
     add_action("wp_ajax_future_lms_get_settings", [$this, "get_settings"]);
     add_action("wp_ajax_future_lms_set_settings", [$this, "set_settings"]);
-    add_action("wp_ajax_future_lms_create_products_existing", [$this, "create_products_existing"]);
     add_action('show_user_profile', [$this, 'extraUserFields']);
     add_action('edit_user_profile', [$this, 'extraUserFields']);
     add_action('manage_users_columns', [$this, 'addExtraUserFieldsToList']);
@@ -185,36 +182,6 @@ class FutureLMS {
     //loop through all POST variables and update options
     Settings::set_many($_POST);
     wp_send_json(["error" => false, "message" => "Settings saved successfully"]);
-  }
-
-  public function create_products_existing() {
-    try {
-      // Check if WooCommerce is active
-      if ( ! class_exists( 'WooCommerce' ) && ! function_exists( 'WC' ) ) {
-        wp_send_json_error( 'WooCommerce is not active' );
-        return;
-      }
-
-      // Call the static method to create products
-      $result = \FutureLMS\woocommerce\WCAutoProduct::create_products_for_existing_courses();
-      
-      if ( $result === false ) {
-        wp_send_json_error( 'Failed to create products' );
-        return;
-      }
-
-      $message = sprintf(
-        'Successfully processed %d courses. Created %d new products, skipped %d courses that already had products.',
-        $result['total'],
-        $result['created'],
-        $result['skipped']
-      );
-
-      wp_send_json_success( $message );
-
-    } catch ( Exception $e ) {
-      wp_send_json_error( 'Error: ' . $e->getMessage() );
-    }
   }
 
   public static function log($msg) {
@@ -826,18 +793,6 @@ class FutureLMS {
 
     include $template;
   }
-
-	private function load_woocommerce_integration() {
-		$integration_file = plugin_dir_path( __FILE__ ) . 'woocommerce/WCIntegration.php';
-		if ( file_exists( $integration_file ) ) {
-			include_once $integration_file;
-		}
-		
-		$auto_product_file = plugin_dir_path( __FILE__ ) . 'woocommerce/WCAutoProduct.php';
-		if ( file_exists( $auto_product_file ) ) {
-			include_once $auto_product_file;
-		}
-	}
 }
 
 $directory = __DIR__ . '/classes';

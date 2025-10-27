@@ -3,7 +3,6 @@
 // Get course details and present them as a sales page
 
 use FutureLMS\FutureLMS;
-use FutureLMS\woocommerce\WCIntegration;
 
 $courseId = intval($course->raw('ID'));
 $courseTitle = $course->display("name");
@@ -28,7 +27,7 @@ $user = wp_get_current_user();
     </span>
     <?php FutureLMS::get_template_part('price_box.php', ['course' => $course]); ?>
     <?php if (!empty($wcProductId)) { ?>
-      <form class="cart" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', get_permalink() ) ); ?>" method="post" enctype="multipart/form-data">
+      <form class="cart" action="" method="post" enctype="multipart/form-data">
         <button type="submit" name="add-to-cart" value="" class='buy-now button'>
           <?php _e('קנה עכשיו','future-lms'); ?>
         </button>

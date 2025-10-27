@@ -4,9 +4,7 @@ namespace FutureLMS\classes;
 
 class Settings {
   private const OPTIONS = ['flms_default_lobby_page' => 'mycourses',
-                           'flms_store_currency' => 'ILS',
-                           'flms_auto_create_woocommerce_products' => 'no',
-                           'flms_auto_create_products_for_drafts' => 'no'];
+                           'flms_store_currency' => 'ILS'];
   private const PREFIX = 'flms_';
 
   public const CURRENCIES = [
