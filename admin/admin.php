@@ -7,7 +7,7 @@ use FutureLMS\classes\VersionManager;
     <a class="item" data-tab="courses">
         <span>Courses</span>
         <span class="action-bar">
-      <span data-tooltip="Add course" data-variation="mini" data-inverted="">
+      <span class="tooltip" data-content="Add course" data-variation="mini" data-inverted="">
         <i class='plus icon green square outline' data-action='add-course'></i>
       </span>
     </span>
@@ -15,7 +15,7 @@ use FutureLMS\classes\VersionManager;
     <a class="item" data-tab="classes">
         <span>Classes</span>
         <span class="action-bar">
-            <span data-tooltip="Add class" data-variation="mini" data-inverted="">
+            <span class="tooltip" data-content="Add class" data-variation="mini" data-inverted="">
                 <i class='plus icon green square outline' data-action='add-class'></i>
             </span>
         </span>

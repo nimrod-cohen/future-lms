@@ -173,7 +173,7 @@ class CoursesTab {
                   ? "<i class='pause icon red actionable' data-action='pause-course'></i>"
                   : "<i class='play icon green actionable' data-action='resume-course'></i>"
               }
-              <span data-tooltip="Add module" data-variation="mini" data-inverted=""><i class="plus square outline icon actionable" data-action='add-module'></i></span>
+              <span class="tooltip" data-content="Add module" data-variation="mini" data-inverted=""><i class="plus square outline icon actionable" data-action='add-module'></i></span>
               <i class="trash alternate outline icon red actionable" data-action='delete-course'></i>
             </span>
           </div>
@@ -199,7 +199,7 @@ class CoursesTab {
                 }</span>
                     <span class='module-name ${module.enabled === true ? '' : 'disabled'}'>${
                   module.count_progress
-                    ? '<span data-tooltip="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
+                    ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
                     : ''
                 } ${module.name}</span>
                     <span class='module-actions action-bar'>
@@ -211,7 +211,7 @@ class CoursesTab {
                       }
                       <i class="arrow up icon actionable" data-action='move-up-module'></i>
                       <i class="arrow down icon actionable" data-action='move-down-module'></i>
-                      <span data-tooltip="Add lesson" data-variation="mini" data-inverted="">
+                      <span class="tooltip" data-content="Add lesson" data-variation="mini" data-inverted="">
                         <i class="plus square outline icon actionable" data-action='add-lesson'></i>
                       </span>
                       <i class="trash alternate outline icon red actionable" data-action='delete-module'></i>
