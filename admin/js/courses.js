@@ -320,6 +320,9 @@ class CoursesTab {
   };
 
   editLesson = async (e, lessonId = null, moduleId = null) => {
+    if (this.state.get('editing-lesson')) return; // Prevent multiple simultaneous edits
+    this.state.set('editing-lesson', true);
+
     // If lessonId is provided, we're editing; otherwise we're creating
     if (lessonId === null) {
       const lessonEl = e.target.closest('.module-lesson');
@@ -359,7 +362,7 @@ class CoursesTab {
     const videosToTextarea = arr => (arr && arr.length ? arr.join('\n') : '');
 
     slideout.show({
-      title: lessonId ? 'Edit Lesson' : 'Add Lesson',
+      title: lessonId ? `Edit Lesson ${lesson.lesson_number}` : 'Add Lesson',
       message: `
         <div class='slideout-form-line'>
           <label class='slideout-form-line-title'>Lesson name</label>
@@ -370,10 +373,6 @@ class CoursesTab {
           <select name='lesson_module' class='slideout-form-select'>
             <option value=''>Loading...</option>
           </select>
-        </div>
-        <div class='slideout-form-line'>
-          <label class='slideout-form-line-title'>Lesson number</label>
-          <input type='number' min='1' name='lesson_number' value='${lesson.lesson_number || 1}'/>
         </div>
         <div class='slideout-form-line'>
           <label class='slideout-form-line-title'>Teaser</label>
@@ -446,7 +445,8 @@ class CoursesTab {
             'error'
           );
         }
-      }
+      },
+      onClose: () => this.state.set('editing-lesson', false)
     });
 
     const select = document.querySelector('.slideout-form-select[name="lesson_module"]');
