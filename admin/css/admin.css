@@ -211,7 +211,7 @@ div.error {
                 .course-actions {
                   display: grid;
                   grid-auto-flow: column;
-                  justify-content: end;
+                  justify-content: start;
                   align-items: center;
                 }
               }
@@ -264,7 +264,7 @@ div.error {
                   display: none;
                   grid-area: actions;
                   grid-auto-flow: column;
-                  justify-content: end;
+                  justify-content: start;
                   align-items: center;
                   > i {
                     cursor: pointer;
@@ -322,7 +322,7 @@ div.error {
                       .lesson-actions {
                         display: grid;
                         grid-auto-flow: column;
-                        justify-content: end;
+                        justify-content: start;
                         flex-grow: 1;
 
                         > i {
