@@ -122,12 +122,13 @@ class Course extends BaseObject {
         $module["lessons"] = [];
 
         $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm2.meta_value AS video_list,
-          pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser
+          pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser, pm5.meta_value AS lesson_duration
           FROM ".$wpdb->prefix."posts plesson
           INNER JOIN ".$wpdb->prefix."postmeta pm1 ON pm1.post_id = plesson.id AND pm1.meta_key = 'module' AND pm1.meta_value = $moduleId
           LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm2 ON pm2.post_id = plesson.id AND pm2.meta_key = 'video_list'
           LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm3 ON pm3.post_id = plesson.ID AND pm3.meta_key = 'lesson_number'
           LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm4 ON pm4.post_id = plesson.ID AND pm4.meta_key = 'teaser'
+          LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm5 ON pm5.post_id = plesson.ID AND pm5.meta_key = 'lesson_duration'
           WHERE plesson.post_type = 'lesson'
           AND plesson.post_status <> 'trash' ";
 
@@ -146,6 +147,7 @@ class Course extends BaseObject {
           $lesson["order"] = $lessonRow["lesson_number"];
           $lesson["enabled"] = $lessonRow["post_status"] == "publish";
           $lesson["teaser"] = $lessonRow["teaser"] ?? '';
+          $lesson["duration"] = $lessonRow["lesson_duration"];
 
           $videos = $lessonRow["video_list"];
           $videos = json_decode(empty($videos) ? "[]" : $videos, true);
