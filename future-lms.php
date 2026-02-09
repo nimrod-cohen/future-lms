@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Nimrod
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -33,16 +33,15 @@
 namespace FutureLMS;
 
 use Exception;
-use WP_User;
-use WP_User_Query;
-use NumberFormatter;
-use FutureLMS\classes\Student;
-use FutureLMS\classes\VersionManager;
-use FutureLMS\classes\Course;
 use FutureLMS\classes\BaseObject;
+use FutureLMS\classes\Course;
 use FutureLMS\classes\Lesson;
+use FutureLMS\classes\ProgressManager;
 use FutureLMS\classes\SchoolClass;
 use FutureLMS\classes\Settings;
+use FutureLMS\classes\Student;
+use FutureLMS\classes\VersionManager;
+use WP_User_Query;
 
 class FutureLMS {
   function __construct() {
@@ -52,21 +51,68 @@ class FutureLMS {
 
     add_shortcode('flms_course_price', ['FutureLMS\classes\Course', 'get_course_price_box']);
     add_shortcode('flms_school_lobby', [$this, 'show_school_lobby']);
-    add_filter('body_class', [$this,'add_school_class_to_body']);
+    add_filter('body_class', [$this, 'add_school_class_to_body']);
 
     add_filter('manage_lesson_posts_columns', [$this, 'addLessonsColumns']);
     add_action('manage_lesson_posts_custom_column', [$this, 'fillLessonsColumns'], 10, 2);
-    add_action('plugins_loaded', [$this,'future_lms_load_textdomain']);
+    add_action('plugins_loaded', [$this, 'future_lms_load_textdomain']);
+
+    // Hooks/actions contract for cross-plugin communication
+    $this->register_hooks();
+  }
+
+  private function register_hooks() {
+    // Create a student user, returns user ID
+    add_filter('future-lms/create_student', function ($userId, $email, $name, $phone) {
+      $student = Student::create($email, '', $email);
+      $newId = $student->get_id();
+      if (!empty($name)) {
+        wp_update_user(["ID" => $newId, "display_name" => $name]);
+      }
+      if (!empty($phone)) {
+        $phone = apply_filters('future-lms/student_phone', $phone);
+        update_user_meta($newId, 'user_phone', $phone);
+      }
+      return $newId;
+    }, 10, 4);
+
+    // Check if student is attending a course
+    add_filter('future-lms/is_attending_course', function ($result, $studentId, $courseId) {
+      $student = new Student($studentId);
+      return $student->is_attending_course($courseId);
+    }, 10, 3);
+
+    // Get student's class for a course
+    add_filter('future-lms/get_student_class', function ($result, $studentId, $courseId) {
+      $student = new Student($studentId);
+      return $student->get_class($courseId);
+    }, 10, 3);
+
+    // Subscribe/unsubscribe a student to/from a class
+    add_action('future-lms/subscribe_to_class', function ($studentId, $classId, $subscribe) {
+      $student = new Student($studentId);
+      $student->subscribe_to_class($classId, $subscribe);
+    }, 10, 3);
+
+    // Get course tree
+    add_filter('future-lms/get_course_tree', function ($result, $courseIds) {
+      return Course::get_courses_tree($courseIds);
+    }, 10, 2);
+
+    // Get student progress for a course (returns array with percent, watched, duration)
+    add_filter('future-lms/get_student_progress', function ($result, $studentId, $courseId) {
+      $tree = Course::get_courses_tree([$courseId]);
+      return ProgressManager::getCourseProgress($studentId, $courseId, $tree);
+    }, 10, 3);
   }
 
   function future_lms_load_textdomain() {
     load_plugin_textdomain('future-lms', false, dirname(plugin_basename(__FILE__)) . '/languages/');
   }
 
-  public static function TABLE_PREFIX()
-  {
+  public static function TABLE_PREFIX() {
     global $wpdb;
-    return $wpdb->prefix.'flms_';
+    return $wpdb->prefix . 'flms_';
   }
 
   public static function version() {
@@ -78,18 +124,18 @@ class FutureLMS {
     if (is_singular()) {
       global $post;
       if (has_shortcode($post->post_content, 'flms_school_lobby')) {
-          $classes[] = 'school';
+        $classes[] = 'school';
       }
     }
     return $classes;
   }
 
   public function show_school_lobby() {
-    if(is_admin() || !is_user_logged_in() || !current_user_can('student')) {
+    if (is_admin() || !is_user_logged_in() || !current_user_can('student')) {
       return;
     }
     //if request is POST and course_id is set, redirect to course page
-    if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['course_id'], $_POST['class_id'], $_POST['lesson_id']) ) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['course_id'], $_POST['class_id'], $_POST['lesson_id'])) {
       require_once plugin_dir_path(__FILE__) . 'front/course.php';
     } else {
       require_once plugin_dir_path(__FILE__) . 'front/lobby.php';
@@ -107,11 +153,8 @@ class FutureLMS {
     add_action("wp_ajax_get_lessons", [$this, "get_class_lessons"]);
     add_action("wp_ajax_get_lesson_content", [$this, "get_lesson_content"]);
     add_action("wp_ajax_set_student_notes", [$this, "set_student_notes"]);
-    add_action("wp_ajax_get_student_progress", [$this, "get_student_progress"]);
-    add_action("wp_ajax_set_student_progress", [$this, "set_student_progress"]);
     add_action("wp_ajax_get_students", [$this, "get_students"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
-    add_action("wp_ajax_add_student_to_class", [$this, "add_student_to_class"]);
     add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
     add_action("wp_ajax_future_lms_get_settings", [$this, "get_settings"]);
@@ -128,18 +171,21 @@ class FutureLMS {
     add_action('template_redirect', [$this, 'restrict_school_access']);
 
     //add student role if not exists
-     add_role('student', 'Student', [
-        'read' => true,
-        'edit_posts' => false,
-        'delete_posts' => false,
+    add_role('student', 'Student', [
+      'read' => true,
+      'edit_posts' => false,
+      'delete_posts' => false
     ]);
+
+    // Initialize ProgressManager (registers AJAX handlers)
+    ProgressManager::get_instance();
   }
 
   public function restrict_school_access() {
     if (is_single()) {
       global $post;
       // Check if the post type is lesson, module, class or course
-      if (in_array($post->post_type,['lesson','module','class']) && !current_user_can('student')) {
+      if (in_array($post->post_type, ['lesson', 'module', 'class']) && !current_user_can('student')) {
         wp_redirect(wp_login_url());
       }
     }
@@ -212,11 +258,11 @@ class FutureLMS {
   public function addExtraModuleFieldsToListData($column_name, $module_id) {
     $pod = BaseObject::factory("module", $module_id);
     switch ($column_name) {
-      case "course":
-        $courseId = $pod->raw("course");
-        $course = BaseObject::factory("course", $courseId);
-        echo "<a href='" . site_url("/wp-admin/post.php?post=" . $courseId . "&action=edit") . "'>" . $course->raw("name") . "</a>";
-        break;
+    case "course":
+      $courseId = $pod->raw("course");
+      $course = BaseObject::factory("course", $courseId);
+      echo "<a href='" . site_url("/wp-admin/post.php?post=" . $courseId . "&action=edit") . "'>" . $course->raw("name") . "</a>";
+      break;
     }
   }
 
@@ -230,12 +276,12 @@ class FutureLMS {
     global $wpdb;
 
     if ('module' == $column_name) {
-      $module_id = $wpdb->get_var("select meta_value from ".$wpdb->prefix."postmeta where post_id = $lesson_id and meta_key = 'module'");
-      $module_order = $wpdb->get_var("select meta_value from ".$wpdb->prefix."postmeta where post_id = $module_id and meta_key = 'order'");
-      $module_name = $wpdb->get_var("select post_title from ".$wpdb->prefix."posts where id = $module_id");
-      echo "<a href='" . site_url("/wp-admin/post.php?post=" . $module_id . "&action=edit")."'>".$module_name."(".$module_order.")</a>";
+      $module_id = $wpdb->get_var("select meta_value from " . $wpdb->prefix . "postmeta where post_id = $lesson_id and meta_key = 'module'");
+      $module_order = $wpdb->get_var("select meta_value from " . $wpdb->prefix . "postmeta where post_id = $module_id and meta_key = 'order'");
+      $module_name = $wpdb->get_var("select post_title from " . $wpdb->prefix . "posts where id = $module_id");
+      echo "<a href='" . site_url("/wp-admin/post.php?post=" . $module_id . "&action=edit") . "'>" . $module_name . "(" . $module_order . ")</a>";
     } else if ('lesson_number' == $column_name) {
-      $lesson_number = $wpdb->get_var("select meta_value from ".$wpdb->prefix."postmeta where post_id = $lesson_id and meta_key = 'lesson_number'");
+      $lesson_number = $wpdb->get_var("select meta_value from " . $wpdb->prefix . "postmeta where post_id = $lesson_id and meta_key = 'lesson_number'");
       echo $lesson_number;
     }
   }
@@ -257,8 +303,7 @@ class FutureLMS {
         </td>
       </tr>
     </table>
-  <?php 
-  }
+  <?php }
 
   public function enqueueSchoolScripts() {
     wp_enqueue_script('future-lms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
@@ -279,7 +324,11 @@ class FutureLMS {
     if (function_exists('wp_enqueue_media')) {
       wp_enqueue_media();
     }
-    
+
+    // Enqueue WP Pointer to prevent "pointer is not a function" errors from WP core
+    wp_enqueue_style('wp-pointer');
+    wp_enqueue_script('wp-pointer');
+
     wp_enqueue_script('future-lms-semantic-js', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.js');
     wp_enqueue_style('future-lms-semantic-css', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.css');
 
@@ -292,7 +341,7 @@ class FutureLMS {
 
     wp_localize_script('future-lms-admin-js', '__futurelms', [
       'ajax_url' => admin_url('admin-ajax.php'),
-      'store_currency' => Settings::get("store_currency"),
+      'store_currency' => Settings::get("store_currency")
     ]);
 
     wp_enqueue_script('trumbowyg-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/trumbowyg.min.js');
@@ -307,47 +356,6 @@ class FutureLMS {
 
   public function show_admin_page() {
     require_once __DIR__ . DIRECTORY_SEPARATOR . 'admin/admin.php';
-  }
-
-  public function add_student_to_class() {
-    $courseId = $_REQUEST["course_id"];
-    $studentId = $_REQUEST["student_id"];
-    $classId = $_REQUEST["class_id"];
-    $name = $_REQUEST["name"];
-    $phone = $_REQUEST["phone"];
-    $email = $_REQUEST["email"];
-
-    $studentObj = Student::create($email, '', $email);
-    if (!$studentObj) {
-      wp_send_json(['error' => true, 'message' => 'Failed to create or load student']);
-    }
-    $studentId = $studentObj->get_id();
-
-    //filter email and phone as some systems may want it in a specific format
-    $email = apply_filters('future-lms/student_email', $email);
-    $phone = apply_filters('future-lms/student_phone', $phone);
-
-    if (!empty($name)) {
-      $arr = ["ID" => $studentId];
-      $arr["display_name"] = $name;
-      wp_update_user($arr);
-    }
-    if (!empty($phone)) {
-      update_user_meta($studentId, 'user_phone', $phone);
-    }
-
-    $student = new Student($studentId);
-
-    $old_class = $student->get_class($courseId);
-
-    if (!$old_class) { //currently not listed at all
-      $student->subscribe_to_class($classId, true);
-    } else if ($old_class["id"] != $classId) { //already registered to another class
-      $student->subscribe_to_class($old_class["id"], false);
-      $student->subscribe_to_class($classId, true);
-    }
-
-    wp_send_json([]);
   }
 
   public function remove_student_from_class() {
@@ -376,7 +384,7 @@ class FutureLMS {
 
     $classes = BaseObject::factory("class", ["where" => "course.id = " . $courseId], -1);
 
-    foreach($classes->results() as $row) {
+    foreach ($classes->results() as $row) {
       $result[] = [
         'id' => $row->ID,
         'title' => $row->post_title,
@@ -387,7 +395,7 @@ class FutureLMS {
 
     //sort by start date
     usort($result, function ($a, $b) {
-        return $a["start_date"] < $b["start_date"];
+      return $a["start_date"] < $b["start_date"];
     });
 
     wp_send_json($result);
@@ -401,94 +409,27 @@ class FutureLMS {
       $month = intval($_REQUEST["month"]);
       $year = intval($_REQUEST["year"]);
 
-      $result = SchoolClass::students($courseId, $classId, $search, $month, $year);
+      $students = SchoolClass::students($courseId, $classId, $search, $month, $year);
 
-      wp_send_json($result);
-    } catch (Exception $ex) {
-        wp_send_json(["error" => $ex->getMessage()]);
-    }
-  }
+      // Calculate progress for all students in one pass
+      if (!empty($students)) {
+        $courseIds = array_unique(array_column($students, 'course_id'));
+        $courseTree = Course::get_courses_tree($courseIds);
 
-  public function set_student_progress() {
-    $courseId = $_POST["course_id"];
-    $moduleId = $_POST["module_id"];
-    $lessonId = $_POST["lesson_id"];
-    $videoId = $_POST["video_id"];
-    $percent = intval($_POST["percent"]);
-    $seconds = intval($_POST["seconds"]);
-
-    $student = new Student(get_current_user_id());
-    $data = $student->get_progress();
-
-    if (!isset($data["courses"])) {
-      $data["courses"] = [];
-    }
-
-    $pos = array_search($courseId, array_column($data["courses"], 'course_id'));
-    if ($pos === false) { //should not happen
-      $course = ["course_id" => $courseId, "modules" => []];
-      $data["courses"][] = &$course;
-    } else {
-      $course = &$data["courses"][$pos];
-    }
-
-    //find module
-    $pos = array_search($moduleId, array_column($course["modules"], 'module_id'));
-    if ($pos === false) {
-      $module = ["module_id" => $moduleId, "lessons" => []];
-      $course["modules"][] = &$module;
-    } else {
-      $module = &$course["modules"][$pos];
-    }
-
-    //find lesson
-    $pos = array_search($lessonId, array_column($module["lessons"], 'lesson_id'));
-    if ($pos === false) {
-      $lesson = ["lesson_id" => $lessonId, "videos" => []];
-      $module["lessons"][] = &$lesson;
-    } else {
-      $lesson = &$module["lessons"][$pos];
-    }
-
-    //find video
-    $pos = array_search($videoId, array_column($lesson["videos"], 'video_id'));
-    if ($pos === false) {
-      $video = ["video_id" => $videoId, "percent" => 0, "seconds" => 0];
-      $lesson["videos"][] = &$video;
-    } else {
-      $video = &$lesson["videos"][$pos];
-    }
-
-    if ($video["percent"] < $percent) {
-      $video["seconds"] = $seconds;
-      $video["percent"] = $percent;
-
-      $student->set_progress($data);
-    }
-  }
-
-  public function get_student_progress() {
-    try {
-      $result = [];
-      $studentId = get_current_user_id();
-
-      if (current_user_can('manage_options') && isset($_POST["student_id"])) {
-        $studentId = $_POST["student_id"];
+        foreach ($students as &$student) {
+          $cid = (int) $student['course_id'];
+          $sid = (int) $student['id'];
+          $progressData = ProgressManager::getCourseProgress($sid, $cid, $courseTree);
+          $student['progress'] = floor($progressData['percent']);
+        }
+        unset($student);
       }
 
-      $student = new Student($studentId);
-      $classes = $student->attendence_info();
-      $courses = array_map(function ($class) {
-          return $class["course_id"];
-      }, $classes);
-      $result["progress"] = $student->get_progress();
-      $result["course_tree"] = Course::get_courses_tree($courses);
-
-      wp_send_json($result);
+      wp_send_json($students);
     } catch (Exception $ex) {
-      wp_send_json(json_encode(["error" => $ex->getMessage()]));
+      wp_send_json(["error" => $ex->getMessage()]);
     }
-}
+  }
 
   public function set_student_notes() {
     try {
@@ -518,11 +459,11 @@ class FutureLMS {
 
       //course id not found or student not listed
       if (!$course->exists()
-          || !$student->is_attending_course($courseId)
-          || !$student->is_lesson_open($courseId, $lessonId)
+        || !$student->is_attending_course($courseId)
+        || !$student->is_lesson_open($courseId, $lessonId)
       ) {
-          throw new Exception("Failed to load class");
-          return;
+        throw new Exception("Failed to load class");
+        return;
       }
 
       $lesson = new Lesson($lessonId);
@@ -563,12 +504,12 @@ class FutureLMS {
 
       $class = new SchoolClass($class_id);
       if (!$class) {
-          throw new Exception('cannot find class by id');
+        throw new Exception('cannot find class by id');
       }
 
       $is_live = $class->raw("is_live_class") == "1";
 
-      if(!$is_live) {
+      if (!$is_live) {
         $class_lessons = [];
       } else {
         $class_lessons = $class->raw("lessons") ?? '[]';
@@ -588,7 +529,7 @@ class FutureLMS {
         while ($lesson = $lessons->fetch()) {
           $open = !$is_live; //if live class, all lessons are closed by default
           $lesson_id = $lesson->raw("ID");
-          if($is_live) {
+          if ($is_live) {
             $pos = array_search($lesson_id, array_column($class_lessons, 'id'));
             if (false !== $pos) {
               $open = $class_lessons[$pos]["open"] ?? false;
@@ -617,7 +558,7 @@ class FutureLMS {
       });
       wp_send_json($result);
     } catch (Exception $ex) {
-        wp_send_json(["error" => $ex->getMessage()]);
+      wp_send_json(["error" => $ex->getMessage()]);
     }
   }
 
@@ -654,7 +595,7 @@ class FutureLMS {
       $heads = array_merge($headers, $addresseeChunk);
 
       if (wp_get_environment_type() !== 'production') {
-          continue;
+        continue;
       }
 
       wp_mail(['yinon@bursa4u.com'], $subject, $content, $heads);
@@ -676,24 +617,24 @@ class FutureLMS {
     $lessons = $class->raw("lessons");
 
     if ($lessons) {
-        $lessons = json_decode($lessons, true);
+      $lessons = json_decode($lessons, true);
     } else {
-        $lessons = [];
+      $lessons = [];
     }
 
     $found = false;
     foreach ($lessons as &$lesson) {
-        if ($lesson["id"] == $lessonId) {
-            $lesson["open"] = !$lesson["open"];
-            $found = true;
-            break;
-        }
+      if ($lesson["id"] == $lessonId) {
+        $lesson["open"] = !$lesson["open"];
+        $found = true;
+        break;
+      }
     }
     if (!$found) {
-        $lessons[] = [
-            "id" => $lessonId,
-            "open" => true
-        ];
+      $lessons[] = [
+        "id" => $lessonId,
+        "open" => true
+      ];
     }
 
     $lessons = json_encode($lessons);
@@ -761,7 +702,7 @@ class FutureLMS {
     $result = [];
     foreach ($users as $user) {
       if (array_search($user["id"], array_column($existing, 'id')) === FALSE) {
-          $result[] = $user;
+        $result[] = $user;
       }
     }
 
@@ -798,14 +739,13 @@ class FutureLMS {
 $directory = __DIR__ . '/classes';
 $files = glob($directory . '/*.php');
 foreach ($files as $file) {
-    include_once $file;
+  include_once $file;
 }
 
 $directory = __DIR__ . '/post-types';
 $files = glob($directory . '/*.php');
 foreach ($files as $file) {
-    include_once $file;
+  include_once $file;
 }
-
 
 $futureLms = new FutureLMS();
