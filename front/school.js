@@ -68,27 +68,13 @@ class Lobby {
     let courseBtns = document.querySelectorAll(`.course-card.active-course .course-progress-bar`);
     courseBtns.forEach(btn => btn.classList.add('hidden'));
 
-    progress.progress.courses.forEach(course => {
-      if (!progress.course_tree[course.course_id]) return;
+    Object.keys(progress.progress).forEach(courseId => {
+      if (!progress.course_tree[courseId]) return;
 
-      const courseSize = progress.course_tree[course.course_id].total;
-      //measure course size
-      var courseProgress = 0;
-      course.modules.forEach(module => {
-        module.lessons.forEach(lesson => {
-          if (
-            !progress.course_tree[course.course_id] ||
-            progress.course_tree[course.course_id].modules[module.module_id].count_progress !== true
-          )
-            return;
-          lesson.videos.forEach(video => (courseProgress += video.percent));
-        });
-      });
-
-      let total = Math.min(100, (courseProgress / courseSize) * 100);
+      let total = Math.min(100, progress.progress[courseId].percent);
 
       let prog = document.querySelector(
-        `.my-courses .course-card[data-course-id='${course.course_id}'] .course-progress-bar`
+        `.my-courses .course-card[data-course-id='${courseId}'] .course-progress-bar`
       );
       if (prog) {
         prog.classList.remove('hidden');
@@ -245,7 +231,7 @@ class Classroom {
   loadProgress = async () => {
     let progress = await callServer({
       action: 'get_student_progress',
-      class_id: this.state.get('classId')
+      course_id: this.state.get('courseId')
     });
     this.state.set('student-progress', progress);
     console.log('progress is ', progress);
@@ -385,14 +371,19 @@ class Classroom {
     if (percent < 100 && this.lastProgressCall && Math.floor((new Date() - this.lastProgressCall) / 1000) < 10) return;
 
     this.lastProgressCall = new Date();
+    const courseId = this.state.get('courseId');
+    const studentProgress = this.state.get('student-progress');
+    const currentCoursePercent = studentProgress?.progress?.[courseId]?.percent ?? -1;
+
     await callServer({
       action: 'set_student_progress',
-      course_id: this.state.get('courseId'),
+      course_id: courseId,
       module_id: lesson.module_id,
       lesson_id: lesson.id,
       video_id: video.video_id,
       percent: percent,
-      seconds: seconds
+      seconds: seconds,
+      progress: currentCoursePercent
     });
     this.loadProgress();
   };
@@ -531,20 +522,18 @@ class Classroom {
         const courseTreeLesson = progress.course_tree[course].modules[lesson.module_id].lessons[lesson.id];
         showPlay = courseTreeLesson.videos[0] !== 'text';
 
-        var lessonTotal = progress.course_tree[course].modules[lesson.module_id].lessons[lesson.id].videos.length * 100;
+        var lessonTotal = courseTreeLesson.videos.length * 100;
 
-        const videos = progress.progress.courses
-          .find(c => parseInt(c.course_id) === course)
-          .modules.find(m => lesson.module_id === parseInt(m.module_id))
-          .lessons.find(l => parseInt(l.lesson_id) === lesson.id).videos;
+        const lessonProgress = progress.course_progress?.[lesson.id];
+        if (lessonProgress) {
+          const passed = Object.values(lessonProgress).reduce((prev, curr) => {
+            prev += curr.percent;
+            return prev;
+          }, 0);
 
-        const passed = videos.reduce((prev, curr) => {
-          prev += curr.percent;
-          return prev;
-        }, 0);
-
-        const pct = parseInt((passed / lessonTotal) * 100);
-        background = `linear-gradient(to top, #46da9c 0, #46da9c ${pct}%, white ${pct}%, white 100%)`;
+          const pct = parseInt((passed / lessonTotal) * 100);
+          background = `linear-gradient(to top, #46da9c 0, #46da9c ${pct}%, white ${pct}%, white 100%)`;
+        }
       } catch (ex) {}
 
       var lessonDiv = currModule.querySelector(`[lesson-id='${lesson.id}']`);
