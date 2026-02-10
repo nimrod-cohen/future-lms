@@ -472,7 +472,9 @@ class Admin {
         'course_duration' => $_POST["course_duration"] ?? '',
         'short_description' => $_POST["short_description"] ?? '',
         'what_you_learn' => $_POST["what_you_learn"] ?? '',
-        'color' => $_POST["color"] ?? '#aabbcc'
+        'color' => $_POST["color"] ?? '#aabbcc',
+        'full_price' => $_POST["full_price"] ?? '',
+        'discount_price' => $_POST["discount_price"] ?? ''
       ];
       
       foreach ($meta_fields as $key => $value) {

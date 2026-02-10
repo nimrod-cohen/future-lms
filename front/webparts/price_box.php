@@ -2,11 +2,12 @@
   use FutureLMS\classes\Settings;
 
   $fmt = $course->get_formatter();
-  $full_price = 100;  //get from commerce plugin
-  $currency = Settings::get('store_currency'); 
+  $pricing = apply_filters('future-lms/course_price', null, $course->ID);
+  $full_price = $pricing['full_price'] ?? 0;
+  $discount_price = $pricing['discount_price'] ?? null;
+  $currency = Settings::get('store_currency');
   $full_price_txt = $fmt->formatCurrency($full_price, $currency);
 
-  $discount_price = 90; //get from commerce plugin
   if(!empty($discount_price)) {
     $discount_price = floatval($discount_price);
   }

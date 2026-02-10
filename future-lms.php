@@ -104,6 +104,16 @@ class FutureLMS {
       $tree = Course::get_courses_tree([$courseId]);
       return ProgressManager::getCourseProgress($studentId, $courseId, $tree);
     }, 10, 3);
+
+    // Get course price
+    add_filter('future-lms/course_price', function ($price, $courseId) {
+      $course = new Course($courseId);
+      $discount = $course->field('discount_price');
+      return [
+        'full_price' => floatval($course->field('full_price')),
+        'discount_price' => !empty($discount) ? floatval($discount) : null,
+      ];
+    }, 10, 2);
   }
 
   function future_lms_load_textdomain() {

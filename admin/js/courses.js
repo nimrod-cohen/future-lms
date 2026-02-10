@@ -194,13 +194,13 @@ class CoursesTab {
                   openModules.indexOf(mid) !== -1 ? '' : 'closed'
                 }" data-module-id='${mid}'>
                     <span class='module-order ${module.intro_module ? 'intro' : ''}'>${
-                  module.intro_module ? 'In' : idx + 1 - introModules
-                }</span>
+                      module.intro_module ? 'In' : idx + 1 - introModules
+                    }</span>
                     <span class='module-name ${module.enabled === true ? '' : 'disabled'}'>${
-                  module.count_progress
-                    ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
-                    : ''
-                } ${module.name}</span>
+                      module.count_progress
+                        ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
+                        : ''
+                    } ${module.name}</span>
                     <span class='module-actions action-bar'>
                       <i class="edit icon blue actionable" data-action='edit-module'></i>
                       ${
@@ -227,12 +227,12 @@ class CoursesTab {
                         return `<div class='module-lesson' data-lesson-id='${lessonId}'>
                           <span class='lesson-order'>${idx2 + 1}</span>
                           <span class='lesson-name ${lesson.enabled === true ? '' : 'disabled'}'>${lesson.name} ${
-                          vidoes.length
-                            ? `<i class='play circle outline icon green jsutils-popover' data-content='${vidoes.join(
-                                ','
-                              )}'></i>`
-                            : ''
-                        }</span>
+                            vidoes.length
+                              ? `<i class='play circle outline icon green jsutils-popover' data-content='${vidoes.join(
+                                  ','
+                                )}'></i>`
+                              : ''
+                          }</span>
                           <span class='lesson-actions action-bar'>
                             <i class="edit icon blue actionable" data-action='edit-lesson'></i>
                             ${
@@ -638,8 +638,18 @@ class CoursesTab {
         <small class='desc' style='font-size:0.8rem;'>Please enter each point on a new line.</small>
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Tags (comma separated)</label>
-        <input type='text' name='course_tags' value='${course?.tags || ''}' />
+        <label class='slideout-form-line-title'>Full Price</label>
+        <input type='number' name='course_full_price' value='${course?.full_price || ''}' min='0' step='1' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Discount Price</label>
+        <input type='number' name='course_discount_price' value='${course?.discount_price || ''}' min='0' step='1' />
+        <small class='desc' style='font-size:0.8rem;'>Leave empty for no discount</small>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Tags</label>
+        <input type='hidden' name='course_tags' value='${course?.tags || ''}' />
+        <div id='course-tag-cloud'></div>
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Featured Image</label>
@@ -688,7 +698,9 @@ class CoursesTab {
           tags: encodeURIComponent(vals.course_tags || ''),
           color: vals.course_color || '#aabbcc',
           course_image: vals.course_image || 0,
-          default_class: vals.course_default_class
+          default_class: vals.course_default_class,
+          full_price: vals.course_full_price || '',
+          discount_price: vals.course_discount_price || ''
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
@@ -727,8 +739,38 @@ class CoursesTab {
       .querySelector('.slideout-panel input[name="course_color"]')
       ?.addEventListener('click', e => e.stopPropagation(), true);
 
+    // init tag cloud
+    this.initTagCloud();
+
     // init featured image picker
     this.initFeaturedImagePicker();
+  };
+
+  initTagCloud = () => {
+    const container = document.querySelector('#course-tag-cloud');
+    const hidden = document.querySelector('.slideout-panel input[name="course_tags"]');
+    if (!container || !hidden) return;
+
+    const initial = hidden.value
+      ? hidden.value
+          .split(',')
+          .map(t => t.trim())
+          .filter(Boolean)
+      : [];
+
+    new TagCloud({
+      container,
+      initialValues: initial,
+      callback: tags => {
+        hidden.value = tags.join(',');
+      },
+      options: {
+        suggestions: [
+          { label: 'featured', description: 'highlights this course in the store' },
+          { label: 'hidden', description: 'hides this course from the store' }
+        ]
+      }
+    });
   };
 
   initFeaturedImagePicker = () => {
