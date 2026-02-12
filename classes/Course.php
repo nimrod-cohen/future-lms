@@ -46,9 +46,13 @@ class Course extends BaseObject {
     global $wpdb;
 
     $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
-    pmurl.meta_value AS course_page_url
+    pmurl.meta_value AS course_page_url,
+    pmdur.meta_value AS total_duration,
+    pmcdur.meta_value AS counted_duration
     FROM ".$wpdb->prefix."posts pcourse
     LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmurl ON pmurl.post_id = pcourse.id AND pmurl.meta_key = 'course_page_url'
+    LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmdur ON pmdur.post_id = pcourse.id AND pmdur.meta_key = 'course_total_duration'
+    LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmcdur ON pmcdur.post_id = pcourse.id AND pmcdur.meta_key = 'course_counted_duration'
     WHERE pcourse.post_type = 'course'
     AND pcourse.post_status <> 'trash' ";
 
@@ -80,6 +84,8 @@ class Course extends BaseObject {
       $result[$course_id]["enabled"] = $row["post_status"] == "publish";
       $result[$course_id]["name"] = $row["course_name"];
       $result[$course_id]["course_page_url"] = empty($row["course_page_url"]) ? get_permalink($course_id) : $row["course_page_url"];
+      $result[$course_id]["total_duration"] = intval($row["total_duration"]);
+      $result[$course_id]["counted_duration"] = intval($row["counted_duration"]);
       $result[$course_id]["course_image"] = !empty($course_meta["_thumbnail_id"]) ? wp_get_attachment_image_url($course_meta["_thumbnail_id"], 'full') : null;
 
       $course = &$result[$course_id];
@@ -122,7 +128,8 @@ class Course extends BaseObject {
         $module["lessons"] = [];
 
         $sql = "SELECT plesson.post_title AS 'lesson_name', plesson.ID AS lesson_id, pm2.meta_value AS video_list,
-          pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser, pm5.meta_value AS lesson_duration
+          pm3.meta_value AS lesson_number, plesson.post_status, pm4.meta_value AS teaser,
+          pm5.meta_value AS lesson_duration
           FROM ".$wpdb->prefix."posts plesson
           INNER JOIN ".$wpdb->prefix."postmeta pm1 ON pm1.post_id = plesson.id AND pm1.meta_key = 'module' AND pm1.meta_value = $moduleId
           LEFT OUTER JOIN ".$wpdb->prefix."postmeta pm2 ON pm2.post_id = plesson.id AND pm2.meta_key = 'video_list'
@@ -147,7 +154,7 @@ class Course extends BaseObject {
           $lesson["order"] = $lessonRow["lesson_number"];
           $lesson["enabled"] = $lessonRow["post_status"] == "publish";
           $lesson["teaser"] = $lessonRow["teaser"] ?? '';
-          $lesson["duration"] = $lessonRow["lesson_duration"];
+          $lesson["duration"] = intval($lessonRow["lesson_duration"]);
 
           $videos = $lessonRow["video_list"];
           $videos = json_decode(empty($videos) ? "[]" : $videos, true);

@@ -7,6 +7,7 @@ class CoursesTab {
     this.state.listen('courses', this.render);
 
     this.getCourses();
+    this.loadVimeoSDK();
 
     JSUtils.addGlobalEventListener('#courses-list', '.course .course-module .module-name', 'click', this.openModule);
     JSUtils.addGlobalEventListener('#courses-list', '.course .course-name', 'click', this.openCourse);
@@ -66,6 +67,17 @@ class CoursesTab {
 
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', e =>
       this.editLesson(e)
+    );
+
+    JSUtils.addGlobalEventListener('#courses-list', '.refresh-durations', 'click', e => {
+      this.refreshLessonDuration(e.target, true);
+    });
+
+    JSUtils.addGlobalEventListener(
+      '#courses-list',
+      ".actionable[data-action='refresh-course-durations']",
+      'click',
+      this.refreshAllLessonDurations
     );
 
     document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
@@ -161,11 +173,16 @@ class CoursesTab {
           return course.modules[a].order - course.modules[b].order;
         });
 
+        const formattedTotalDuration = course.total_duration ? this.formatDuration(course.total_duration) : '';
+        const formattedCountedDuration = course.counted_duration ? this.formatDuration(course.counted_duration) : '';
+
         return `<div class="course ${openCourses.indexOf(cid) !== -1 ? '' : 'closed'}" data-course-id="${cid}">
           <div class="course-header">
             <span class='course-id'>${cid}</span>
             <h3 class='course-name ${course.enabled === true ? '' : 'disabled'}'>${course.name}</h3>
+            <strong id="course-duration-${cid}">${formattedTotalDuration ? ` - (Total: ${formattedTotalDuration} / Counted: ${formattedCountedDuration || '0m'})` : ''}</strong>
             <span class='course-actions action-bar'>
+              <i class="sync alternate icon orange actionable" data-action="refresh-course-durations" title="Recalculate Total Duration" data-course-id="${cid}"></i>
               <i class="edit icon blue actionable" data-action='edit-course'></i>
               ${
                 course.enabled === true
@@ -194,13 +211,13 @@ class CoursesTab {
                   openModules.indexOf(mid) !== -1 ? '' : 'closed'
                 }" data-module-id='${mid}'>
                     <span class='module-order ${module.intro_module ? 'intro' : ''}'>${
-                      module.intro_module ? 'In' : idx + 1 - introModules
-                    }</span>
+                  module.intro_module ? 'In' : idx + 1 - introModules
+                }</span>
                     <span class='module-name ${module.enabled === true ? '' : 'disabled'}'>${
-                      module.count_progress
-                        ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
-                        : ''
-                    } ${module.name}</span>
+                  module.count_progress
+                    ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
+                    : ''
+                } ${module.name}</span>
                     <span class='module-actions action-bar'>
                       <i class="edit icon blue actionable" data-action='edit-module'></i>
                       ${
@@ -223,16 +240,19 @@ class CoursesTab {
                         if (typeof lesson !== 'object') return '';
                         //copy the videos array to a new array, and remove the "text" instance from the array
                         const vidoes = lesson.videos.filter(v => v !== 'text');
+                        const videoIds = vidoes.join(',');
+                        const formattedLessonDuration = lesson.duration ? this.formatDuration(lesson.duration) : '';
 
-                        return `<div class='module-lesson' data-lesson-id='${lessonId}'>
+                        return `<div class='module-lesson' data-lesson-id='${lessonId}' data-course-id='${cid}'>
                           <span class='lesson-order'>${idx2 + 1}</span>
-                          <span class='lesson-name ${lesson.enabled === true ? '' : 'disabled'}'>${lesson.name} ${
-                            vidoes.length
-                              ? `<i class='play circle outline icon green jsutils-popover' data-content='${vidoes.join(
-                                  ','
-                                )}'></i>`
+                          <span class='lesson-name ${lesson.enabled === true ? '' : 'disabled'}'>${lesson.name}
+                            ${formattedLessonDuration ? ` - <strong class="video-duration">(${formattedLessonDuration})</strong>` : ''}
+                            ${vidoes.length
+                              ? `<i class='play circle outline icon green tooltip' data-content='${videoIds}'></i>
+                                 <i class='sync alternate icon blue refresh-durations' title='Refresh durations' data-content='${videoIds}'></i>`
                               : ''
-                          }</span>
+                            }
+                          </span>
                           <span class='lesson-actions action-bar'>
                             <i class="edit icon blue actionable" data-action='edit-lesson'></i>
                             ${
@@ -255,9 +275,7 @@ class CoursesTab {
       })
       .join('');
 
-    document.querySelectorAll('.jsutils-popover').forEach(el => {
-      new Popover(el);
-    });
+    //popover is a global singleton from wpjsutils, no need to instantiate
   };
 
   editModule = (e, moduleId) => {
@@ -638,18 +656,8 @@ class CoursesTab {
         <small class='desc' style='font-size:0.8rem;'>Please enter each point on a new line.</small>
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Full Price</label>
-        <input type='number' name='course_full_price' value='${course?.full_price || ''}' min='0' step='1' />
-      </div>
-      <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Discount Price</label>
-        <input type='number' name='course_discount_price' value='${course?.discount_price || ''}' min='0' step='1' />
-        <small class='desc' style='font-size:0.8rem;'>Leave empty for no discount</small>
-      </div>
-      <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Tags</label>
-        <input type='hidden' name='course_tags' value='${course?.tags || ''}' />
-        <div id='course-tag-cloud'></div>
+        <label class='slideout-form-line-title'>Tags (comma separated)</label>
+        <input type='text' name='course_tags' value='${course?.tags || ''}' />
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Featured Image</label>
@@ -698,9 +706,7 @@ class CoursesTab {
           tags: encodeURIComponent(vals.course_tags || ''),
           color: vals.course_color || '#aabbcc',
           course_image: vals.course_image || 0,
-          default_class: vals.course_default_class,
-          full_price: vals.course_full_price || '',
-          discount_price: vals.course_discount_price || ''
+          default_class: vals.course_default_class
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
@@ -739,38 +745,164 @@ class CoursesTab {
       .querySelector('.slideout-panel input[name="course_color"]')
       ?.addEventListener('click', e => e.stopPropagation(), true);
 
-    // init tag cloud
-    this.initTagCloud();
-
     // init featured image picker
     this.initFeaturedImagePicker();
   };
 
-  initTagCloud = () => {
-    const container = document.querySelector('#course-tag-cloud');
-    const hidden = document.querySelector('.slideout-panel input[name="course_tags"]');
-    if (!container || !hidden) return;
+  refreshLessonDuration = async (icon, reloadTable = false) => {
+    const lessonEl = icon.closest('.module-lesson');
+    const lessonId = lessonEl.dataset.lessonId;
+    const videoIds =
+      icon.dataset.content
+        ?.split(',')
+        .map(id => id.trim())
+        .filter(Boolean) || [];
 
-    const initial = hidden.value
-      ? hidden.value
-          .split(',')
-          .map(t => t.trim())
-          .filter(Boolean)
-      : [];
+    if (icon.classList.contains('loading')) return;
 
-    new TagCloud({
-      container,
-      initialValues: initial,
-      callback: tags => {
-        hidden.value = tags.join(',');
-      },
-      options: {
-        suggestions: [
-          { label: 'featured', description: 'highlights this course in the store' },
-          { label: 'hidden', description: 'hides this course from the store' }
-        ]
+    console.log(`[Duration] Lesson ${lessonId} — videoIds:`, videoIds);
+    console.log(`[Duration] Vimeo SDK loaded:`, !!window.Vimeo);
+    icon.classList.add('loading', 'grey');
+
+    try {
+      if (videoIds.length === 0) {
+        console.log(`[Duration] No videos for lesson ${lessonId}, clearing duration`);
+        await JSUtils.fetch(__futurelms.ajax_url, {
+          action: 'set_lesson_duration',
+          lesson_id: lessonId
+        });
+      } else {
+        for (const videoId of videoIds) {
+          console.log(`[Duration] Creating iframe for video ${videoId}`);
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://player.vimeo.com/video/${videoId}?background=1&autoplay=1&muted=1`;
+          Object.assign(iframe.style, { width: '0', height: '0', border: '0' });
+          document.body.appendChild(iframe);
+
+          let duration = 0;
+          try {
+            const player = new Vimeo.Player(iframe);
+            console.log(`[Duration] Vimeo player created for ${videoId}, fetching duration...`);
+            duration = await player.getDuration();
+            console.log(`[Duration] Video ${videoId} duration: ${duration}s (${Math.floor(duration / 60)}m ${Math.floor(duration % 60)}s)`);
+          } catch (err) {
+            console.warn(`[Duration] Skipping video ${videoId} (private or not found)`, err);
+          } finally {
+            console.log(`[Duration] Saving video ${videoId} duration=${Math.floor(duration)} to lesson ${lessonId}`);
+            const saveResult = await JSUtils.fetch(__futurelms.ajax_url, {
+              action: 'set_video_duration',
+              lesson_id: lessonId,
+              video_id: videoId,
+              duration: Math.floor(duration)
+            });
+            console.log(`[Duration] Save result for ${videoId}:`, saveResult);
+            iframe.remove();
+          }
+        }
       }
-    });
+
+      if (reloadTable) {
+        console.log(`[Duration] Recalculating course duration for course ${lessonEl.dataset.courseId}`);
+        const result = await JSUtils.fetch(__futurelms.ajax_url, {
+          action: 'set_course_duration',
+          course_id: lessonEl.dataset.courseId
+        });
+        console.log(`[Duration] Course duration result:`, result);
+        if (!result.error) {
+          this.getCourses();
+        }
+      }
+    } catch (e) {
+      console.error('[Duration] Failed updating durations', e);
+    } finally {
+      icon.classList.remove('loading', 'grey');
+      icon.classList.add('check', 'blue');
+      icon.title = 'Durations fetched';
+      console.log(`[Duration] Done for lesson ${lessonId}`);
+    }
+  };
+
+  refreshAllLessonDurations = async e => {
+    const icon = e.target.closest('[data-action="refresh-course-durations"]');
+    if (!icon) return;
+
+    icon.classList.add('loading');
+    const courseId = icon.dataset.courseId;
+    const courseEl = icon.closest('.course');
+
+    if (!courseEl) return;
+
+    const icons = courseEl.querySelectorAll('.refresh-durations');
+    const total = icons.length;
+
+    let current = 0;
+    this.updateProgressBar(courseEl, courseId, current, total);
+
+    for (const refreshIcon of icons) {
+      await this.refreshLessonDuration(refreshIcon);
+      current++;
+      this.updateProgressBar(courseEl, courseId, current, total);
+    }
+
+    await this.refreshCourseDuration(courseId);
+    icon.classList.remove('loading');
+  };
+
+  refreshCourseDuration = async courseId => {
+    try {
+      const result = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'set_course_duration',
+        course_id: courseId
+      });
+      if (!result.error) {
+        this.getCourses();
+      }
+    } catch (error) {
+      console.error('AJAX error:', error);
+    }
+  };
+
+  formatDuration = seconds => {
+    seconds = Math.max(0, Math.floor(seconds));
+
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    const hh = hrs.toString().padStart(2, '0');
+    const mm = mins.toString().padStart(2, '0');
+    const ss = secs.toString().padStart(2, '0');
+
+    return `${hh}:${mm}:${ss}`;
+  };
+
+  updateProgressBar = (courseEl, courseId, current, total) => {
+    const progressContainer = courseEl.querySelector(`#course-duration-${courseId}`);
+    if (!progressContainer) return;
+
+    if (!progressContainer.querySelector('.progress-bar')) {
+      progressContainer.innerHTML = `
+      <div class="progress-text">Refreshing 0/${total}</div>
+      <div class="progress-bar-container" style="background:#eee; height: 8px; width: 100%; border-radius: 4px; margin-top: 4px;">
+        <div class="progress-bar" style="background: #0073aa; width: 0%; height: 100%; border-radius: 4px;"></div>
+      </div>`;
+    }
+
+    const progressText = progressContainer.querySelector('.progress-text');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+
+    const percent = Math.round((current / total) * 100);
+    progressText.textContent =
+      current === total ? `All ${total} lessons refreshed` : `Refreshing ${current}/${total}`;
+    progressBar.style.width = `${percent}%`;
+  };
+
+  loadVimeoSDK = () => {
+    if (!window.Vimeo) {
+      const tag = document.createElement('script');
+      tag.src = 'https://player.vimeo.com/api/player.js';
+      document.head.appendChild(tag);
+    }
   };
 
   initFeaturedImagePicker = () => {

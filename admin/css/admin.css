@@ -318,6 +318,10 @@ div.error {
                       font-weight: bold;
                     }
 
+                    .refresh-durations {
+                      display: none;
+                    }
+
                     &:hover {
                       .lesson-actions {
                         display: grid;
@@ -330,6 +334,10 @@ div.error {
                           bottom: unset;
                           position: relative;
                         }
+                      }
+
+                      .refresh-durations {
+                        display: inline;
                       }
                     }
 
