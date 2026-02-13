@@ -111,6 +111,36 @@ class Classroom {
     let sidebar = coursePage.querySelector('.school-sidebar');
     this.state.set('sidebar', sidebar);
 
+    const autoAdvance = localStorage.getItem('auto_advance_videos') === 'true';
+    this.state.set('auto-advance', autoAdvance);
+    const autoplayIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon><line x1="19" y1="3" x2="19" y2="21"></line></svg>`;
+    const exitIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`;
+
+    new Dropdown(
+      '.course-options',
+      [
+        {
+          text: () => {
+            let autoAdvance = this.state.get('auto-advance');
+            return `${autoplayIcon}${autoAdvance ? '✔️ ' : ''}ניגון סרטונים אוטומטי`;
+          },
+          action: () => {
+            let autoAdvance = this.state.get('auto-advance');
+            this.state.set('auto-advance', !autoAdvance);
+            localStorage.setItem('auto_advance_videos', !autoAdvance);
+            return false;
+          }
+        },
+        {
+          text: () => `${exitIcon}חזרה לאיזור תלמידים`,
+          action: () => {
+            document.location.href = '/lobby';
+          }
+        }
+      ],
+      { class: 'rtl' }
+    );
+
     let navs = document.querySelectorAll('.lesson-materials-nav li');
     navs.forEach(nav => {
       if (nav.classList.contains('toggle-videos')) return;
@@ -133,16 +163,6 @@ class Classroom {
       this.promoteVideo(-1);
     });
 
-    const exitBtn = coursePage.querySelector('.exit-to-lobby');
-    exitBtn.addEventListener('click', e => {
-      e.preventDefault();
-      document.location.href = '/lobby';
-    });
-
-    //load all popovers
-    document.querySelectorAll('.show-popover').forEach(el => {
-      new Popover(el);
-    });
 
     //listen to student note changes
     JSUtils.addGlobalEventListener(coursePage, '.student-notes', 'input', e => {
@@ -355,7 +375,13 @@ class Classroom {
         this.reportProgress(lesson, lesson.videos[current], Math.floor(data.percent * 100), data.seconds);
       };
       player.on('timeupdate', vimeoPlayerEvent);
-      player.on('ended', vimeoPlayerEvent);
+      player.on('ended', async data => {
+        await vimeoPlayerEvent(data);
+        const isAutoAdvance = this.state.get('auto-advance');
+        if (isAutoAdvance) {
+          this.autoAdvanceToNextVideo();
+        }
+      });
     } else {
       this.reportProgress(lesson, { video_id: 'text' }, 100, 0);
 
@@ -409,6 +435,34 @@ class Classroom {
 
     progress[this.state.get('courseId')] = lessonId;
     localStorage.setItem('course_progress', JSON.stringify(progress));
+  };
+
+  autoAdvanceToNextVideo = () => {
+    const coursePage = this.state.get('coursePage');
+    const vc = coursePage.querySelector('.video-container');
+    const lesson = this.state.get('lesson');
+    const currentVideo = this.state.get('curr-video');
+
+    if (!lesson.videos?.length) return;
+
+    vc.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 300px; font-size: 18px; background: black; color:white;">טוען את הסרטון הבא...</div>`;
+
+    setTimeout(() => {
+      // Check if there's a next video in current lesson
+      if (lesson.videos?.length && currentVideo < lesson.videos.length - 1) {
+        this.state.set('curr-video', currentVideo + 1);
+        return;
+      }
+
+      // Move to next lesson
+      const courseData = this.state.get('course-data');
+      const currentLessonIndex = courseData.findIndex(l => l.id === lesson.id);
+
+      if (currentLessonIndex !== -1 && currentLessonIndex < courseData.length - 1) {
+        const nextLesson = courseData[currentLessonIndex + 1];
+        this.state.set('lesson', nextLesson);
+      }
+    }, 3000);
   };
 
   showLessonTab = tab => {

@@ -75,11 +75,15 @@ body.school {
         gap: 10px;
         align-items: center;
 
-        > label {
+        > label, > .course-name {
           flex-grow: 1;
           font-size: 1.2rem;
         }
-        .exit-to-lobby {
+        .course-duration {
+          font-size: 0.8rem;
+          font-weight: 100;
+        }
+        .course-options {
           width: 20px;
           height: 20px;
           cursor: pointer;
