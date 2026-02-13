@@ -482,10 +482,7 @@ class Classroom {
         content = lesson.homework;
         break;
       case 'student-notes':
-        content = `<div class="notebook-container">
-            <div class="notebook-lines"></div>
-            <div class="student-notes" contenteditable="true" spellcheck="false">${lesson?.studentNotes || ''}</div>
-          </div>`;
+        content = `<div class="notebook-container"><div class="notebook-lines"></div><div class="student-notes" contenteditable="true" spellcheck="false">${lesson?.studentNotes || ''}</div></div>`;
         break;
     }
 
