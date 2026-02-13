@@ -371,6 +371,15 @@ class Classroom {
       let iframe = document.querySelector(`#${iframeId}`);
       let player = new Vimeo.Player(iframe);
       this.state.set('vimeo-player', player);
+
+      const savedProgress = this.state.get('student-progress')?.course_progress?.[lesson.id]?.[lesson.videos[current].video_id];
+      if (this.state.get('auto-advancing')) {
+        this.state.set('auto-advancing', false);
+        player.ready().then(() => player.play());
+      } else if (savedProgress?.seconds > 0 && savedProgress?.percent < 100) {
+        player.ready().then(() => player.setCurrentTime(savedProgress.seconds));
+      }
+
       const vimeoPlayerEvent = async data => {
         this.reportProgress(lesson, lesson.videos[current], Math.floor(data.percent * 100), data.seconds);
       };
@@ -448,6 +457,8 @@ class Classroom {
     vc.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 300px; font-size: 18px; background: black; color:white;">טוען את הסרטון הבא...</div>`;
 
     setTimeout(() => {
+      this.state.set('auto-advancing', true);
+
       // Check if there's a next video in current lesson
       if (lesson.videos?.length && currentVideo < lesson.videos.length - 1) {
         this.state.set('curr-video', currentVideo + 1);
