@@ -48,3 +48,60 @@ msgstr "החבא/הצג וידאו"
 
 msgid "Choose lesson"
 msgstr "בחירת שיעור"
+
+msgid "Download diploma"
+msgstr "הורד תעודה"
+
+msgid "Certificate of Completion"
+msgstr "תעודת סיום"
+
+msgid "Certificate"
+msgstr "תעודה"
+
+msgid "%1$s has successfully completed the course %2$s"
+msgstr "%1$s סיים/ה בהצלחה את הקורס %2$s"
+
+msgid "has successfully completed the course"
+msgstr "סיים/ה בהצלחה את הקורס"
+
+msgid "This certifies that"
+msgstr "וזאת לתעודה כי"
+
+msgid "has participated and successfully completed"
+msgstr "השתתף/ה וסיים/ה בהצלחה"
+
+msgid "comprising %s hours of study"
+msgstr "בהיקף של %s שעות לימוד"
+
+msgid "Date: %s"
+msgstr "תאריך: %s"
+
+msgid "Date"
+msgstr "תאריך"
+
+msgid "Enable Diploma"
+msgstr "הפעל תעודה"
+
+msgid "Diploma not available"
+msgstr "תעודה לא זמינה"
+
+msgid "Not eligible for diploma"
+msgstr "אינך זכאי לתעודה"
+
+msgid "Invalid request"
+msgstr "בקשה לא תקינה"
+
+msgid "Access denied"
+msgstr "גישה נדחתה"
+
+msgid "Lecturer Name"
+msgstr "שם המרצה"
+
+msgid "Lecturer Signature"
+msgstr "חתימת המרצה"
+
+msgid "Select Image"
+msgstr "בחר תמונה"
+
+msgid "Remove"
+msgstr "הסר"

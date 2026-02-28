@@ -87,6 +87,7 @@ class Course extends BaseObject {
       $result[$course_id]["total_duration"] = intval($row["total_duration"]);
       $result[$course_id]["counted_duration"] = intval($row["counted_duration"]);
       $result[$course_id]["course_image"] = !empty($course_meta["_thumbnail_id"]) ? wp_get_attachment_image_url($course_meta["_thumbnail_id"], 'full') : null;
+      $result[$course_id]["lecturer_signature_url"] = !empty($course_meta["lecturer_signature"]) ? wp_get_attachment_image_url($course_meta["lecturer_signature"], 'medium') : null;
 
       $course = &$result[$course_id];
       $course["modules"] = [];

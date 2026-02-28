@@ -35,6 +35,7 @@ namespace FutureLMS;
 use Exception;
 use FutureLMS\classes\BaseObject;
 use FutureLMS\classes\Course;
+use FutureLMS\classes\Diploma;
 use FutureLMS\classes\Lesson;
 use FutureLMS\classes\ProgressManager;
 use FutureLMS\classes\SchoolClass;
@@ -45,6 +46,8 @@ use WP_User_Query;
 
 class FutureLMS {
   function __construct() {
+    require_once __DIR__ . '/vendor/autoload.php';
+
     VersionManager::install_version();
 
     add_action('init', [$this, 'init_hooks']);
@@ -189,6 +192,19 @@ class FutureLMS {
 
     // Initialize ProgressManager (registers AJAX handlers)
     ProgressManager::get_instance();
+
+    // Diploma clean URL: /school/diploma/{course_id}
+    add_rewrite_rule(
+      '^school/diploma/([0-9]+)/?$',
+      'index.php?flms_diploma=1&flms_course_id=$matches[1]',
+      'top'
+    );
+    add_filter('query_vars', function ($vars) {
+      $vars[] = 'flms_diploma';
+      $vars[] = 'flms_course_id';
+      return $vars;
+    });
+    add_action('template_redirect', [$this, 'handleDiplomaRoute']);
   }
 
   public function restrict_school_access() {
@@ -199,6 +215,82 @@ class FutureLMS {
         wp_redirect(wp_login_url());
       }
     }
+  }
+
+  public function handleDiplomaRoute() {
+    if (!get_query_var('flms_diploma')) {
+      return;
+    }
+    $courseId = intval(get_query_var('flms_course_id'));
+
+    // Temporary debug: save PDF to file and show what's going on
+    if (isset($_GET['debug_diploma'])) {
+      while (ob_get_level()) { ob_end_clean(); }
+      header('Content-Type: text/html; charset=utf-8');
+      echo '<pre>';
+      try {
+        $studentId = get_current_user_id();
+        echo "Student: $studentId, Course: $courseId\n";
+        echo "OB levels before generate: " . ob_get_level() . "\n";
+        echo "Headers sent: " . (headers_sent($f, $l) ? "YES $f:$l" : "NO") . "\n";
+
+        $data = Diploma::getDefaultData($studentId, $courseId);
+        $data = apply_filters('future-lms/diploma/data', $data, $studentId, $courseId);
+        echo "Data keys: " . implode(', ', array_keys($data)) . "\n";
+        echo "Logo URL length: " . strlen($data['logo_url']) . "\n";
+
+        $html = Diploma::buildHtmlPublic($data, $studentId, $courseId);
+        echo "HTML length: " . strlen($html) . "\n";
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', false);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isFontSubsettingEnabled', true);
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+        $pdf = $dompdf->output();
+        echo "PDF size: " . strlen($pdf) . " bytes\n";
+        echo "PDF starts with: " . substr($pdf, 0, 20) . "\n";
+        echo "\nSUCCESS\n";
+      } catch (\Throwable $e) {
+        echo "ERROR: " . $e->getMessage() . "\n";
+        echo $e->getFile() . ":" . $e->getLine() . "\n";
+        echo $e->getTraceAsString() . "\n";
+      }
+      echo '</pre>';
+      exit;
+    }
+
+    $this->downloadDiploma($courseId);
+  }
+
+  public function downloadDiploma(int $courseId = 0) {
+    if (!$courseId) {
+      $courseId = intval($_REQUEST['course_id'] ?? 0);
+    }
+
+    if (!$courseId || !is_user_logged_in()) {
+      wp_die(__('Invalid request', 'future-lms'), 403);
+    }
+
+    $studentId = get_current_user_id();
+    $student = new Student($studentId);
+
+    if (!$student->is_attending_course($courseId)) {
+      wp_die(__('Access denied', 'future-lms'), 403);
+    }
+
+    if (!Diploma::isEnabled($courseId)) {
+      wp_die(__('Diploma not available', 'future-lms'), 404);
+    }
+
+    if (!Diploma::isEligible($studentId, $courseId)) {
+      wp_die(__('Not eligible for diploma', 'future-lms'), 403);
+    }
+
+    Diploma::generate($studentId, $courseId);
   }
 
   public function addLessonsColumns($columns) {

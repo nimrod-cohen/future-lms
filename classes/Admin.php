@@ -469,12 +469,14 @@ class Admin {
         'default_class' => $default_class,
         'course_code' => $_POST["course_code"] ?? '',
         'short_name' => $_POST["short_name"] ?? '',
-        'course_duration' => $_POST["course_duration"] ?? '',
         'short_description' => $_POST["short_description"] ?? '',
         'what_you_learn' => $_POST["what_you_learn"] ?? '',
         'color' => $_POST["color"] ?? '#aabbcc',
         'full_price' => $_POST["full_price"] ?? '',
-        'discount_price' => $_POST["discount_price"] ?? ''
+        'discount_price' => $_POST["discount_price"] ?? '',
+        'diploma_enabled' => $_POST["diploma_enabled"] ?? '0',
+        'lecturer_name' => $_POST["lecturer_name"] ?? '',
+        'lecturer_signature' => $_POST["lecturer_signature"] ?? ''
       ];
       
       foreach ($meta_fields as $key => $value) {
