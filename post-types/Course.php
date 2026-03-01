@@ -139,6 +139,11 @@ function render_course_meta_box($post)
                 <input type="color" name="color" value="<?= esc_attr($meta['color'][0] ?? '#aabbcc') ?>">
             </span>
         </p>
+        <!-- Initial Student Count -->
+        <p>
+            <label><strong>Initial Student Count:</strong></label>
+            <input type="number" name="initial_student_count" min="0" value="<?= esc_attr($meta['initial_student_count'][0] ?? '0') ?>">
+        </p>
         <!-- Enable Diploma -->
         <p>
             <label><strong><?php _e('Enable Diploma', 'future-lms'); ?>:</strong></label>
@@ -206,6 +211,7 @@ add_action('save_post_course', function ($post_id, $post) {
         'what_you_learn',
         'tags',
         'color',
+        'initial_student_count',
         'lecturer_name',
         'lecturer_signature'
     ];

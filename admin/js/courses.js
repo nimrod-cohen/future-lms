@@ -692,6 +692,10 @@ class CoursesTab {
         </select>
       </div>
       <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Initial Student Count</label>
+        <input type='number' name='initial_student_count' min='0' value='${course?.initial_student_count || '0'}' />
+      </div>
+      <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Enable Diploma</label>
         <input type='checkbox' name='diploma_enabled' value='1' ${course?.diploma_enabled === '1' ? 'checked' : ''} />
       </div>
@@ -734,6 +738,7 @@ class CoursesTab {
           color: vals.course_color || '#aabbcc',
           course_image: vals.course_image || 0,
           default_class: vals.course_default_class,
+          initial_student_count: vals.initial_student_count || '0',
           diploma_enabled: vals.diploma_enabled ? '1' : '0',
           lecturer_name: vals.lecturer_name || '',
           lecturer_signature: vals.lecturer_signature || 0

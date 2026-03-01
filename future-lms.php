@@ -108,6 +108,25 @@ class FutureLMS {
       return ProgressManager::getCourseProgress($studentId, $courseId, $tree);
     }, 10, 3);
 
+    // Get student count for a course (or total)
+    add_filter('future-lms/student_count', function ($count, $courseId) {
+      global $wpdb;
+      $prefix = self::TABLE_PREFIX();
+
+      if ($courseId) {
+        $db_count = (int) $wpdb->get_var($wpdb->prepare(
+          "SELECT COUNT(DISTINCT cs.student_id)
+           FROM {$prefix}class_to_students cs
+           INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = cs.class_id AND pm.meta_key = 'course' AND pm.meta_value = %d",
+          $courseId
+        ));
+        $initial = (int) get_post_meta($courseId, 'initial_student_count', true);
+        return $db_count + $initial;
+      }
+
+      return (int) $wpdb->get_var("SELECT COUNT(DISTINCT student_id) FROM {$prefix}class_to_students");
+    }, 10, 2);
+
     // Get course price
     add_filter('future-lms/course_price', function ($price, $courseId) {
       $course = new Course($courseId);

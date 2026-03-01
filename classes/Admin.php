@@ -474,6 +474,7 @@ class Admin {
         'color' => $_POST["color"] ?? '#aabbcc',
         'full_price' => $_POST["full_price"] ?? '',
         'discount_price' => $_POST["discount_price"] ?? '',
+        'initial_student_count' => $_POST["initial_student_count"] ?? '0',
         'diploma_enabled' => $_POST["diploma_enabled"] ?? '0',
         'lecturer_name' => $_POST["lecturer_name"] ?? '',
         'lecturer_signature' => $_POST["lecturer_signature"] ?? ''
