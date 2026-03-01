@@ -453,13 +453,15 @@ class Admin {
         //create new course, a course is a wp_post with post_type = course
         $courseId = wp_insert_post([
           'post_title' => $name,
+          'post_content' => wp_kses_post($_POST["post_content"] ?? ''),
           'post_status' => 'draft',
           'post_type' => 'course'
         ]);
       } else {
         wp_update_post([
           'ID' => $courseId,
-          'post_title' => $name
+          'post_title' => $name,
+          'post_content' => wp_kses_post($_POST["post_content"] ?? '')
         ]);
       }
 

@@ -46,6 +46,7 @@ class Course extends BaseObject {
     global $wpdb;
 
     $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
+    pcourse.post_content AS post_content,
     pmurl.meta_value AS course_page_url,
     pmdur.meta_value AS total_duration,
     pmcdur.meta_value AS counted_duration
@@ -83,6 +84,7 @@ class Course extends BaseObject {
       $result[$course_id]["ID"] = $course_id;
       $result[$course_id]["enabled"] = $row["post_status"] == "publish";
       $result[$course_id]["name"] = $row["course_name"];
+      $result[$course_id]["post_content"] = $row["post_content"];
       $result[$course_id]["course_page_url"] = empty($row["course_page_url"]) ? get_permalink($course_id) : $row["course_page_url"];
       $result[$course_id]["total_duration"] = intval($row["total_duration"]);
       $result[$course_id]["counted_duration"] = intval($row["counted_duration"]);
