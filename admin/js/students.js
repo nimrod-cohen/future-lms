@@ -186,8 +186,12 @@ class StudentsTab {
     e.stopPropagation();
     let step = this.state.get('register-current-step');
     if (this.validateStep(step)) {
-      step++;
-      this.state.set('register-current-step', step);
+      if (step === this.LAST_STEP) {
+        this.submitAddStudent();
+      } else {
+        step++;
+        this.state.set('register-current-step', step);
+      }
     }
   }
 
@@ -204,9 +208,11 @@ class StudentsTab {
     if (step === 1) {
       modal.querySelector('.button.prev').classList.add('disabled');
       modal.querySelector('.button.next').classList.remove('disabled');
+      modal.querySelector('.button.next').innerText = 'Next';
     } else if (step === this.LAST_STEP) {
       modal.querySelector('.button.prev').classList.remove('disabled');
-      modal.querySelector('.button.next').classList.add('disabled');
+      modal.querySelector('.button.next').classList.remove('disabled');
+      modal.querySelector('.button.next').innerText = 'Submit';
     } else {
       modal.querySelector('.button.prev').classList.remove('disabled');
       modal.querySelector('.button.next').classList.remove('disabled');
@@ -220,36 +226,41 @@ class StudentsTab {
       let steps = modal.querySelectorAll(':scope > .content');
       steps.forEach(stp => stp.classList.add('hidden'));
       modal.querySelector(`:scope > .content.step-${step}`).classList.remove('hidden');
+    } catch (ex) {
+      alert(ex.message);
+    }
+  }
 
-      if (step === this.LAST_STEP) {
-        let tab = COMMON.getTab(COMMON.TABS.STUDENTS);
+  submitAddStudent() {
+    try {
+      let modal = document.querySelector('#add-student-modal');
+      let tab = COMMON.getTab(COMMON.TABS.STUDENTS);
 
-        let userData = {};
+      let userData = {};
 
-        if (this.state.get('add-student-is-existing')) {
-          userData = {
-            id: modal.querySelector('.search.student').getAttribute('data-id'),
-            name: modal.querySelector('.search.student input.prompt').value
-          };
-        } else {
-          let email = modal.querySelector('.ui.input input[name=student-email]').value.trim();
-          email = COMMON.removeNonAsciiChars(email);
+      if (this.state.get('add-student-is-existing')) {
+        userData = {
+          id: modal.querySelector('.search.student').getAttribute('data-id'),
+          name: modal.querySelector('.search.student input.prompt').value
+        };
+      } else {
+        let email = modal.querySelector('.ui.input input[name=student-email]').value.trim();
+        email = COMMON.removeNonAsciiChars(email);
 
-          userData = {
-            email: encodeURIComponent(email),
-            name: modal.querySelector('.ui.input input[name=full-name]').value.trim(),
-            phone: modal.querySelector('.ui.input input[name=phone]').value.trim()
-          };
-        }
-        let courseId = tab.querySelector('.ui.search.courses').getAttribute('data-id');
-
-        userData.class_id = tab.querySelector('.ui.search.classes').getAttribute('data-id');
-
-        let step2 = modal.querySelector('.content.step-2');
-
-        userData.comment = step2.querySelector('textarea#comment').value;
-        this.addStudentToClass(courseId, userData);
+        userData = {
+          email: encodeURIComponent(email),
+          name: modal.querySelector('.ui.input input[name=full-name]').value.trim(),
+          phone: modal.querySelector('.ui.input input[name=phone]').value.trim()
+        };
       }
+      let courseId = tab.querySelector('.ui.search.courses').getAttribute('data-id');
+
+      userData.class_id = tab.querySelector('.ui.search.classes').getAttribute('data-id');
+
+      let step2 = modal.querySelector('.content.step-2');
+      userData.comment = step2.querySelector('textarea#comment').value;
+
+      this.addStudentToClass(courseId, userData);
     } catch (ex) {
       alert(ex.message);
     }
