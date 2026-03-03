@@ -131,9 +131,11 @@ class FutureLMS {
     add_filter('future-lms/course_price', function ($price, $courseId) {
       $course = new Course($courseId);
       $discount = $course->field('discount_price');
+      $maxpay = $course->field('maxpay');
       return [
         'full_price' => floatval($course->field('full_price')),
         'discount_price' => !empty($discount) ? floatval($discount) : null,
+        'maxpay' => !empty($maxpay) ? intval($maxpay) : 1,
       ];
     }, 10, 2);
   }

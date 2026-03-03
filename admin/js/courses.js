@@ -665,6 +665,11 @@ class CoursesTab {
         <small class='desc' style='font-size:0.8rem;'>Leave empty for no discount.</small>
       </div>
       <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Max Installments</label>
+        <input type='number' name='course_maxpay' min='1' max='36' value='${course?.maxpay || ''}' placeholder='1' />
+        <small class='desc' style='font-size:0.8rem;'>Leave empty for default (1 = single payment).</small>
+      </div>
+      <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Tags (comma separated)</label>
         <input type='text' name='course_tags' value='${course?.tags || ''}' />
       </div>
@@ -740,6 +745,7 @@ class CoursesTab {
           tags: vals.course_tags || '',
           full_price: vals.course_full_price || '',
           discount_price: vals.course_discount_price || '',
+          maxpay: vals.course_maxpay || '',
           color: vals.course_color || '#aabbcc',
           course_image: vals.course_image || 0,
           default_class: vals.course_default_class,

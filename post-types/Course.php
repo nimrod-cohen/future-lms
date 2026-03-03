@@ -140,6 +140,11 @@ function render_course_meta_box($post)
                 <input type="color" name="color" value="<?= esc_attr($meta['color'][0] ?? '#aabbcc') ?>">
             </span>
         </p>
+        <!-- Max Installments -->
+        <p>
+            <label><strong>Max Installments (maxpay):</strong></label>
+            <input type="number" name="maxpay" min="1" max="36" value="<?= esc_attr($meta['maxpay'][0] ?? '') ?>" placeholder="1">
+        </p>
         <!-- Initial Student Count -->
         <p>
             <label><strong>Initial Student Count:</strong></label>
@@ -212,6 +217,7 @@ add_action('save_post_course', function ($post_id, $post) {
         'what_you_learn',
         'tags',
         'color',
+        'maxpay',
         'initial_student_count',
         'lecturer_name',
         'lecturer_signature'
