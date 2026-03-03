@@ -1,7 +1,7 @@
 class StudentsTab {
   state = window.StateManagerFactory();
   currentClassName = '';
-  LAST_STEP = 3;
+  LAST_STEP = 2;
 
   constructor() {
     this.changeStep = this.changeStep.bind(this);
@@ -248,7 +248,7 @@ class StudentsTab {
         let step2 = modal.querySelector('.content.step-2');
 
         userData.comment = step2.querySelector('textarea#comment').value;
-        this.addStudentToClass(courseId, userData, sum);
+        this.addStudentToClass(courseId, userData);
       }
     } catch (ex) {
       alert(ex.message);

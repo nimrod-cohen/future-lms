@@ -125,6 +125,14 @@
       </div>
     </div>
   </div>
+  <div class="content step-2 hidden">
+    <div class="ui form">
+      <div class="field">
+        <label>Comment (optional)</label>
+        <textarea id="comment" rows="3" placeholder="Add a note about this enrollment..."></textarea>
+      </div>
+    </div>
+  </div>
   <div class="actions">
     <div class="ui primary prev button disabled">Back</div>
     <div class="ui primary next button">Next</div>
