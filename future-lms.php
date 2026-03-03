@@ -592,9 +592,9 @@ class FutureLMS {
       $lesson = new Lesson($lessonId);
 
       $result["presentation"] = $lesson->display('presentation');
-      $result["homework"] = do_shortcode($lesson->display('homework'));
+      $result["homework"] = $lesson->display('homework');
       $result["additionalFiles"] = $lesson->display('additional_files');
-      $result["lessonContent"] = do_shortcode($lesson->display('post_content'));
+      $result["lessonContent"] = $lesson->display('post_content');
       $result["studentNotes"] = $student->get_lesson_notes($lessonId);
 
       $videos = $lesson->raw('video_list');
