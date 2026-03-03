@@ -80,8 +80,7 @@ body.school {
           font-size: 1.2rem;
         }
         .course-duration {
-          font-size: 0.8rem;
-          font-weight: 100;
+          display: none;
         }
         .course-options {
           width: 20px;
