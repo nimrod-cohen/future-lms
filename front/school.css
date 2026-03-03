@@ -82,6 +82,13 @@ body.school {
         .course-duration {
           display: none;
         }
+        .back-to-lobby {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          color: #666;
+          &:hover { color: #333; }
+        }
         .course-options {
           width: 20px;
           height: 20px;
