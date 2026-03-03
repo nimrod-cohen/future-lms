@@ -68,27 +68,13 @@ class Lobby {
     let courseBtns = document.querySelectorAll(`.course-card.active-course .course-progress-bar`);
     courseBtns.forEach(btn => btn.classList.add('hidden'));
 
-    progress.progress.courses.forEach(course => {
-      if (!progress.course_tree[course.course_id]) return;
+    Object.keys(progress.progress).forEach(courseId => {
+      if (!progress.course_tree[courseId]) return;
 
-      const courseSize = progress.course_tree[course.course_id].total;
-      //measure course size
-      var courseProgress = 0;
-      course.modules.forEach(module => {
-        module.lessons.forEach(lesson => {
-          if (
-            !progress.course_tree[course.course_id] ||
-            progress.course_tree[course.course_id].modules[module.module_id].count_progress !== true
-          )
-            return;
-          lesson.videos.forEach(video => (courseProgress += video.percent));
-        });
-      });
-
-      let total = Math.min(100, (courseProgress / courseSize) * 100);
+      let total = Math.min(100, progress.progress[courseId].percent);
 
       let prog = document.querySelector(
-        `.my-courses .course-card[data-course-id='${course.course_id}'] .course-progress-bar`
+        `.my-courses .course-card[data-course-id='${courseId}'] .course-progress-bar`
       );
       if (prog) {
         prog.classList.remove('hidden');
@@ -125,6 +111,36 @@ class Classroom {
     let sidebar = coursePage.querySelector('.school-sidebar');
     this.state.set('sidebar', sidebar);
 
+    const autoAdvance = localStorage.getItem('auto_advance_videos') === 'true';
+    this.state.set('auto-advance', autoAdvance);
+    const autoplayIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon><line x1="19" y1="3" x2="19" y2="21"></line></svg>`;
+    const exitIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`;
+
+    new Dropdown(
+      '.course-options',
+      [
+        {
+          text: () => {
+            let autoAdvance = this.state.get('auto-advance');
+            return `${autoplayIcon}${autoAdvance ? '✔️ ' : ''}ניגון סרטונים אוטומטי`;
+          },
+          action: () => {
+            let autoAdvance = this.state.get('auto-advance');
+            this.state.set('auto-advance', !autoAdvance);
+            localStorage.setItem('auto_advance_videos', !autoAdvance);
+            return false;
+          }
+        },
+        {
+          text: () => `${exitIcon}חזרה לאיזור תלמידים`,
+          action: () => {
+            document.location.href = '/lobby';
+          }
+        }
+      ],
+      { class: 'rtl' }
+    );
+
     let navs = document.querySelectorAll('.lesson-materials-nav li');
     navs.forEach(nav => {
       if (nav.classList.contains('toggle-videos')) return;
@@ -147,16 +163,6 @@ class Classroom {
       this.promoteVideo(-1);
     });
 
-    const exitBtn = coursePage.querySelector('.exit-to-lobby');
-    exitBtn.addEventListener('click', e => {
-      e.preventDefault();
-      document.location.href = '/lobby';
-    });
-
-    //load all popovers
-    document.querySelectorAll('.show-popover').forEach(el => {
-      new Popover(el);
-    });
 
     //listen to student note changes
     JSUtils.addGlobalEventListener(coursePage, '.student-notes', 'input', e => {
@@ -245,7 +251,7 @@ class Classroom {
   loadProgress = async () => {
     let progress = await callServer({
       action: 'get_student_progress',
-      class_id: this.state.get('classId')
+      course_id: this.state.get('courseId')
     });
     this.state.set('student-progress', progress);
     console.log('progress is ', progress);
@@ -365,11 +371,26 @@ class Classroom {
       let iframe = document.querySelector(`#${iframeId}`);
       let player = new Vimeo.Player(iframe);
       this.state.set('vimeo-player', player);
+
+      const savedProgress = this.state.get('student-progress')?.course_progress?.[lesson.id]?.[lesson.videos[current].video_id];
+      if (this.state.get('auto-advancing')) {
+        this.state.set('auto-advancing', false);
+        player.ready().then(() => player.play());
+      } else if (savedProgress?.seconds > 0 && savedProgress?.percent < 100) {
+        player.ready().then(() => player.setCurrentTime(savedProgress.seconds));
+      }
+
       const vimeoPlayerEvent = async data => {
         this.reportProgress(lesson, lesson.videos[current], Math.floor(data.percent * 100), data.seconds);
       };
       player.on('timeupdate', vimeoPlayerEvent);
-      player.on('ended', vimeoPlayerEvent);
+      player.on('ended', async data => {
+        await vimeoPlayerEvent(data);
+        const isAutoAdvance = this.state.get('auto-advance');
+        if (isAutoAdvance) {
+          this.autoAdvanceToNextVideo();
+        }
+      });
     } else {
       this.reportProgress(lesson, { video_id: 'text' }, 100, 0);
 
@@ -385,14 +406,19 @@ class Classroom {
     if (percent < 100 && this.lastProgressCall && Math.floor((new Date() - this.lastProgressCall) / 1000) < 10) return;
 
     this.lastProgressCall = new Date();
+    const courseId = this.state.get('courseId');
+    const studentProgress = this.state.get('student-progress');
+    const currentCoursePercent = studentProgress?.progress?.[courseId]?.percent ?? -1;
+
     await callServer({
       action: 'set_student_progress',
-      course_id: this.state.get('courseId'),
+      course_id: courseId,
       module_id: lesson.module_id,
       lesson_id: lesson.id,
       video_id: video.video_id,
       percent: percent,
-      seconds: seconds
+      seconds: seconds,
+      progress: currentCoursePercent
     });
     this.loadProgress();
   };
@@ -420,6 +446,36 @@ class Classroom {
     localStorage.setItem('course_progress', JSON.stringify(progress));
   };
 
+  autoAdvanceToNextVideo = () => {
+    const coursePage = this.state.get('coursePage');
+    const vc = coursePage.querySelector('.video-container');
+    const lesson = this.state.get('lesson');
+    const currentVideo = this.state.get('curr-video');
+
+    if (!lesson.videos?.length) return;
+
+    vc.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 300px; font-size: 18px; background: black; color:white;">טוען את הסרטון הבא...</div>`;
+
+    setTimeout(() => {
+      this.state.set('auto-advancing', true);
+
+      // Check if there's a next video in current lesson
+      if (lesson.videos?.length && currentVideo < lesson.videos.length - 1) {
+        this.state.set('curr-video', currentVideo + 1);
+        return;
+      }
+
+      // Move to next lesson
+      const courseData = this.state.get('course-data');
+      const currentLessonIndex = courseData.findIndex(l => l.id === lesson.id);
+
+      if (currentLessonIndex !== -1 && currentLessonIndex < courseData.length - 1) {
+        const nextLesson = courseData[currentLessonIndex + 1];
+        this.state.set('lesson', nextLesson);
+      }
+    }, 3000);
+  };
+
   showLessonTab = tab => {
     let lesson = this.state.get('lesson');
     let content = '';
@@ -437,10 +493,7 @@ class Classroom {
         content = lesson.homework;
         break;
       case 'student-notes':
-        content = `<div class="notebook-container">
-            <div class="notebook-lines"></div>
-            <div class="student-notes" contenteditable="true" spellcheck="false">${lesson?.studentNotes || ''}</div>
-          </div>`;
+        content = `<div class="notebook-container"><div class="notebook-lines"></div><div class="student-notes" contenteditable="true" spellcheck="false">${lesson?.studentNotes || ''}</div></div>`;
         break;
     }
 
@@ -531,20 +584,18 @@ class Classroom {
         const courseTreeLesson = progress.course_tree[course].modules[lesson.module_id].lessons[lesson.id];
         showPlay = courseTreeLesson.videos[0] !== 'text';
 
-        var lessonTotal = progress.course_tree[course].modules[lesson.module_id].lessons[lesson.id].videos.length * 100;
+        var lessonTotal = courseTreeLesson.videos.length * 100;
 
-        const videos = progress.progress.courses
-          .find(c => parseInt(c.course_id) === course)
-          .modules.find(m => lesson.module_id === parseInt(m.module_id))
-          .lessons.find(l => parseInt(l.lesson_id) === lesson.id).videos;
+        const lessonProgress = progress.course_progress?.[lesson.id];
+        if (lessonProgress) {
+          const passed = Object.values(lessonProgress).reduce((prev, curr) => {
+            prev += curr.percent;
+            return prev;
+          }, 0);
 
-        const passed = videos.reduce((prev, curr) => {
-          prev += curr.percent;
-          return prev;
-        }, 0);
-
-        const pct = parseInt((passed / lessonTotal) * 100);
-        background = `linear-gradient(to top, #46da9c 0, #46da9c ${pct}%, white ${pct}%, white 100%)`;
+          const pct = parseInt((passed / lessonTotal) * 100);
+          background = `linear-gradient(to top, #46da9c 0, #46da9c ${pct}%, white ${pct}%, white 100%)`;
+        }
       } catch (ex) {}
 
       var lessonDiv = currModule.querySelector(`[lesson-id='${lesson.id}']`);

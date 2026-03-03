@@ -4,6 +4,8 @@ Template Name: School Template
  */
 
 use FutureLMS\classes\Course;
+use FutureLMS\classes\Diploma;
+use FutureLMS\classes\ProgressManager;
 use FutureLMS\classes\Settings;
 use FutureLMS\classes\Student;
 use FutureLMS\FutureLMS;
@@ -62,11 +64,23 @@ while ($obj = $courses->fetch()) {
 }
 ?>
 <?php
+// Compute progress for attending courses (used for diploma eligibility)
+$courseIds = array_map(function ($c) { return (int) $c->raw("ID"); }, $attending_courses);
+$progressData = [];
+if (!empty($courseIds)) {
+  $courseTree = Course::get_courses_tree($courseIds);
+  foreach ($courseIds as $cid) {
+    $p = ProgressManager::getCourseProgress($user->ID, $cid, $courseTree);
+    $progressData[$cid] = $p['percent'] ?? 0;
+  }
+}
+
 switch ($schoolPage) {
 case "mycourses":
   FutureLMS::get_template_part("my_courses.php", [
     'attending_courses' => $attending_courses,
-    'student' => $student
+    'student' => $student,
+    'progressData' => $progressData,
   ]);
   break;
 case "courses":

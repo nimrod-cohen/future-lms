@@ -49,6 +49,7 @@
           <th>Email</th>
           <th>Name</th>
           <th>Phone</th>
+          <th>Progress</th>
           <th class="result-count">0 students</th>
         </thead>
         <tbody>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 500 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="Layer1">
+        <g transform="matrix(1.81505,0,0,1.81505,367.869,23.5352)">
+            <g transform="matrix(50.5036,0,0,50.5036,67.2829,49.3421)">
+            </g>
+            <text x="25.213px" y="49.342px" style="font-family:'Arial-Black', 'Arial Black', sans-serif;font-weight:900;font-size:50.504px;fill:rgb(17,26,70);">U</text>
+        </g>
+        <g transform="matrix(1,0,0,1,-12.0339,71.5552)">
+            <g transform="matrix(125,0,0,125,426.762,46.7689)">
+            </g>
+            <text x="371.262px" y="46.769px" style="font-family:'Cochin-Italic', 'Cochin';font-weight:500;font-style:italic;font-size:125px;fill:url(#_Linear1);">4</text>
+        </g>
+        <g transform="matrix(1.81505,0,0,1.81505,-34.1306,23.5352)">
+            <g transform="matrix(50.5036,0,0,50.5036,218.12,49.3421)">
+            </g>
+            <text x="25.213px" y="49.342px" style="font-family:'Arial-Black', 'Arial Black', sans-serif;font-weight:900;font-size:50.504px;fill:rgb(17,26,70);">B<tspan x="61.163px 103.182px 142.415px 178.837px " y="49.342px 49.342px 49.342px 49.342px ">URSA</tspan></text>
+        </g>
+        <g transform="matrix(2.09074,0,0,2.09074,-82.3991,-136.038)">
+            <g transform="matrix(20.9256,0,0,20.9256,270.826,140.836)">
+            </g>
+            <text x="46.848px" y="140.836px" style="font-family:'Heebo-Regular', 'Heebo';font-size:20.926px;fill:rgb(17,26,70);"><tspan x="46.848px 51.969px 61.526px 73.759px 78.88px 87.956px 100.19px 104.187px 109.013px 113.991px 120.38px 125.502px 129.499px 141.6px 152.515px 156.513px 168.327px 173.306px 188.727px 199.836px 203.834px 215.709px 227.942px 231.94px 243.448px 253.688px 260.077px " y="140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px 140.836px ">ילאירא ןוני םע קושה תא חצנל</tspan></text>
+        </g>
+    </g>
+    <defs>
+        <linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-4.29233,86.285,-86.285,-4.29233,416.4,-43.5827)"><stop offset="0" style="stop-color:rgb(165,135,23);stop-opacity:1"/><stop offset="0.55" style="stop-color:rgb(255,247,0);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(158,154,16);stop-opacity:1"/></linearGradient>
+    </defs>
+</svg>

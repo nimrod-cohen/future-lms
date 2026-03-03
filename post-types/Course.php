@@ -9,7 +9,8 @@ function register_course_post_type()
         'supports' => ['title', 'editor', 'thumbnail', 'author'],
         'menu_icon' => 'dashicons-book-alt',
         'has_archive' => true,
-        'show_ui' => true
+        'show_ui' => true,
+        'show_in_menu' => false
     );
     register_post_type('course', $args);
 }
@@ -75,6 +76,22 @@ function render_course_meta_box($post)
             display: inline-block;
           }
         }
+        .future-lms-meta-box .signature-preview img {
+          max-width: 150px;
+          max-height: 80px;
+          display: block;
+          margin-bottom: 6px;
+        }
+        .future-lms-meta-box .remove-signature {
+          background:#dc2626;
+          color:#fff;
+          border:none;
+          padding:4px 10px;
+          margin-left:8px;
+          font-size:12px;
+          border-radius:4px;
+          cursor:pointer;
+        }
     </style>
     <div class="future-lms-meta-box">
         <!-- Third Party Reference -->
@@ -123,7 +140,67 @@ function render_course_meta_box($post)
                 <input type="color" name="color" value="<?= esc_attr($meta['color'][0] ?? '#aabbcc') ?>">
             </span>
         </p>
+        <!-- Max Installments -->
+        <p>
+            <label><strong>Max Installments (maxpay):</strong></label>
+            <input type="number" name="maxpay" min="1" max="36" value="<?= esc_attr($meta['maxpay'][0] ?? '') ?>" placeholder="1">
+        </p>
+        <!-- Initial Student Count -->
+        <p>
+            <label><strong>Initial Student Count:</strong></label>
+            <input type="number" name="initial_student_count" min="0" value="<?= esc_attr($meta['initial_student_count'][0] ?? '0') ?>">
+        </p>
+        <!-- Enable Diploma -->
+        <p>
+            <label><strong><?php _e('Enable Diploma', 'future-lms'); ?>:</strong></label>
+            <input type="checkbox" name="diploma_enabled" value="1" <?php checked($meta['diploma_enabled'][0] ?? '0', '1'); ?>>
+        </p>
+        <!-- Lecturer Name -->
+        <p>
+            <label><strong><?php _e('Lecturer Name', 'future-lms'); ?>:</strong></label>
+            <input type="text" name="lecturer_name" value="<?= esc_attr($meta['lecturer_name'][0] ?? '') ?>">
+        </p>
+        <!-- Lecturer Signature -->
+        <p>
+            <span class="future-lms-meta-box-label"><strong><?php _e('Lecturer Signature', 'future-lms'); ?>:</strong></span>
+            <span>
+                <input type="hidden" name="lecturer_signature" id="lecturer_signature" value="<?= esc_attr($meta['lecturer_signature'][0] ?? '') ?>">
+                <div class="signature-preview" id="signature_preview">
+                    <?php
+                    $sigId = $meta['lecturer_signature'][0] ?? '';
+                    if ($sigId) {
+                        $sigUrl = wp_get_attachment_image_url($sigId, 'medium');
+                        if ($sigUrl) echo '<img src="' . esc_url($sigUrl) . '" />';
+                    }
+                    ?>
+                </div>
+                <button type="button" class="button" id="select_signature_button"><?php _e('Select Image', 'future-lms'); ?></button>
+                <button type="button" class="remove-signature" id="remove_signature_button" style="display:<?= !empty($sigId) ? 'inline-block' : 'none' ?>;"><?php _e('Remove', 'future-lms'); ?></button>
+            </span>
+        </p>
     </div>
+    <script>
+    jQuery(function($){
+        var frame;
+        $('#select_signature_button').on('click', function(e){
+            e.preventDefault();
+            if (frame) { frame.open(); return; }
+            frame = wp.media({ title: '<?php _e('Select Image', 'future-lms'); ?>', multiple: false, library: { type: 'image' } });
+            frame.on('select', function(){
+                var attachment = frame.state().get('selection').first().toJSON();
+                $('#lecturer_signature').val(attachment.id);
+                $('#signature_preview').html('<img src="' + attachment.url + '" />');
+                $('#remove_signature_button').show();
+            });
+            frame.open();
+        });
+        $('#remove_signature_button').on('click', function(){
+            $('#lecturer_signature').val('');
+            $('#signature_preview').html('');
+            $(this).hide();
+        });
+    });
+    </script>
     <?php
 }
 
@@ -139,7 +216,11 @@ add_action('save_post_course', function ($post_id, $post) {
         'short_description',
         'what_you_learn',
         'tags',
-        'color'
+        'color',
+        'maxpay',
+        'initial_student_count',
+        'lecturer_name',
+        'lecturer_signature'
     ];
 
     foreach ($fields as $field) {
@@ -147,5 +228,8 @@ add_action('save_post_course', function ($post_id, $post) {
             update_post_meta($post_id, $field, sanitize_textarea_field($_POST[$field]));
         }
     }
+
+    // Checkbox: save '1' if checked, '0' if unchecked
+    update_post_meta($post_id, 'diploma_enabled', isset($_POST['diploma_enabled']) ? '1' : '0');
   }
 }, 10, 2);

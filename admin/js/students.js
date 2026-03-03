@@ -265,7 +265,7 @@ class StudentsTab {
 
     let students = Object.values(data);
     if (students.length === 0) {
-      studentTable.insertAdjacentHTML('beforeend', "<tr><td colspan='5'>No results</td></tr>");
+      studentTable.insertAdjacentHTML('beforeend', "<tr><td colspan='9'>No results</td></tr>");
       tab.querySelector('.result-count').innerText = '0 students';
     }
 
@@ -284,9 +284,9 @@ class StudentsTab {
         <td>${student.user_email}</td>
         <td>${name}</td>
         <td>${phone}</td>
+        <td class="progress-cell">${student.progress != null ? student.progress + '%' : '-'}</td>
         <td>
           <span data-inverted='' data-position='top right' data-tooltip='Remove student'><i class="minus red circle icon clickable remove-class"></i></span>
-          <span data-inverted='' data-position='top right' data-tooltip='Show progress'><i class="tasks blue circle icon clickable show-progress"></i></span>
         </td>
       </tr>`
       );
@@ -295,7 +295,6 @@ class StudentsTab {
       let studentRow = studentTable.querySelector(`tr[data-id='${student.id}'][class-id='${student.class_id}']`);
       let td = studentRow.querySelector(`td:last-child`);
       let remove = td.querySelector('i.remove-class');
-      let showProgress = td.querySelector('i.show-progress');
       const courseId = studentRow.getAttribute('course-id');
 
       const removeStudentClick = e => {
@@ -314,36 +313,6 @@ class StudentsTab {
         });
       };
 
-      const showProgressClick = e => {
-        JSUtils.fetch(__futurelms.ajax_url, {
-          action: 'get_student_progress',
-          student_id: student.id
-        }).then(data => {
-          data.progress.courses.forEach(course => {
-            if (!data.course_tree[course.course_id]) return;
-
-            var courseProgress = 0;
-            //measure course size
-            course.modules.forEach(module => {
-              module.lessons.forEach(lesson => {
-                lesson.videos.forEach(video => (courseProgress += video.percent));
-              });
-            });
-
-            const courseSize = data.course_tree[course.course_id].total;
-            courseProgress = Math.floor(Math.min(100, (courseProgress / courseSize) * 100));
-
-            let progressBtn = studentTable.querySelector(
-              `tr[data-id='${student.id}'][course-id='${course.course_id}'] td:last-child i.show-progress`
-            );
-
-            progressBtn.removeEventListener('click', showProgressClick);
-            progressBtn.replaceWith(`${courseProgress}%`);
-          });
-        });
-      };
-
-      showProgress.addEventListener('click', showProgressClick);
       remove.addEventListener('click', removeStudentClick);
     });
   }

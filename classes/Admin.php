@@ -453,13 +453,15 @@ class Admin {
         //create new course, a course is a wp_post with post_type = course
         $courseId = wp_insert_post([
           'post_title' => $name,
+          'post_content' => wp_kses_post($_POST["post_content"] ?? ''),
           'post_status' => 'draft',
           'post_type' => 'course'
         ]);
       } else {
         wp_update_post([
           'ID' => $courseId,
-          'post_title' => $name
+          'post_title' => $name,
+          'post_content' => wp_kses_post($_POST["post_content"] ?? '')
         ]);
       }
 
@@ -469,10 +471,16 @@ class Admin {
         'default_class' => $default_class,
         'course_code' => $_POST["course_code"] ?? '',
         'short_name' => $_POST["short_name"] ?? '',
-        'course_duration' => $_POST["course_duration"] ?? '',
         'short_description' => $_POST["short_description"] ?? '',
         'what_you_learn' => $_POST["what_you_learn"] ?? '',
-        'color' => $_POST["color"] ?? '#aabbcc'
+        'color' => $_POST["color"] ?? '#aabbcc',
+        'full_price' => $_POST["full_price"] ?? '',
+        'discount_price' => $_POST["discount_price"] ?? '',
+        'maxpay' => $_POST["maxpay"] ?? '',
+        'initial_student_count' => $_POST["initial_student_count"] ?? '0',
+        'diploma_enabled' => $_POST["diploma_enabled"] ?? '0',
+        'lecturer_name' => $_POST["lecturer_name"] ?? '',
+        'lecturer_signature' => $_POST["lecturer_signature"] ?? ''
       ];
       
       foreach ($meta_fields as $key => $value) {

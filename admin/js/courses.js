@@ -7,6 +7,7 @@ class CoursesTab {
     this.state.listen('courses', this.render);
 
     this.getCourses();
+    this.loadVimeoSDK();
 
     JSUtils.addGlobalEventListener('#courses-list', '.course .course-module .module-name', 'click', this.openModule);
     JSUtils.addGlobalEventListener('#courses-list', '.course .course-name', 'click', this.openCourse);
@@ -66,6 +67,17 @@ class CoursesTab {
 
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', e =>
       this.editLesson(e)
+    );
+
+    JSUtils.addGlobalEventListener('#courses-list', '.refresh-durations', 'click', e => {
+      this.refreshLessonDuration(e.target, true);
+    });
+
+    JSUtils.addGlobalEventListener(
+      '#courses-list',
+      ".actionable[data-action='refresh-course-durations']",
+      'click',
+      this.refreshAllLessonDurations
     );
 
     document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
@@ -161,11 +173,16 @@ class CoursesTab {
           return course.modules[a].order - course.modules[b].order;
         });
 
+        const formattedTotalDuration = course.total_duration ? this.formatDuration(course.total_duration) : '';
+        const formattedCountedDuration = course.counted_duration ? this.formatDuration(course.counted_duration) : '';
+
         return `<div class="course ${openCourses.indexOf(cid) !== -1 ? '' : 'closed'}" data-course-id="${cid}">
           <div class="course-header">
             <span class='course-id'>${cid}</span>
             <h3 class='course-name ${course.enabled === true ? '' : 'disabled'}'>${course.name}</h3>
+            <strong id="course-duration-${cid}">${formattedTotalDuration ? ` - (Total: ${formattedTotalDuration} / Counted: ${formattedCountedDuration || '0m'})` : ''}</strong>
             <span class='course-actions action-bar'>
+              <i class="sync alternate icon orange actionable" data-action="refresh-course-durations" title="Recalculate Total Duration" data-course-id="${cid}"></i>
               <i class="edit icon blue actionable" data-action='edit-course'></i>
               ${
                 course.enabled === true
@@ -223,16 +240,19 @@ class CoursesTab {
                         if (typeof lesson !== 'object') return '';
                         //copy the videos array to a new array, and remove the "text" instance from the array
                         const vidoes = lesson.videos.filter(v => v !== 'text');
+                        const videoIds = vidoes.join(',');
+                        const formattedLessonDuration = lesson.duration ? this.formatDuration(lesson.duration) : '';
 
-                        return `<div class='module-lesson' data-lesson-id='${lessonId}'>
+                        return `<div class='module-lesson' data-lesson-id='${lessonId}' data-course-id='${cid}'>
                           <span class='lesson-order'>${idx2 + 1}</span>
-                          <span class='lesson-name ${lesson.enabled === true ? '' : 'disabled'}'>${lesson.name} ${
-                          vidoes.length
-                            ? `<i class='play circle outline icon green jsutils-popover' data-content='${vidoes.join(
-                                ','
-                              )}'></i>`
-                            : ''
-                        }</span>
+                          <span class='lesson-name ${lesson.enabled === true ? '' : 'disabled'}'>${lesson.name}
+                            ${formattedLessonDuration ? ` - <strong class="video-duration">(${formattedLessonDuration})</strong>` : ''}
+                            ${vidoes.length
+                              ? `<i class='play circle outline icon green tooltip' data-content='${videoIds}'></i>
+                                 <i class='sync alternate icon blue refresh-durations' title='Refresh durations' data-content='${videoIds}'></i>`
+                              : ''
+                            }
+                          </span>
                           <span class='lesson-actions action-bar'>
                             <i class="edit icon blue actionable" data-action='edit-lesson'></i>
                             ${
@@ -255,9 +275,7 @@ class CoursesTab {
       })
       .join('');
 
-    document.querySelectorAll('.jsutils-popover').forEach(el => {
-      new Popover(el);
-    });
+    //popover is a global singleton from wpjsutils, no need to instantiate
   };
 
   editModule = (e, moduleId) => {
@@ -625,8 +643,8 @@ class CoursesTab {
         <input type='url' name='course_page_url' value='${course?.course_page_url || ''}' />
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Course Duration (hours)</label>
-        <input type='text' name='course_duration' value='${course?.course_duration || ''}' />
+        <label class='slideout-form-line-title'>Course Content</label>
+        <textarea name='course_post_content' style='height:200px;'>${course?.post_content || ''}</textarea>
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Short Description</label>
@@ -636,6 +654,20 @@ class CoursesTab {
         <label class='slideout-form-line-title'>What You will Learn</label>
         <textarea name='course_what_you_learn' style='height:100px;'>${course?.what_you_learn || ''}</textarea>
         <small class='desc' style='font-size:0.8rem;'>Please enter each point on a new line.</small>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Full Price</label>
+        <input type='number' name='course_full_price' value='${course?.full_price || ''}' step='0.01' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Discount Price</label>
+        <input type='number' name='course_discount_price' value='${course?.discount_price || ''}' step='0.01' />
+        <small class='desc' style='font-size:0.8rem;'>Leave empty for no discount.</small>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Max Installments</label>
+        <input type='number' name='course_maxpay' min='1' max='36' value='${course?.maxpay || ''}' placeholder='1' />
+        <small class='desc' style='font-size:0.8rem;'>Leave empty for default (1 = single payment).</small>
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Tags (comma separated)</label>
@@ -667,6 +699,31 @@ class CoursesTab {
         <select name="course_default_class" class="course-default-class slideout-form-select">
           <option value="">No default class selected</option>
         </select>
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Initial Student Count</label>
+        <input type='number' name='initial_student_count' min='0' value='${course?.initial_student_count || '0'}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Enable Diploma</label>
+        <input type='checkbox' name='diploma_enabled' value='1' ${course?.diploma_enabled === '1' ? 'checked' : ''} />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Lecturer Name</label>
+        <input type='text' name='lecturer_name' value='${course?.lecturer_name || ''}' />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title'>Lecturer Signature</label>
+        <div class='signature-picker'>
+          <input type='hidden' name='lecturer_signature' value='${course?.lecturer_signature || 0}' />
+          <div class='ui mini image signature-preview'>
+            ${course?.lecturer_signature_url ? `<img src='${course.lecturer_signature_url}' style='max-width:150px;max-height:80px;' />` : ''}
+          </div>
+          <button type='button' class='ui tiny button select-signature'>Select Image</button>
+          <button type='button' class='ui tiny button remove-signature' style='display: ${
+            course?.lecturer_signature_url ? 'inline-block' : 'none'
+          };'>Remove</button>
+        </div>
       </div>`,
       type: slideout.types.FORM,
       confirmText: courseId ? 'Update' : 'Create',
@@ -682,13 +739,20 @@ class CoursesTab {
           name: vals.course_name,
           course_code: vals.course_code || '',
           page_url: encodeURI(vals.course_page_url || ''),
-          course_duration: vals.course_duration || '',
+          post_content: vals.course_post_content || '',
           short_description: vals.course_short_description || '',
           what_you_learn: vals.course_what_you_learn || '',
-          tags: encodeURIComponent(vals.course_tags || ''),
+          tags: vals.course_tags || '',
+          full_price: vals.course_full_price || '',
+          discount_price: vals.course_discount_price || '',
+          maxpay: vals.course_maxpay || '',
           color: vals.course_color || '#aabbcc',
           course_image: vals.course_image || 0,
-          default_class: vals.course_default_class
+          default_class: vals.course_default_class,
+          initial_student_count: vals.initial_student_count || '0',
+          diploma_enabled: vals.diploma_enabled ? '1' : '0',
+          lecturer_name: vals.lecturer_name || '',
+          lecturer_signature: vals.lecturer_signature || 0
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);
@@ -729,6 +793,165 @@ class CoursesTab {
 
     // init featured image picker
     this.initFeaturedImagePicker();
+
+    // init signature image picker
+    this.initSignaturePicker();
+  };
+
+  refreshLessonDuration = async (icon, reloadTable = false) => {
+    const lessonEl = icon.closest('.module-lesson');
+    const lessonId = lessonEl.dataset.lessonId;
+    const videoIds =
+      icon.dataset.content
+        ?.split(',')
+        .map(id => id.trim())
+        .filter(Boolean) || [];
+
+    if (icon.classList.contains('loading')) return;
+
+    console.log(`[Duration] Lesson ${lessonId} — videoIds:`, videoIds);
+    console.log(`[Duration] Vimeo SDK loaded:`, !!window.Vimeo);
+    icon.classList.add('loading', 'grey');
+
+    try {
+      if (videoIds.length === 0) {
+        console.log(`[Duration] No videos for lesson ${lessonId}, clearing duration`);
+        await JSUtils.fetch(__futurelms.ajax_url, {
+          action: 'set_lesson_duration',
+          lesson_id: lessonId
+        });
+      } else {
+        for (const videoId of videoIds) {
+          console.log(`[Duration] Creating iframe for video ${videoId}`);
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://player.vimeo.com/video/${videoId}?background=1&autoplay=1&muted=1`;
+          Object.assign(iframe.style, { width: '0', height: '0', border: '0' });
+          document.body.appendChild(iframe);
+
+          let duration = 0;
+          try {
+            const player = new Vimeo.Player(iframe);
+            console.log(`[Duration] Vimeo player created for ${videoId}, fetching duration...`);
+            duration = await player.getDuration();
+            console.log(`[Duration] Video ${videoId} duration: ${duration}s (${Math.floor(duration / 60)}m ${Math.floor(duration % 60)}s)`);
+          } catch (err) {
+            console.warn(`[Duration] Skipping video ${videoId} (private or not found)`, err);
+          } finally {
+            console.log(`[Duration] Saving video ${videoId} duration=${Math.floor(duration)} to lesson ${lessonId}`);
+            const saveResult = await JSUtils.fetch(__futurelms.ajax_url, {
+              action: 'set_video_duration',
+              lesson_id: lessonId,
+              video_id: videoId,
+              duration: Math.floor(duration)
+            });
+            console.log(`[Duration] Save result for ${videoId}:`, saveResult);
+            iframe.remove();
+          }
+        }
+      }
+
+      if (reloadTable) {
+        console.log(`[Duration] Recalculating course duration for course ${lessonEl.dataset.courseId}`);
+        const result = await JSUtils.fetch(__futurelms.ajax_url, {
+          action: 'set_course_duration',
+          course_id: lessonEl.dataset.courseId
+        });
+        console.log(`[Duration] Course duration result:`, result);
+        if (!result.error) {
+          this.getCourses();
+        }
+      }
+    } catch (e) {
+      console.error('[Duration] Failed updating durations', e);
+    } finally {
+      icon.classList.remove('loading', 'grey');
+      icon.classList.add('check', 'blue');
+      icon.title = 'Durations fetched';
+      console.log(`[Duration] Done for lesson ${lessonId}`);
+    }
+  };
+
+  refreshAllLessonDurations = async e => {
+    const icon = e.target.closest('[data-action="refresh-course-durations"]');
+    if (!icon) return;
+
+    icon.classList.add('loading');
+    const courseId = icon.dataset.courseId;
+    const courseEl = icon.closest('.course');
+
+    if (!courseEl) return;
+
+    const icons = courseEl.querySelectorAll('.refresh-durations');
+    const total = icons.length;
+
+    let current = 0;
+    this.updateProgressBar(courseEl, courseId, current, total);
+
+    for (const refreshIcon of icons) {
+      await this.refreshLessonDuration(refreshIcon);
+      current++;
+      this.updateProgressBar(courseEl, courseId, current, total);
+    }
+
+    await this.refreshCourseDuration(courseId);
+    icon.classList.remove('loading');
+  };
+
+  refreshCourseDuration = async courseId => {
+    try {
+      const result = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'set_course_duration',
+        course_id: courseId
+      });
+      if (!result.error) {
+        this.getCourses();
+      }
+    } catch (error) {
+      console.error('AJAX error:', error);
+    }
+  };
+
+  formatDuration = seconds => {
+    seconds = Math.max(0, Math.floor(seconds));
+
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    const hh = hrs.toString().padStart(2, '0');
+    const mm = mins.toString().padStart(2, '0');
+    const ss = secs.toString().padStart(2, '0');
+
+    return `${hh}:${mm}:${ss}`;
+  };
+
+  updateProgressBar = (courseEl, courseId, current, total) => {
+    const progressContainer = courseEl.querySelector(`#course-duration-${courseId}`);
+    if (!progressContainer) return;
+
+    if (!progressContainer.querySelector('.progress-bar')) {
+      progressContainer.innerHTML = `
+      <div class="progress-text">Refreshing 0/${total}</div>
+      <div class="progress-bar-container" style="background:#eee; height: 8px; width: 100%; border-radius: 4px; margin-top: 4px;">
+        <div class="progress-bar" style="background: #0073aa; width: 0%; height: 100%; border-radius: 4px;"></div>
+      </div>`;
+    }
+
+    const progressText = progressContainer.querySelector('.progress-text');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+
+    const percent = Math.round((current / total) * 100);
+    progressText.textContent =
+      current === total ? `All ${total} lessons refreshed` : `Refreshing ${current}/${total}`;
+    progressBar.style.width = `${percent}%`;
+  };
+
+  loadVimeoSDK = () => {
+    if (!window.Vimeo) {
+      const tag = document.createElement('script');
+      tag.src = 'https://player.vimeo.com/api/player.js';
+      document.head.appendChild(tag);
+    }
   };
 
   initFeaturedImagePicker = () => {
@@ -765,6 +988,48 @@ class CoursesTab {
       removeBtn.addEventListener('click', () => {
         const input = document.querySelector('input[name="course_image"]');
         const preview = document.querySelector('.featured-image-preview');
+
+        if (input) input.value = '0';
+        if (preview) preview.innerHTML = '';
+        removeBtn.style.display = 'none';
+      });
+    }
+  };
+
+  initSignaturePicker = () => {
+    if (!window.wp || !window.wp.media) return;
+
+    const selectBtn = document.querySelector('.select-signature');
+    const removeBtn = document.querySelector('.remove-signature');
+
+    if (selectBtn) {
+      selectBtn.addEventListener('click', () => {
+        const frame = wp.media({
+          title: 'Select Signature Image',
+          multiple: false,
+          library: { type: 'image' }
+        });
+
+        frame.on('select', () => {
+          const attachment = frame.state().get('selection').first().toJSON();
+          const input = document.querySelector('input[name="lecturer_signature"]');
+          const preview = document.querySelector('.signature-preview');
+
+          if (input) input.value = attachment.id;
+          if (preview) {
+            preview.innerHTML = `<img src='${attachment.url}' style='max-width:150px;max-height:80px;' />`;
+          }
+          if (removeBtn) removeBtn.style.display = 'inline-block';
+        });
+
+        frame.open();
+      });
+    }
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        const input = document.querySelector('input[name="lecturer_signature"]');
+        const preview = document.querySelector('.signature-preview');
 
         if (input) input.value = '0';
         if (preview) preview.innerHTML = '';

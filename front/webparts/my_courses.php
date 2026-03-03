@@ -36,6 +36,14 @@ foreach ($attending_courses as $course) {
                 <input type="hidden" name="lesson_id" value="<?php echo $nextLessson; ?>">
                 <button type='submit' class='enter-course'><?php _e("Enter course", "future-lms"); ?></button>
               </form>
+              <?php
+              $cid = (int) $course->raw("ID");
+              $courseProgress = isset($progressData[$cid]) ? $progressData[$cid] : 0;
+              if (\FutureLMS\classes\Diploma::isEnabled($cid) && $courseProgress >= \FutureLMS\classes\Diploma::ELIGIBILITY_THRESHOLD) : ?>
+                <a class="diploma-download" href="<?php echo home_url('/school/diploma/' . $cid); ?>" target="_blank">
+                  <?php _e("Download diploma", "future-lms"); ?>
+                </a>
+              <?php endif; ?>
             </span>
           </div>
     </div>
