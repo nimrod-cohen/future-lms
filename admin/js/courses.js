@@ -639,10 +639,6 @@ class CoursesTab {
         <input type='text' name='course_code' value='${course?.code || ''}' />
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title'>Course page URL</label>
-        <input type='url' name='course_page_url' value='${course?.course_page_url || ''}' />
-      </div>
-      <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Course Content</label>
         <textarea name='course_post_content' style='height:200px;'>${course?.post_content || ''}</textarea>
       </div>
@@ -738,7 +734,6 @@ class CoursesTab {
           course_id: courseId || '',
           name: vals.course_name,
           course_code: vals.course_code || '',
-          page_url: encodeURI(vals.course_page_url || ''),
           post_content: vals.course_post_content || '',
           short_description: vals.course_short_description || '',
           what_you_learn: vals.course_what_you_learn || '',

@@ -100,11 +100,6 @@ function render_course_meta_box($post)
             <input type="text" name="course_code"
                    value="<?= esc_attr($meta['course_code'][0] ?? '') ?>">
         </p>
-        <!-- Course Page URL -->
-        <p>
-            <label><strong>Course Page URL:</strong></label>
-            <input type="url" name="course_page_url" value="<?= esc_url($meta['course_page_url'][0] ?? '') ?>">
-        </p>
         <!-- Short Name -->
         <p>
             <label><strong>Short Name:</strong></label>
@@ -210,7 +205,6 @@ add_action('save_post_course', function ($post_id, $post) {
     $fields = [
         'currency',
         'course_code',
-        'course_page_url',
         'short_name',
         'course_duration',
         'short_description',

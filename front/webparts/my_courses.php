@@ -9,7 +9,7 @@ if (count($attending_courses) == 0) {
 foreach ($attending_courses as $course) {
   $image = $course->get_featured_image('full');
 
-  $courseUrl = $course->raw("course_page_url");
+  $courseUrl = apply_filters('future-lms/course_page_url', get_permalink($course->raw("ID")), $course);
   $author = get_the_author_meta('display_name', $course->raw("post_author"));
 
   $class = $student->get_class($course->raw("ID"));

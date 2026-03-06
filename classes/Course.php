@@ -47,11 +47,9 @@ class Course extends BaseObject {
 
     $sql = "SELECT pcourse.id AS course_id, pcourse.post_title AS course_name, pcourse.post_status,
     pcourse.post_content AS post_content,
-    pmurl.meta_value AS course_page_url,
     pmdur.meta_value AS total_duration,
     pmcdur.meta_value AS counted_duration
     FROM ".$wpdb->prefix."posts pcourse
-    LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmurl ON pmurl.post_id = pcourse.id AND pmurl.meta_key = 'course_page_url'
     LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmdur ON pmdur.post_id = pcourse.id AND pmdur.meta_key = 'course_total_duration'
     LEFT OUTER JOIN ".$wpdb->prefix."postmeta pmcdur ON pmcdur.post_id = pcourse.id AND pmcdur.meta_key = 'course_counted_duration'
     WHERE pcourse.post_type = 'course'
@@ -85,7 +83,7 @@ class Course extends BaseObject {
       $result[$course_id]["enabled"] = $row["post_status"] == "publish";
       $result[$course_id]["name"] = $row["course_name"];
       $result[$course_id]["post_content"] = $row["post_content"];
-      $result[$course_id]["course_page_url"] = empty($row["course_page_url"]) ? get_permalink($course_id) : $row["course_page_url"];
+      $result[$course_id]["course_page_url"] = get_permalink($course_id);
       $result[$course_id]["total_duration"] = intval($row["total_duration"]);
       $result[$course_id]["counted_duration"] = intval($row["counted_duration"]);
       $result[$course_id]["course_image"] = !empty($course_meta["_thumbnail_id"]) ? wp_get_attachment_image_url($course_meta["_thumbnail_id"], 'full') : null;

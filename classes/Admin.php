@@ -445,7 +445,6 @@ class Admin {
     try {
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
       $name = $_POST["name"];
-      $page_url = $_POST["page_url"];
       $tags = $_POST["tags"];
       $default_class = $_POST["default_class"];
 
@@ -466,7 +465,6 @@ class Admin {
       }
 
       $meta_fields = [
-        'course_page_url' => $page_url,
         'tags' => $tags,
         'default_class' => $default_class,
         'course_code' => $_POST["course_code"] ?? '',
