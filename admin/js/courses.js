@@ -474,7 +474,7 @@ class CoursesTab {
       if (header) {
         header.style.cssText = 'display:flex;align-items:center;gap:12px;';
         header.querySelector('h2').insertAdjacentHTML('afterend',
-          `<a href='${editPostUrl}' target='_blank' class='button' style='display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-right:auto;text-decoration:none;'><i class='fas fa-external-link-alt'></i> Edit Lesson Content</a>`);
+          `<a href='${editPostUrl}' target='_blank' onclick="event.stopPropagation(); window.open('${editPostUrl}', '_blank');" class='button' style='display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-right:auto;text-decoration:none;cursor:pointer;'><i class='fas fa-external-link-alt'></i> Edit Lesson Content</a>`);
       }
     }
 
