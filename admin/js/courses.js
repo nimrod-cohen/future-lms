@@ -472,14 +472,9 @@ class CoursesTab {
     if (lessonId) {
       const header = document.querySelector('.slideout-header');
       if (header) {
-        const editLink = document.createElement('a');
-        editLink.href = editPostUrl;
-        editLink.target = '_blank';
-        editLink.className = 'button';
-        editLink.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-right:auto;text-decoration:none;';
-        editLink.innerHTML = '<i class="fas fa-external-link-alt"></i> Edit Lesson Content';
-        header.querySelector('h2').after(editLink);
         header.style.cssText = 'display:flex;align-items:center;gap:12px;';
+        header.querySelector('h2').insertAdjacentHTML('afterend',
+          `<a href='${editPostUrl}' target='_blank' class='button' style='display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-right:auto;text-decoration:none;'><i class='fas fa-external-link-alt'></i> Edit Lesson Content</a>`);
       }
     }
 
