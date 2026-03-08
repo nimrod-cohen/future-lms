@@ -379,9 +379,12 @@ class CoursesTab {
 
     const videosToTextarea = arr => (arr && arr.length ? arr.join('\n') : '');
 
+    const editPostUrl = lessonId ? `${window.location.origin}/wp-admin/post.php?post=${lessonId}&action=edit` : '';
+
     slideout.show({
       title: lessonId ? `Edit Lesson ${lesson.lesson_number}` : 'Add Lesson',
       message: `
+        ${lessonId ? `<div style='margin-bottom:12px;'><a href='${editPostUrl}' target='_blank' class='ui tiny button' style='display:inline-flex;align-items:center;gap:6px;'><i class='fas fa-external-link-alt'></i> Edit Lesson Content</a></div>` : ''}
         <div class='slideout-form-line'>
           <label class='slideout-form-line-title'>Lesson name</label>
           <input type='text' name='lesson_name' value='${lesson.name || ''}'/>
