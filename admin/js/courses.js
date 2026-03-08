@@ -384,7 +384,6 @@ class CoursesTab {
     slideout.show({
       title: lessonId ? `Edit Lesson ${lesson.lesson_number}` : 'Add Lesson',
       message: `
-        ${lessonId ? `<div style='margin-bottom:12px;'><a href='${editPostUrl}' target='_blank' class='ui tiny button' style='display:inline-flex;align-items:center;gap:6px;'><i class='fas fa-external-link-alt'></i> Edit Lesson Content</a></div>` : ''}
         <div class='slideout-form-line'>
           <label class='slideout-form-line-title'>Lesson name</label>
           <input type='text' name='lesson_name' value='${lesson.name || ''}'/>
@@ -469,6 +468,20 @@ class CoursesTab {
       },
       onClose: () => this.state.set('editing-lesson', false)
     });
+
+    if (lessonId) {
+      const header = document.querySelector('.slideout-header');
+      if (header) {
+        const editLink = document.createElement('a');
+        editLink.href = editPostUrl;
+        editLink.target = '_blank';
+        editLink.className = 'button';
+        editLink.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-right:auto;text-decoration:none;';
+        editLink.innerHTML = '<i class="fas fa-external-link-alt"></i> Edit Lesson Content';
+        header.querySelector('h2').after(editLink);
+        header.style.cssText = 'display:flex;align-items:center;gap:12px;';
+      }
+    }
 
     const select = document.querySelector('.slideout-form-select[name="lesson_module"]');
     if (select) {
