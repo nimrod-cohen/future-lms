@@ -379,8 +379,6 @@ class CoursesTab {
 
     const videosToTextarea = arr => (arr && arr.length ? arr.join('\n') : '');
 
-    const editPostUrl = lessonId ? `${window.location.origin}/wp-admin/post.php?post=${lessonId}&action=edit` : '';
-
     slideout.show({
       title: lessonId ? `Edit Lesson ${lesson.lesson_number}` : 'Add Lesson',
       message: `
@@ -410,6 +408,10 @@ class CoursesTab {
           <textarea name='lesson_videos' style='height:120px;'>${videosToTextarea(lesson.videos)}</textarea>
         </div>
         <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Lesson Content</label>
+          <textarea class='trumbo' name='lesson_content' style='height:250px;'></textarea>
+        </div>
+        <div class='slideout-form-line'>
           <label class='slideout-form-line-title'>Homework</label>
           <textarea class='trumbo' name='lesson_homework' style='height:180px;'></textarea>
         </div>
@@ -433,14 +435,16 @@ class CoursesTab {
           .map(v => ({ video_id: v }));
 
         const $ = window.jQuery;
-        const homeworkHtml =
-          $ && $.fn.trumbowyg
-            ? jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html')
-            : vals.lesson_homework || '';
-        const additionalHtml =
-          $ && $.fn.trumbowyg
-            ? jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html')
-            : vals.lesson_additional_files || '';
+        const trumbo = $ && $.fn.trumbowyg;
+        const contentHtml = trumbo
+          ? jQuery('.trumbo[name="lesson_content"]').trumbowyg('html')
+          : vals.lesson_content || '';
+        const homeworkHtml = trumbo
+          ? jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html')
+          : vals.lesson_homework || '';
+        const additionalHtml = trumbo
+          ? jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html')
+          : vals.lesson_additional_files || '';
 
         const payload = {
           action: 'edit_lesson',
@@ -450,6 +454,7 @@ class CoursesTab {
           name: vals.lesson_name,
           teaser: vals.lesson_teaser || '',
           video_list: JSON.stringify(videos),
+          content: contentHtml,
           homework: homeworkHtml,
           additional_files: additionalHtml,
           presentation: vals.lesson_presentation || 0
@@ -469,15 +474,6 @@ class CoursesTab {
       onClose: () => this.state.set('editing-lesson', false)
     });
 
-    if (lessonId) {
-      const header = document.querySelector('.slideout-header');
-      if (header) {
-        header.style.cssText = 'display:flex;align-items:center;gap:12px;';
-        header.querySelector('h2').insertAdjacentHTML('afterend',
-          `<a href='${editPostUrl}' target='_blank' onclick="event.stopPropagation(); window.open('${editPostUrl}', '_blank');" class='button' style='display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-right:auto;text-decoration:none;cursor:pointer;'><i class='fas fa-external-link-alt'></i> Edit Lesson Content</a>`);
-      }
-    }
-
     const select = document.querySelector('.slideout-form-select[name="lesson_module"]');
     if (select) {
       const courses = this.state.get('courses');
@@ -495,6 +491,7 @@ class CoursesTab {
 
     if (window.jQuery && jQuery.fn.trumbowyg) {
       jQuery('.trumbo').trumbowyg({ lang: 'he' });
+      jQuery('.trumbo[name="lesson_content"]').trumbowyg('html', lesson.content || '');
       jQuery('.trumbo[name="lesson_homework"]').trumbowyg('html', lesson.homework || '');
       jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html', lesson.additional_files || '');
     }

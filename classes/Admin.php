@@ -93,10 +93,13 @@ class Admin {
       $presentationFilename = $presentationUrl ? wp_basename($presentationUrl) : '';
       $presentationMime = $presentationId ? get_post_mime_type($presentationId) : '';
 
+      $post = get_post($lessonId);
+
       wp_send_json([
         'error' => false,
         'id' => $lessonId,
         'name' => $lesson->raw('title'),
+        'content' => $post ? $post->post_content : '',
         'teaser' => $lesson->raw('teaser') ?? '',
         'videos' => $videos,
         'homework' => $lesson->raw('homework') ?? '',
@@ -122,6 +125,7 @@ class Admin {
       $videoListJson = isset($_POST["video_list"]) ? stripslashes($_POST["video_list"]) : '[]';
       $homework = isset($_POST["homework"]) ? stripslashes($_POST["homework"]) : '';
       $additional_files = isset($_POST["additional_files"]) ? stripslashes($_POST["additional_files"]) : '';
+      $content = isset($_POST["content"]) ? stripslashes($_POST["content"]) : '';
       $newModuleId = isset($_POST["module_id"]) ? intval($_POST["module_id"]) : null;
       $lessonNumber = isset($_POST["lesson_number"]) ? intval($_POST["lesson_number"]) : null;
       $presentationId = isset($_POST["presentation"]) ? intval($_POST["presentation"]) : 0;
@@ -136,6 +140,7 @@ class Admin {
         
         $lessonId = wp_insert_post([
           'post_title' => $name,
+          'post_content' => wp_kses_post($content),
           'post_status' => 'draft',
           'post_type' => 'lesson',
           'post_parent' => $newModuleId
@@ -145,10 +150,10 @@ class Admin {
           wp_send_json(['error' => true, 'message' => 'Failed to create lesson']);
         }
       } else {
-        // Update existing lesson title
         wp_update_post([
           'ID' => $lessonId,
-          'post_title' => $name
+          'post_title' => $name,
+          'post_content' => wp_kses_post($content)
         ]);
       }
 
