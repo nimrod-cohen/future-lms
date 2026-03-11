@@ -138,6 +138,11 @@ class FutureLMS {
         'maxpay' => !empty($maxpay) ? intval($maxpay) : 1,
       ];
     }, 10, 2);
+
+    // Get course code (short name)
+    add_filter('future-lms/course_code', function ($code, $courseId) {
+      return get_post_meta($courseId, 'course_code', true) ?: $code;
+    }, 10, 2);
   }
 
   function future_lms_load_textdomain() {
