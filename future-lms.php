@@ -815,17 +815,39 @@ class FutureLMS {
         'user_login',
         'user_nicename',
         'user_email',
-        'user_url'
+        'user_url',
+        'display_name'
       ]]);
 
     $users = $query->get_results();
-    $users = array_reduce($users, function ($result, $item) {
-      $result[] = [
+
+    // Also search by phone meta
+    $phoneQuery = new WP_User_Query([
+      'role' => 'student',
+      'meta_query' => [[
+        'key' => 'user_phone',
+        'value' => esc_attr($search),
+        'compare' => 'LIKE'
+      ]]
+    ]);
+    $phoneUsers = $phoneQuery->get_results();
+
+    // Merge results, dedup by ID
+    $allUsers = array_merge($users, $phoneUsers);
+    $seen = [];
+    $users = [];
+    foreach ($allUsers as $item) {
+      if (isset($seen[$item->ID])) continue;
+      $seen[$item->ID] = true;
+      $phone = get_user_meta($item->ID, 'user_phone', true);
+      $subtitle = $item->data->user_email;
+      if ($phone) $subtitle .= ' | ' . $phone;
+      $users[] = [
         'id' => $item->ID,
-        'title' => $item->data->display_name
+        'title' => $item->data->display_name,
+        'description' => $subtitle
       ];
-      return $result;
-    }, []);
+    }
 
     $result = [];
     foreach ($users as $user) {
