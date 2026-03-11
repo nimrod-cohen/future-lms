@@ -644,7 +644,7 @@ class CoursesTab {
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Course Code</label>
-        <input type='text' name='course_code' value='${course?.code || ''}' />
+        <input type='text' name='course_code' value='${course?.course_code || ''}' />
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Course Content</label>
