@@ -202,6 +202,8 @@ class FutureLMS {
     add_action("wp_ajax_future_lms_set_settings", [$this, "set_settings"]);
     add_action('show_user_profile', [$this, 'extraUserFields']);
     add_action('edit_user_profile', [$this, 'extraUserFields']);
+    add_action('personal_options_update', [$this, 'saveExtraUserFields']);
+    add_action('edit_user_profile_update', [$this, 'saveExtraUserFields']);
     add_action('manage_users_columns', [$this, 'addExtraUserFieldsToList']);
     add_filter('manage_users_custom_column', [$this, 'addExtraUserFieldsToListData'], 10, 3);
     add_action('manage_edit-module_columns', [$this, 'addExtraModuleFieldsToList']);
@@ -434,6 +436,14 @@ class FutureLMS {
       </tr>
     </table>
   <?php }
+
+  public function saveExtraUserFields($user_id) {
+    if (!current_user_can('edit_user', $user_id)) {
+      return false;
+    }
+    $phone = apply_filters('future-lms/student_phone', $_POST["phone"] ?? '');
+    update_user_meta($user_id, 'user_phone', $phone);
+  }
 
   public function enqueueSchoolScripts() {
     wp_enqueue_script('future-lms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
