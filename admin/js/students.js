@@ -248,7 +248,7 @@ class StudentsTab {
         email = COMMON.removeNonAsciiChars(email);
 
         userData = {
-          email: encodeURIComponent(email),
+          email: email,
           name: modal.querySelector('.ui.input input[name=full-name]').value.trim(),
           phone: modal.querySelector('.ui.input input[name=phone]').value.trim()
         };
