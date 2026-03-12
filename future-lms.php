@@ -3,8 +3,8 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.1.1
- * Author: Nimrod
+ * Version: 1.1.2
+ * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
  * Requires: 4.6 or higher
@@ -47,6 +47,8 @@ use WP_User_Query;
 class FutureLMS {
   function __construct() {
     require_once __DIR__ . '/vendor/autoload.php';
+    require_once __DIR__ . '/includes/github-updater.php';
+    new GitHubPluginUpdater(__FILE__);
 
     VersionManager::install_version();
 
