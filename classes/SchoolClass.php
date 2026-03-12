@@ -27,10 +27,10 @@ use FutureLMS\classes\BaseObject;
         }
 
         if (!empty($search)) {
-            $where .= " AND ( u.display_name like %s OR u.user_email like %s)";
+            $where .= " AND ( u.display_name like %s OR u.user_email like %s OR um.meta_value like %s)";
         } else {
             $search = 1;
-            $where .= " AND (%d = %d) ";
+            $where .= " AND (%d = %d AND %d = %d) ";
         }
         if (!empty($month)) {
             $where .= " AND ( month(cs.registration_date) = " . $month . " AND year(cs.registration_date) = " . $year . ")";
@@ -46,7 +46,7 @@ use FutureLMS\classes\BaseObject;
       where " . $where . "
       order by cs.registration_date desc";
 
-        $sql = $wpdb->prepare($sql, $search, $search);
+        $sql = $wpdb->prepare($sql, $search, $search, $search);
 
         return $wpdb->get_results($sql, ARRAY_A);
     }

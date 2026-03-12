@@ -13,7 +13,7 @@
           </div>
         </div>
         <div class="field">
-          <input type="text" name="name_or_email" placeholder="Search name or email">
+          <input type="text" name="name_or_email" placeholder="Search name, email, or phone">
         </div>
         <div class="field">
           <div class="ui calendar" id="registration_month">
