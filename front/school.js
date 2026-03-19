@@ -513,6 +513,50 @@ class Classroom {
         window.open(row.getAttribute('data-href'), '_blank');
       });
     });
+
+    this.convertFaqToAccordion(coursePage);
+  };
+
+  convertFaqToAccordion = (coursePage) => {
+    const viewer = coursePage.querySelector('.lesson-content-viewer');
+    if (!viewer) return;
+
+    const paragraphs = Array.from(viewer.querySelectorAll('p'));
+    let faqStarted = false;
+
+    for (let i = 0; i < paragraphs.length; i++) {
+      const p = paragraphs[i];
+      const strong = p.querySelector('strong');
+      if (!strong) continue;
+
+      const text = strong.textContent.trim();
+      if (text.includes('שאלות נפוצות')) {
+        faqStarted = true;
+        continue;
+      }
+      if (!faqStarted) continue;
+      if (text.endsWith('?')) {
+        const answers = [];
+        let j = i + 1;
+        while (j < paragraphs.length) {
+          const nextStrong = paragraphs[j].querySelector('strong');
+          if (nextStrong && (nextStrong.textContent.trim().endsWith('?') || nextStrong.textContent.trim() === paragraphs[j].textContent.trim())) break;
+          answers.push(paragraphs[j]);
+          j++;
+        }
+
+        const details = document.createElement('details');
+        details.className = 'faq-item';
+        const summary = document.createElement('summary');
+        summary.textContent = text;
+        details.appendChild(summary);
+        const answerDiv = document.createElement('div');
+        answerDiv.className = 'faq-answer';
+        answers.forEach(a => answerDiv.appendChild(a));
+        details.appendChild(answerDiv);
+        p.replaceWith(details);
+      }
+    }
   };
 
   loadLessons = async () => {
