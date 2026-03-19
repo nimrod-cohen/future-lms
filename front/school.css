@@ -460,6 +460,39 @@ body.school {
               padding: 4px 6px;
             }
           }
+
+          .broker-table {
+            width: 100%;
+            border-collapse: collapse;
+
+            thead th {
+              color: white;
+              font-weight: 600;
+            }
+
+            tbody tr {
+              border-bottom: 1px solid #e5e7eb;
+
+              &:nth-child(even) {
+                background: #f0f6ff;
+              }
+
+              &[data-href] {
+                cursor: pointer;
+
+                &:hover {
+                  background: #e8f0fe;
+                }
+              }
+            }
+
+            .cta-link {
+              display: inline-block;
+              color: white;
+              text-decoration: none;
+              margin-top: 8px;
+            }
+          }
         }
       }
     }

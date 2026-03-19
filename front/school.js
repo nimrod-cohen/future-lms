@@ -506,6 +506,13 @@ class Classroom {
     if (document.querySelector('table.screeners.table')) {
       window.screeners.init();
     }
+
+    coursePage.querySelectorAll('tr[data-href]').forEach(row => {
+      row.addEventListener('click', e => {
+        if (e.target.closest('a')) return;
+        window.open(row.getAttribute('data-href'), '_blank');
+      });
+    });
   };
 
   loadLessons = async () => {
