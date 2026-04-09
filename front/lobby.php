@@ -31,14 +31,19 @@ $urls = [
 		<div class="row page-content">
 			<div class="col-lg-12 main-content">
         <div class="school-header">
-          <span class="hello"><?php echo sprintf(__('Hey %s','future-lms'), $user->data->display_name); ?>, 
-            <a class="text-blue-600 underline" href="/"><?php _e('Back to site &larr;','future-lms');?></a>
-          </span>
-          <span class="tabs">
-            <a class="<?php echo $schoolPage === "mycourses" ? "selected" : ""; ?>" href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
-            <span class="divider">&nbsp;</span>
-            <a class="<?php echo $schoolPage === "courses" ? "selected" : ""; ?>" href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course store','future-lms');?></a>
-          </span>
+          <div class="school-header-greeting">
+            <span class="hello"><?php echo sprintf(__('Hey %s','future-lms'), $user->data->display_name); ?>,</span>
+            <a class="hello-back" href="/"><?php _e('Back to site &larr;','future-lms');?></a>
+          </div>
+          <div class="school-header-nav">
+            <span class="tabs">
+              <a class="<?php echo $schoolPage === "mycourses" ? "selected" : ""; ?>" href="<?php echo $urls["my_courses"]; ?>"><?php _e('My courses','future-lms');?></a>
+              <span class="divider">&nbsp;</span>
+              <a class="<?php echo $schoolPage === "courses" ? "selected" : ""; ?>" href="<?php echo $urls["available_courses"]; ?>"><?php _e('Course store','future-lms');?></a>
+              <span class="divider">&nbsp;</span>
+              <a href="/help" title="מרכז העזרה" class="help-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> מרכז העזרה</a>
+            </span>
+          </div>
         </div>
         <div class="school-courses">
         <?php
@@ -97,6 +102,9 @@ case "course-details":
 }
 ?>
         </div><!-- school courses -->
+        <div class="lobby-footer">
+          <a href="/help">מרכז העזרה</a>
+        </div>
 			</div> <!-- main content -->
 		</div> <!-- page-content -->
 	</div>

@@ -598,20 +598,59 @@ body.school {
     .school-header {
       padding: 0 20px;
       display: flex;
-      justify-content: space-between;
-      flex-direction: row;
-      align-items: center;
-      gap: 10px;
+      flex-direction: column;
+      gap: 8px;
+
+      .school-header-greeting {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        color: #374151;
+
+        .hello {
+          font-weight: 500;
+        }
+
+        .hello-back {
+          color: #2563eb;
+          font-size: 14px;
+          text-decoration: none;
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .school-header-nav {
+        display: flex;
+        align-items: center;
+      }
+
       .tabs {
         display: flex;
+        align-items: stretch;
         > a {
+          padding: 8px 14px;
+          border-radius: 8px 8px 0 0;
+          font-size: 14px;
+          transition: background-color 0.15s;
+          display: inline-flex;
+          align-items: center;
           &.selected {
             background-color: #efefef;
           }
-          padding: 5px 10px;
           &:hover {
             text-decoration: none;
             background-color: #e0e0e0;
+          }
+        }
+
+        .help-link {
+          gap: 4px;
+          color: #6b7280;
+          &:hover {
+            color: #2563eb;
           }
         }
 
@@ -1173,4 +1212,22 @@ body.school {
       }
     }
   }
+}
+
+.lobby-footer {
+  text-align: center;
+  padding: 24px 0 8px;
+  margin-top: 32px;
+  border-top: 1px solid var(--border-color);
+}
+
+.lobby-footer a {
+  color: #6b7280;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.lobby-footer a:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
