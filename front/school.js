@@ -111,6 +111,12 @@ class Classroom {
     let sidebar = coursePage.querySelector('.school-sidebar');
     this.state.set('sidebar', sidebar);
 
+    // Show fallback buttons if loading takes too long
+    setTimeout(() => {
+      const fallback = document.getElementById('classroom-loader-fallback');
+      if (fallback) fallback.classList.add('show');
+    }, 10000);
+
     const autoAdvance = localStorage.getItem('auto_advance_videos') === 'true';
     this.state.set('auto-advance', autoAdvance);
     const autoplayIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon><line x1="19" y1="3" x2="19" y2="21"></line></svg>`;
@@ -210,6 +216,13 @@ class Classroom {
     window.scrollTo(0, 0);
 
     await this.loadLesson();
+
+    // Dismiss loading overlay
+    const loader = document.getElementById('classroom-loader');
+    if (loader) {
+      loader.classList.add('hidden');
+      setTimeout(() => loader.remove(), 300);
+    }
   };
 
   enlargeMaterials = e => {
@@ -390,9 +403,11 @@ class Classroom {
         if (isAutoAdvance) {
           this.autoAdvanceToNextVideo();
         }
+        this.blinkNavIcon();
       });
     } else {
       this.reportProgress(lesson, { video_id: 'text' }, 100, 0);
+      setTimeout(() => this.blinkNavIcon(), 500);
 
       vc.classList.add('no-videos-available');
       coursePage.querySelector('.toggle-videos').classList.add('rotated');
@@ -523,6 +538,16 @@ class Classroom {
     });
 
     this.state.set('course-data', lessondata);
+  };
+
+  blinkNavIcon = () => {
+    const btns = document.querySelectorAll('.nav-lessons');
+    btns.forEach(btn => {
+      btn.classList.remove('blink');
+      void btn.offsetWidth; // force reflow to restart animation
+      btn.classList.add('blink');
+    });
+    setTimeout(() => btns.forEach(btn => btn.classList.remove('blink')), 2500);
   };
 
   toggleMobileSidebar = show => {

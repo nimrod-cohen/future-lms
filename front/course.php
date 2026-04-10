@@ -94,5 +94,17 @@ if ($hours > 0) {
       <div class="lesson-content-viewer"></div>
     </div>
   </div>
+  </div>
+</div>
+<div class="classroom-loader" id="classroom-loader">
+  <div class="classroom-loader-content">
+    <div class="classroom-loader-spinner"></div>
+    <div class="classroom-loader-text">טוען את השיעור...</div>
+    <div class="classroom-loader-fallback" id="classroom-loader-fallback">
+      <p>נראה שהטעינה לוקחת יותר מדי זמן</p>
+      <button onclick="location.reload()">רענון העמוד</button>
+      <button onclick="location.href='/lobby/?pg=mycourses'">חזרה ללובי</button>
+    </div>
+  </div>
 </div>
 <script src="https://player.vimeo.com/api/player.js"></script>
