@@ -409,6 +409,7 @@ body.school {
           line-height: 1.4rem;
           height: 100%;
           overflow: scroll;
+          white-space: pre-wrap;
 
           pre {
             line-height: 1.4rem;
