@@ -14,10 +14,11 @@ body.school {
   .nav-lessons {
     cursor: pointer;
     display: none;
-    width: 24px;
+    width: 36px;
     height: auto;
-    border: solid 2px var(--lead-color);
-    border-radius: 3px;
+    border: 0;
+    background: transparent;
+    padding: 0;
   }
 
   .row.page-content {
@@ -263,6 +264,8 @@ body.school {
           display: flex;
           width: 100%;
           justify-content: center;
+          align-items: center;
+          gap: 8px;
 
           > .lesson-title {
             flex-grow: 1;

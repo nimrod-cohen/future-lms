@@ -2,10 +2,10 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;">
     <g transform="matrix(1,0,0,1,0,0.916409)">
-        <path d="M2,3L8,3C10.194,3 12,4.806 12,7L12,21C12,19.354 10.646,18 9,18L2,18L2,3Z" style="fill:none;fill-rule:nonzero;stroke:black;stroke-width:2px;"/>
+        <path d="M2,3L8,3C10.194,3 12,4.806 12,7L12,21C12,19.354 10.646,18 9,18L2,18L2,3Z" style="fill:none;fill-rule:nonzero;stroke:#176eb6;stroke-width:2px;"/>
     </g>
     <g transform="matrix(1,0,0,1,0,0.916409)">
-        <path d="M22,3L16,3C13.806,3 12,4.806 12,7L12,21C12,19.354 13.354,18 15,18L22,18L22,3Z" style="fill:none;fill-rule:nonzero;stroke:black;stroke-width:2px;"/>
+        <path d="M22,3L16,3C13.806,3 12,4.806 12,7L12,21C12,19.354 13.354,18 15,18L22,18L22,3Z" style="fill:none;fill-rule:nonzero;stroke:#176eb6;stroke-width:2px;"/>
     </g>
     <g transform="matrix(1.00882,0,0,1.00882,-0.169586,0.846812)">
         <path d="M16.227,1.226L16.243,7.949L17.754,7.003L19.229,7.892L19.171,1.231L16.227,1.226Z" style="stroke:white;stroke-width:0.99px;stroke-miterlimit:1.5;"/>
