@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200..800&display=swap');
 
+@keyframes nav-lessons-hue {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
 :root {
   --border-color: #ccd5db;
   --border-emphasis-color: #777a7c;
@@ -19,6 +24,7 @@ body.school {
     border: 0;
     background: transparent;
     padding: 0;
+    animation: nav-lessons-hue 6s linear infinite;
   }
 
   .row.page-content {
@@ -412,7 +418,6 @@ body.school {
           line-height: 1.4rem;
           height: 100%;
           overflow: scroll;
-          white-space: pre-wrap;
 
           pre {
             line-height: 1.4rem;

@@ -491,21 +491,37 @@ class Classroom {
     }, 3000);
   };
 
+  /**
+   * If the lesson content already uses HTML block-level structure (paragraphs,
+   * headings, lists, tables, etc.), let it flow normally — its own tags carry
+   * the visual rhythm. Only when it's plain text (raw `\n`s with no
+   * block-level markup) do we convert newlines to <br>. This is the inverse
+   * of v1.2.1's blanket `white-space: pre-wrap`, which over-indented
+   * HTML-formatted lessons because the inter-tag whitespace was preserved.
+   */
+  autoBr = content => {
+    if (!content) return '';
+    if (/<(p|div|br|h[1-6]|ul|ol|li|table|pre|blockquote|section|article|hr)\b/i.test(content)) {
+      return content;
+    }
+    return content.replace(/\n/g, '<br>');
+  };
+
   showLessonTab = tab => {
     let lesson = this.state.get('lesson');
     let content = '';
     switch (tab) {
       case 'content':
-        content = lesson.lessonContent;
+        content = this.autoBr(lesson.lessonContent);
         break;
       case 'additional':
         content = '';
         if (lesson.presentation?.length)
           content += `<p><a target="_blank" href="${lesson.presentation}">לחץ כאן להורדת המצגת של השיעור</a><br/></p>`;
-        if (lesson.additionalFiles?.length) content += `<p>${lesson.additionalFiles}</p>`;
+        if (lesson.additionalFiles?.length) content += `<p>${this.autoBr(lesson.additionalFiles)}</p>`;
         break;
       case 'homework':
-        content = lesson.homework;
+        content = this.autoBr(lesson.homework);
         break;
       case 'student-notes':
         content = `<div class="notebook-container"><div class="notebook-lines"></div><div class="student-notes" contenteditable="true" spellcheck="false">${lesson?.studentNotes || ''}</div></div>`;
