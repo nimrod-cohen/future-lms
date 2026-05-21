@@ -102,9 +102,9 @@ case "course-details":
 }
 ?>
         </div><!-- school courses -->
-        <div class="lobby-footer">
-          <a href="/help">מרכז העזרה</a>
-        </div>
+        <!-- Footer (help-center link + disclaimer) is rendered by the
+             theme's footer-school.php so the lobby and lesson pages share
+             a single visual footer instead of stacking two. -->
 			</div> <!-- main content -->
 		</div> <!-- page-content -->
 	</div>
