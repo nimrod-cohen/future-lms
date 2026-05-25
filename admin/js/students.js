@@ -295,7 +295,7 @@ class StudentsTab {
         <td>${student.user_email}</td>
         <td>${name}</td>
         <td>${phone}</td>
-        <td class="progress-cell">${student.progress != null ? student.progress + '%' : '-'}</td>
+        <td class="progress-cell">${student.progress != null ? `<span class="progress-link">${student.progress}% <svg class="progress-expand-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m7 10 5 5 5-5"/></svg></span>` : '-'}</td>
         <td>
           <span data-inverted='' data-position='top right' data-tooltip='Remove student'><i class="minus red circle icon clickable remove-class"></i></span>
         </td>

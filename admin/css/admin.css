@@ -432,7 +432,8 @@ div.error {
 .flms-pd-lessons { padding: 2px 0; }
 .flms-pd-lesson {
   display: flex; align-items: center; gap: 8px;
-  padding: 7px 14px 7px 28px; font-size: 13px; color: #334155;
+  padding: 7px 14px; padding-inline-start: 42px;
+  font-size: 13px; color: #334155;
   border-top: 1px solid #f1f5f9;
 }
 .flms-pd-lesson:first-child { border-top: 0; }
@@ -442,4 +443,15 @@ div.error {
 .flms-pd-lesson-dur {
   font-size: 11px; color: #94a3b8; font-variant-numeric: tabular-nums;
 }
-.progress-cell[style*="cursor"] { text-decoration: underline; color: #2563eb; }
+
+/* Clickable progress cell: subtle link style + expand icon. */
+.progress-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: #2563eb; cursor: pointer;
+}
+.progress-link:hover { text-decoration: underline; }
+.progress-expand-icon {
+  opacity: 0.45; transition: opacity 0.15s ease;
+  vertical-align: middle;
+}
+.progress-link:hover .progress-expand-icon { opacity: 0.85; }
