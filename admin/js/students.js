@@ -325,7 +325,108 @@ class StudentsTab {
       };
 
       remove.addEventListener('click', removeStudentClick);
+
+      // Click on progress % → open detailed course-tree popup.
+      const progressCell = studentRow.querySelector('.progress-cell');
+      if (progressCell && student.progress != null) {
+        progressCell.style.cursor = 'pointer';
+        progressCell.title = 'Click to view lesson details';
+        progressCell.addEventListener('click', () => {
+          this.showProgressDetail(student.id, studentRow.getAttribute('course-id'), student.display_name, student.course_name);
+        });
+      }
     });
+  }
+
+  /**
+   * Fetch the full module/lesson tree + per-lesson completion status,
+   * then render it inside a remodaler popup. Uses wpjsutils' remodaler
+   * so the look is consistent with the rest of the admin.
+   */
+  async showProgressDetail(studentId, courseId, studentName, courseName) {
+    remodaler.show({
+      title: `${studentName || 'Student'} — ${courseName || 'Course'}`,
+      message: '<div class="flms-progress-loading"><div class="ui active inline loader"></div> Loading...</div>',
+      type: remodaler.types.OK,
+      confirmText: 'Close',
+    });
+
+    try {
+      const data = await JSUtils.fetch(ajaxurl, {
+        action: 'get_student_progress_detail',
+        student_id: studentId,
+        course_id: courseId,
+      });
+
+      if (!data || !data.success) {
+        const msg = (data && data.data && data.data.message) || 'Failed to load progress.';
+        const msgEl = document.querySelector('[data-remodal-message]');
+        if (msgEl) msgEl.innerHTML = `<p style="color:#b91c1c">${msg}</p>`;
+        return;
+      }
+
+      const { student, course, progress, modules } = data.data;
+      const msgEl = document.querySelector('[data-remodal-message]');
+      if (!msgEl) return;
+
+      let html = '';
+
+      // Progress summary bar
+      const pct = progress.percent;
+      const barColor = pct >= 80 ? '#16a34a' : pct >= 40 ? '#d97706' : '#2563eb';
+      html += `<div class="flms-pd-summary">
+        <div class="flms-pd-bar-wrap">
+          <div class="flms-pd-bar" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        <span class="flms-pd-stats">${progress.completed} / ${progress.total} lessons (${pct}%)</span>
+      </div>`;
+
+      // Module → lesson tree
+      let moduleIndex = 0;
+      for (const mod of modules) {
+        const modCompleted = mod.lessons.filter(l => l.completed).length;
+        const modTotal = mod.lessons.length;
+        const modLabel = mod.intro ? 'מבוא' : `מודול ${mod.order}`;
+        const allDone = modCompleted === modTotal;
+
+        html += `<div class="flms-pd-module ${allDone ? 'is-complete' : ''}">
+          <div class="flms-pd-module-header">
+            <span class="flms-pd-module-icon">${allDone ? '✅' : '📂'}</span>
+            <span class="flms-pd-module-name">${modLabel}: ${this._esc(mod.name)}</span>
+            <span class="flms-pd-module-count">${modCompleted}/${modTotal}</span>
+          </div>
+          <div class="flms-pd-lessons">`;
+
+        for (const les of mod.lessons) {
+          const icon = les.completed ? '✅' : '⬜';
+          const dur = les.completed && les.seconds > 0 ? this._fmtDuration(les.seconds) : '';
+          html += `<div class="flms-pd-lesson ${les.completed ? 'is-done' : ''}">
+            <span class="flms-pd-lesson-icon">${icon}</span>
+            <span class="flms-pd-lesson-name">שיעור ${les.number}: ${this._esc(les.name)}</span>
+            ${dur ? `<span class="flms-pd-lesson-dur">${dur}</span>` : ''}
+          </div>`;
+        }
+
+        html += `</div></div>`;
+        moduleIndex++;
+      }
+
+      msgEl.innerHTML = html;
+    } catch (ex) {
+      const msgEl = document.querySelector('[data-remodal-message]');
+      if (msgEl) msgEl.innerHTML = `<p style="color:#b91c1c">Error: ${ex.message || 'Unknown error'}</p>`;
+    }
+  }
+
+  _esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+  _fmtDuration(secs) {
+    if (secs < 60) return `${secs}s`;
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    if (m < 60) return `${m}:${String(s).padStart(2, '0')}`;
+    const h = Math.floor(m / 60);
+    return `${h}:${String(m % 60).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
   fetchStudents() {

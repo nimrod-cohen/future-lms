@@ -187,7 +187,7 @@ class ProgressManager {
     ];
   }
 
-  private static function getDetailedLessonsProgress(int $studentId, int $courseId, array $courseTree): array {
+  public static function getDetailedLessonsProgress(int $studentId, int $courseId, array $courseTree): array {
     $courseLessons = self::getLessons($courseId, $courseTree, false);
     $lessonIds = $courseLessons['ids'];
 

@@ -387,3 +387,59 @@ div.error {
     height: unset;
   }
 }
+
+/* ─── Student progress detail popup (v1.2.5) ─── */
+.flms-progress-loading {
+  display: flex; align-items: center; gap: 12px;
+  justify-content: center; padding: 32px 0; color: #64748b;
+}
+.flms-pd-summary {
+  margin-bottom: 16px; padding-bottom: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.flms-pd-bar-wrap {
+  height: 10px; background: #f1f5f9; border-radius: 999px;
+  overflow: hidden; margin-bottom: 8px;
+}
+.flms-pd-bar {
+  height: 100%; border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.flms-pd-stats {
+  font-size: 13px; color: #475569; font-weight: 500;
+}
+.flms-pd-module {
+  margin-bottom: 6px; border: 1px solid #e2e8f0;
+  border-radius: 8px; overflow: hidden;
+}
+.flms-pd-module.is-complete { border-color: #bbf7d0; }
+.flms-pd-module-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: #f8fafc;
+  font-weight: 600; font-size: 14px; color: #0f172a;
+  cursor: default;
+}
+.flms-pd-module.is-complete .flms-pd-module-header { background: #f0fdf4; }
+.flms-pd-module-icon { flex-shrink: 0; font-size: 16px; }
+.flms-pd-module-name { flex: 1; }
+.flms-pd-module-count {
+  font-size: 12px; font-weight: 500; color: #64748b;
+  background: #f1f5f9; padding: 2px 8px; border-radius: 999px;
+}
+.flms-pd-module.is-complete .flms-pd-module-count {
+  background: #dcfce7; color: #166534;
+}
+.flms-pd-lessons { padding: 2px 0; }
+.flms-pd-lesson {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px 7px 28px; font-size: 13px; color: #334155;
+  border-top: 1px solid #f1f5f9;
+}
+.flms-pd-lesson:first-child { border-top: 0; }
+.flms-pd-lesson.is-done { color: #16a34a; }
+.flms-pd-lesson-icon { flex-shrink: 0; font-size: 14px; }
+.flms-pd-lesson-name { flex: 1; }
+.flms-pd-lesson-dur {
+  font-size: 11px; color: #94a3b8; font-variant-numeric: tabular-nums;
+}
+.progress-cell[style*="cursor"] { text-decoration: underline; color: #2563eb; }

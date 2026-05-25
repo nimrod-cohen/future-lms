@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.2.4
+ * Version: 1.2.5
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -195,6 +195,7 @@ class FutureLMS {
     add_action("wp_ajax_get_lesson_content", [$this, "get_lesson_content"]);
     add_action("wp_ajax_set_student_notes", [$this, "set_student_notes"]);
     add_action("wp_ajax_get_students", [$this, "get_students"]);
+    add_action("wp_ajax_get_student_progress_detail", [$this, "get_student_progress_detail"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
     add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
@@ -568,6 +569,104 @@ class FutureLMS {
       wp_send_json($students);
     } catch (Exception $ex) {
       wp_send_json(["error" => $ex->getMessage()]);
+    }
+  }
+
+  public function get_student_progress_detail() {
+    try {
+      $studentId = intval($_REQUEST["student_id"]);
+      $courseId   = intval($_REQUEST["course_id"]);
+
+      if (!$studentId || !$courseId) {
+        wp_send_json_error(["message" => "Missing student_id or course_id"]);
+      }
+
+      $user = get_user_by("id", $studentId);
+      if (!$user) { wp_send_json_error(["message" => "Student not found"]); }
+
+      $courseTree = Course::get_courses_tree([$courseId], false);
+      if (empty($courseTree[$courseId])) {
+        wp_send_json_error(["message" => "Course not found"]);
+      }
+
+      $ct = $courseTree[$courseId];
+
+      // Get detailed per-lesson progress.
+      $detailedProgress = ProgressManager::getDetailedLessonsProgress($studentId, $courseId, $courseTree);
+
+      // Build a flat module → lessons structure for the frontend.
+      $modules = [];
+      $totalLessons = 0;
+      $completedLessons = 0;
+
+      foreach ($ct["modules"] as $mod) {
+        $modData = [
+          "id"      => (int) $mod["module_id"],
+          "name"    => $mod["module_name"],
+          "order"   => (int) ($mod["module_order"] ?? 0),
+          "intro"   => !empty($mod["intro_module"]),
+          "lessons" => [],
+        ];
+
+        foreach ($mod["lessons"] as $lessonId => $lesson) {
+          $lessonId = (int) $lessonId;
+          $totalLessons++;
+
+          // A lesson is "completed" when at least one video/text entry
+          // hit 100% — same logic ProgressManager uses.
+          $lessonProgress = $detailedProgress[$lessonId] ?? [];
+          $isCompleted = false;
+          $watchedSeconds = 0;
+          foreach ($lessonProgress as $vid => $vp) {
+            if ((int) $vp["percent"] >= 100) $isCompleted = true;
+            $watchedSeconds += (int) $vp["seconds"];
+          }
+          if ($isCompleted) $completedLessons++;
+
+          $modData["lessons"][] = [
+            "id"        => $lessonId,
+            "name"      => $lesson["name"] ?? get_the_title($lessonId),
+            "number"    => (int) ($lesson["lesson_number"] ?? 0),
+            "completed" => $isCompleted,
+            "seconds"   => $watchedSeconds,
+            "duration"  => (int) ($lesson["duration"] ?? 0),
+          ];
+        }
+
+        usort($modData["lessons"], function ($a, $b) {
+          return $a["number"] <=> $b["number"];
+        });
+
+        $modules[] = $modData;
+      }
+
+      usort($modules, function ($a, $b) {
+        if ($a["intro"] && !$b["intro"]) return -1;
+        if (!$a["intro"] && $b["intro"]) return 1;
+        return $a["order"] <=> $b["order"];
+      });
+
+      $percent = $totalLessons > 0 ? round($completedLessons / $totalLessons * 100) : 0;
+
+      wp_send_json_success([
+        "student"  => [
+          "id"    => $studentId,
+          "name"  => $user->display_name,
+          "email" => $user->user_email,
+        ],
+        "course"   => [
+          "id"   => $courseId,
+          "name" => $ct["name"],
+        ],
+        "progress" => [
+          "percent"   => $percent,
+          "completed" => $completedLessons,
+          "total"     => $totalLessons,
+        ],
+        "modules"  => $modules,
+      ]);
+    } catch (\Exception $ex) {
+      wp_send_json_error(["message" => $ex->getMessage()]);
     }
   }
 
