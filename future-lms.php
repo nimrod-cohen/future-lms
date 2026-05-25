@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.2.6
+ * Version: 1.2.7
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -599,11 +599,11 @@ class FutureLMS {
       $totalLessons = 0;
       $completedLessons = 0;
 
-      foreach ($ct["modules"] as $mod) {
+      foreach ($ct["modules"] as $moduleId => $mod) {
         $modData = [
-          "id"      => (int) $mod["module_id"],
-          "name"    => $mod["module_name"],
-          "order"   => (int) ($mod["module_order"] ?? 0),
+          "id"      => (int) $moduleId,
+          "name"    => $mod["name"] ?? '',
+          "order"   => (int) ($mod["order"] ?? 0),
           "intro"   => !empty($mod["intro_module"]),
           "lessons" => [],
         ];
@@ -612,8 +612,6 @@ class FutureLMS {
           $lessonId = (int) $lessonId;
           $totalLessons++;
 
-          // A lesson is "completed" when at least one video/text entry
-          // hit 100% — same logic ProgressManager uses.
           $lessonProgress = $detailedProgress[$lessonId] ?? [];
           $isCompleted = false;
           $watchedSeconds = 0;
@@ -626,7 +624,7 @@ class FutureLMS {
           $modData["lessons"][] = [
             "id"        => $lessonId,
             "name"      => $lesson["name"] ?? get_the_title($lessonId),
-            "number"    => (int) ($lesson["lesson_number"] ?? 0),
+            "number"    => (int) ($lesson["order"] ?? 0),
             "completed" => $isCompleted,
             "seconds"   => $watchedSeconds,
             "duration"  => (int) ($lesson["duration"] ?? 0),
