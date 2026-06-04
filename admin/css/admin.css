@@ -462,13 +462,13 @@ div.error {
 .progress-link:hover .progress-expand-icon { opacity: 0.85; }
 
 /* Read-only IDs shown before action bars on module + lesson rows.
-   Uses inline-flex + align-self:center so a monospace label sized smaller
-   than its row sits on the row's visual center rather than the text
-   baseline of its grid cell. */
+   Stretch the cell to the row height and center the text inside via flex,
+   so the small monospace label sits on the row's visual midline even
+   when the row is taller than the label's natural line-box. */
 .entity-id {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  align-self: center;
+  align-self: stretch;
   line-height: 1;
   font-weight: 100;
   color: var(--disabled-color, #999);

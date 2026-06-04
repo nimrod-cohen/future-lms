@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.2.9
+ * Version: 1.2.10
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -478,7 +478,7 @@ class FutureLMS {
     wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
     wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
     wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js']);
-    wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css']);
+    wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css?time=' . date('Y_m_d_H'), ['future-lms-semantic-css']);
 
     wp_localize_script('future-lms-admin-js', '__futurelms', [
       'ajax_url' => admin_url('admin-ajax.php'),
