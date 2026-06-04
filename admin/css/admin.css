@@ -270,6 +270,7 @@ div.error {
                   grid-auto-flow: column;
                   justify-content: start;
                   align-items: center;
+                  align-self: center;
                   > i {
                     cursor: pointer;
                     bottom: unset;
@@ -460,8 +461,15 @@ div.error {
 }
 .progress-link:hover .progress-expand-icon { opacity: 0.85; }
 
-/* Read-only IDs shown before action bars on module + lesson rows. */
+/* Read-only IDs shown before action bars on module + lesson rows.
+   Uses inline-flex + align-self:center so a monospace label sized smaller
+   than its row sits on the row's visual center rather than the text
+   baseline of its grid cell. */
 .entity-id {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  line-height: 1;
   font-weight: 100;
   color: var(--disabled-color, #999);
   font-size: 0.75rem;
