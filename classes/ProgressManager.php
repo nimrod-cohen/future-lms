@@ -47,6 +47,15 @@ class ProgressManager {
     if ($newMilestone >= 1 && $newMilestone <= 100 && $newMilestone > $oldMilestone) {
       $data['course_percent'] = $newMilestone;
 
+      // Compute the same percent for the single lesson being touched, so
+      // listeners (e.g. Customer.io campaigns keyed off lesson completion)
+      // can act on lesson-level progress without re-querying.
+      $lessonId = (int) ($data['lesson_id'] ?? 0);
+      if ($lessonId) {
+        $lessonProgress = self::getLessonProgress($userId, $courseId, $lessonId, $courseTree);
+        $data['lesson_percent'] = (int) floor($lessonProgress['percent']);
+      }
+
       /**
        * Fires when a student crosses a new 1% milestone in course progress.
        *
@@ -59,6 +68,8 @@ class ProgressManager {
        *     @type int    $percent         Current video percent
        *     @type int    $seconds         Current video watched seconds
        *     @type int    $course_percent  Floored course progress (1 to 100)
+       *     @type int    $lesson_percent  Floored progress of the lesson the
+       *                                   video belongs to (0 to 100)
        * }
        */
       do_action('vi_course_progress_updated', $data);
@@ -125,6 +136,28 @@ class ProgressManager {
 
     $lessonsProgress = self::queryLessonsProgress($studentId, $courseId, $lessonIds);
     return self::calculate($lessonsProgress, $lessonsDurations);
+  }
+
+  /**
+   * Aggregate watched / duration / percent for a single lesson (across all
+   * of its videos). Uses the same calculate() rules as the course-level
+   * computation, so a 'text' row counts as the lesson's full duration when
+   * the user marked it 100%.
+   *
+   * Includes every lesson in the tree (not just count_progress ones) so a
+   * direct lesson_id from an event still resolves even when the lesson's
+   * module is excluded from course-level scoring.
+   */
+  public static function getLessonProgress(int $studentId, int $courseId, int $lessonId, array $courseTree): array {
+    $courseLessons = self::getLessons($courseId, $courseTree, false);
+    $lessonDuration = $courseLessons['durations'][$lessonId] ?? 0;
+
+    if ($lessonDuration <= 0) {
+      return ['watched' => 0, 'duration' => 0, 'percent' => 0];
+    }
+
+    $progressRows = self::queryLessonsProgress($studentId, $courseId, [$lessonId]);
+    return self::calculate($progressRows, [$lessonId => $lessonDuration]);
   }
 
   private static function calculate(array $lessonsProgress, array $lessonDurations): array {
