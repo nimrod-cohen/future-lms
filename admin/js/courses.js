@@ -218,6 +218,7 @@ class CoursesTab {
                     ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
                     : ''
                 } ${module.name}</span>
+                    <span class='entity-id' title='Module ID'>${mid}</span>
                     <span class='module-actions action-bar'>
                       <i class="edit icon blue actionable" data-action='edit-module'></i>
                       ${
@@ -253,6 +254,7 @@ class CoursesTab {
                               : ''
                             }
                           </span>
+                          <span class='entity-id' title='Lesson ID'>${lessonId}</span>
                           <span class='lesson-actions action-bar'>
                             <i class="edit icon blue actionable" data-action='edit-lesson'></i>
                             ${
@@ -287,7 +289,10 @@ class CoursesTab {
 
     slideout.show({
       title: moduleId ? 'Edit Module' : 'Add Module',
-      message: `<div class='slideout-form-line'>
+      message: `${moduleId ? `<div class='slideout-form-line slideout-id-row'>
+        <span class='entity-id-label'>Course #${courseId} · Module #${moduleId}</span>
+      </div>` : ''}
+      <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Module name</label>
         <input type='text' name='module_name' value='${module?.name || ''}'/>
       </div>
@@ -382,6 +387,9 @@ class CoursesTab {
     slideout.show({
       title: lessonId ? `Edit Lesson ${lesson.lesson_number}` : 'Add Lesson',
       message: `
+        ${lessonId ? `<div class='slideout-form-line slideout-id-row'>
+          <span class='entity-id-label'>Course #${courseId || '?'} · Module #${lesson.module_id || '?'} · Lesson #${lessonId}</span>
+        </div>` : ''}
         <div class='slideout-form-line'>
           <label class='slideout-form-line-title'>Lesson name</label>
           <input type='text' name='lesson_name' value='${lesson.name || ''}'/>
