@@ -462,18 +462,17 @@ div.error {
 .progress-link:hover .progress-expand-icon { opacity: 0.85; }
 
 /* Read-only IDs shown before action bars on module + lesson rows.
-   Stretch the cell to the row height and center the text inside via flex,
-   so the small monospace label sits on the row's visual midline even
-   when the row is taller than the label's natural line-box. */
+   Inherit the row's font (the previous monospace was sitting below the
+   Hebrew text baseline). align-self:center + line-height:1 land it on
+   the row's midline; vertical-align:middle covers the inline edge case
+   where align-self doesn't apply (e.g. if the parent isn't grid/flex). */
 .entity-id {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
+  align-self: center;
+  vertical-align: middle;
   line-height: 1;
-  font-weight: 100;
+  font-weight: 400;
   color: var(--disabled-color, #999);
   font-size: 0.75rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   user-select: all;
 }
 
