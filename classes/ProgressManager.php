@@ -35,29 +35,45 @@ class ProgressManager {
       'seconds' => intval($_POST["seconds"])
     ];
 
+    // Course tree is needed for both before- and after-save snapshots.
+    $courseTree = Course::get_courses_tree([$courseId]);
+    $lessonId = (int) $data['lesson_id'];
+
+    // Snapshot the lesson percent BEFORE we save so the 5% milestone
+    // comparison reflects the state the student crossed from. Course %
+    // uses the client-supplied 'progress' field (more reliable than a
+    // pre-save recompute when multiple devices are watching) — see below.
+    $oldLessonPercent = $lessonId
+      ? floor(self::getLessonProgress($userId, $courseId, $lessonId, $courseTree)['percent'])
+      : 0;
+
     self::saveProgress($data);
 
-    $courseTree = Course::get_courses_tree([$courseId]);
     $oldRawPercent = isset($_POST["progress"]) ? floatval($_POST["progress"]) : -1;
     $newRawPercent = self::getCourseProgress($userId, $courseId, $courseTree)['percent'];
 
     $oldMilestone = $oldRawPercent >= 0 ? floor($oldRawPercent) : -1;
     $newMilestone = floor($newRawPercent);
 
-    if ($newMilestone >= 1 && $newMilestone <= 100 && $newMilestone > $oldMilestone) {
-      $data['course_percent'] = $newMilestone;
+    $newLessonPercent = $lessonId
+      ? floor(self::getLessonProgress($userId, $courseId, $lessonId, $courseTree)['percent'])
+      : 0;
 
-      // Compute the same percent for the single lesson being touched, so
-      // listeners (e.g. Customer.io campaigns keyed off lesson completion)
-      // can act on lesson-level progress without re-querying.
-      $lessonId = (int) ($data['lesson_id'] ?? 0);
-      if ($lessonId) {
-        $lessonProgress = self::getLessonProgress($userId, $courseId, $lessonId, $courseTree);
-        $data['lesson_percent'] = (int) floor($lessonProgress['percent']);
-      }
+    // Two independent triggers: course %  crosses a new 1% step, OR
+    // lesson % crosses a new 5% step (5, 10, 15, …, 100). Either fires
+    // the same event payload — we don't double-fire if both happen.
+    $courseTriggered  = ($newMilestone >= 1 && $newMilestone <= 100 && $newMilestone > $oldMilestone);
+    $oldLessonStep    = (int) floor($oldLessonPercent / 5);
+    $newLessonStep    = (int) floor($newLessonPercent / 5);
+    $lessonTriggered  = ($newLessonStep > $oldLessonStep && $newLessonStep >= 1);
+
+    if ($courseTriggered || $lessonTriggered) {
+      $data['course_percent'] = (int) $newMilestone;
+      $data['lesson_percent'] = (int) $newLessonPercent;
 
       /**
-       * Fires when a student crosses a new 1% milestone in course progress.
+       * Fires when a student crosses a new course-progress 1% milestone
+       * OR a new lesson-progress 5% milestone (whichever comes first).
        *
        * @param array $data {
        *     @type int    $user_id
