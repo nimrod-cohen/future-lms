@@ -37,14 +37,16 @@ class ProgressManager {
 
     // Course tree is needed for both before- and after-save snapshots.
     $courseTree = Course::get_courses_tree([$courseId]);
-    $lessonId = (int) $data['lesson_id'];
+    $moduleId = (int) $data['module_id'];
 
-    // Snapshot the lesson percent BEFORE we save so the 5% milestone
+    // Snapshot the module percent BEFORE we save so the 5% milestone
     // comparison reflects the state the student crossed from. Course %
     // uses the client-supplied 'progress' field (more reliable than a
     // pre-save recompute when multiple devices are watching) — see below.
-    $oldLessonPercent = $lessonId
-      ? floor(self::getLessonProgress($userId, $courseId, $lessonId, $courseTree)['percent'])
+    // Modules with count_progress=false return 0 from getModuleProgress,
+    // so they never fire the module trigger.
+    $oldModulePercent = $moduleId
+      ? floor(self::getModuleProgress($userId, $courseId, $moduleId, $courseTree)['percent'])
       : 0;
 
     self::saveProgress($data);
@@ -55,25 +57,25 @@ class ProgressManager {
     $oldMilestone = $oldRawPercent >= 0 ? floor($oldRawPercent) : -1;
     $newMilestone = floor($newRawPercent);
 
-    $newLessonPercent = $lessonId
-      ? floor(self::getLessonProgress($userId, $courseId, $lessonId, $courseTree)['percent'])
+    $newModulePercent = $moduleId
+      ? floor(self::getModuleProgress($userId, $courseId, $moduleId, $courseTree)['percent'])
       : 0;
 
-    // Two independent triggers: course %  crosses a new 1% step, OR
-    // lesson % crosses a new 5% step (5, 10, 15, …, 100). Either fires
+    // Two independent triggers: course % crosses a new 1% step, OR
+    // module % crosses a new 5% step (5, 10, 15, …, 100). Either fires
     // the same event payload — we don't double-fire if both happen.
     $courseTriggered  = ($newMilestone >= 1 && $newMilestone <= 100 && $newMilestone > $oldMilestone);
-    $oldLessonStep    = (int) floor($oldLessonPercent / 5);
-    $newLessonStep    = (int) floor($newLessonPercent / 5);
-    $lessonTriggered  = ($newLessonStep > $oldLessonStep && $newLessonStep >= 1);
+    $oldModuleStep    = (int) floor($oldModulePercent / 5);
+    $newModuleStep    = (int) floor($newModulePercent / 5);
+    $moduleTriggered  = ($newModuleStep > $oldModuleStep && $newModuleStep >= 1);
 
-    if ($courseTriggered || $lessonTriggered) {
+    if ($courseTriggered || $moduleTriggered) {
       $data['course_percent'] = (int) $newMilestone;
-      $data['lesson_percent'] = (int) $newLessonPercent;
+      $data['module_percent'] = (int) $newModulePercent;
 
       /**
        * Fires when a student crosses a new course-progress 1% milestone
-       * OR a new lesson-progress 5% milestone (whichever comes first).
+       * OR a new module-progress 5% milestone (whichever comes first).
        *
        * @param array $data {
        *     @type int    $user_id
@@ -84,8 +86,9 @@ class ProgressManager {
        *     @type int    $percent         Current video percent
        *     @type int    $seconds         Current video watched seconds
        *     @type int    $course_percent  Floored course progress (1 to 100)
-       *     @type int    $lesson_percent  Floored progress of the lesson the
-       *                                   video belongs to (0 to 100)
+       *     @type int    $module_percent  Floored progress of the module the
+       *                                   video belongs to (0 to 100; always
+       *                                   0 for count_progress=false modules)
        * }
        */
       do_action('vi_course_progress_updated', $data);
@@ -174,6 +177,32 @@ class ProgressManager {
 
     $progressRows = self::queryLessonsProgress($studentId, $courseId, [$lessonId]);
     return self::calculate($progressRows, [$lessonId => $lessonDuration]);
+  }
+
+  /**
+   * Aggregate watched / duration / percent for a single module, summing
+   * across all of its lessons. Returns 0 when the module is marked
+   * count_progress=false — by policy that module doesn't participate in
+   * progress reporting (mirrors the course-level scoring rule).
+   */
+  public static function getModuleProgress(int $studentId, int $courseId, int $moduleId, array $courseTree): array {
+    $zero = ['watched' => 0, 'duration' => 0, 'percent' => 0];
+
+    $module = $courseTree[$courseId]["modules"][$moduleId] ?? null;
+    if (!$module) return $zero;
+
+    $countProgress = !isset($module["count_progress"]) || $module["count_progress"];
+    if (!$countProgress) return $zero;
+
+    $lessonDurations = [];
+    foreach ($module["lessons"] as $lessonId => $lesson) {
+      $lessonDurations[(int) $lessonId] = (int) ($lesson["duration"] ?? 0);
+    }
+
+    if (!$lessonDurations || array_sum($lessonDurations) <= 0) return $zero;
+
+    $progressRows = self::queryLessonsProgress($studentId, $courseId, array_keys($lessonDurations));
+    return self::calculate($progressRows, $lessonDurations);
   }
 
   private static function calculate(array $lessonsProgress, array $lessonDurations): array {
