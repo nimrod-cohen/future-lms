@@ -73,6 +73,14 @@ class ProgressManager {
       $data['course_percent'] = (int) $newMilestone;
       $data['module_percent'] = (int) $newModulePercent;
 
+      // Lesson percent is included for context only — it does not have
+      // its own trigger (see the trigger flags above). Computed only when
+      // we're actually firing.
+      $lessonId = (int) ($data['lesson_id'] ?? 0);
+      $data['lesson_percent'] = $lessonId
+        ? (int) floor(self::getLessonProgress($userId, $courseId, $lessonId, $courseTree)['percent'])
+        : 0;
+
       /**
        * Fires when a student crosses a new course-progress 1% milestone
        * OR a new module-progress 5% milestone (whichever comes first).
@@ -89,6 +97,10 @@ class ProgressManager {
        *     @type int    $module_percent  Floored progress of the module the
        *                                   video belongs to (0 to 100; always
        *                                   0 for count_progress=false modules)
+       *     @type int    $lesson_percent  Floored progress of the lesson the
+       *                                   video belongs to (0 to 100;
+       *                                   context only — does not fire on
+       *                                   its own milestone)
        * }
        */
       do_action('vi_course_progress_updated', $data);
