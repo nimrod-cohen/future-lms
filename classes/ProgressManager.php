@@ -170,25 +170,132 @@ class ProgressManager {
   }
 
   /**
-   * Aggregate watched / duration / percent for a single lesson (across all
-   * of its videos). Uses the same calculate() rules as the course-level
-   * computation, so a 'text' row counts as the lesson's full duration when
-   * the user marked it 100%.
+   * Aggregate watched / duration / percent for a single lesson.
+   *
+   * Three completion modes:
+   *   1) Text lesson (videos === ['text']): "complete" means a single
+   *      `text` progress row at 100% exists — visiting the lesson is enough.
+   *   2) Video lesson with known lesson_duration: standard seconds/duration
+   *      math via calculate(); a >95% watch is clamped to 100% (legacy rule).
+   *   3) Video lesson with unknown lesson_duration: fraction of videos that
+   *      have hit 100%. Without this fallback, lessons whose duration meta
+   *      hasn't been crawled yet always read as 0% and never satisfy a
+   *      sequential gate even after the student watched them to the end.
    *
    * Includes every lesson in the tree (not just count_progress ones) so a
    * direct lesson_id from an event still resolves even when the lesson's
    * module is excluded from course-level scoring.
    */
   public static function getLessonProgress(int $studentId, int $courseId, int $lessonId, array $courseTree): array {
-    $courseLessons = self::getLessons($courseId, $courseTree, false);
-    $lessonDuration = $courseLessons['durations'][$lessonId] ?? 0;
-
-    if ($lessonDuration <= 0) {
+    $lessonNode = null;
+    foreach (($courseTree[$courseId]["modules"] ?? []) as $module) {
+      if (isset($module["lessons"][$lessonId])) {
+        $lessonNode = $module["lessons"][$lessonId];
+        break;
+      }
+    }
+    if (!$lessonNode) {
       return ['watched' => 0, 'duration' => 0, 'percent' => 0];
     }
 
+    $videos = $lessonNode["videos"] ?? [];
+    $isTextLesson = ($videos === ['text']) || empty($videos);
     $progressRows = self::queryLessonsProgress($studentId, $courseId, [$lessonId]);
-    return self::calculate($progressRows, [$lessonId => $lessonDuration]);
+
+    if ($isTextLesson) {
+      // Direct visit: the lesson itself has a 100% text row → complete.
+      foreach ($progressRows as $row) {
+        if ($row['video_id'] === 'text' && (int) $row['percent'] >= 100) {
+          return ['watched' => 1, 'duration' => 1, 'percent' => 100];
+        }
+      }
+      // Implicit completion: any LATER lesson in the course tree has progress.
+      // The student couldn't sensibly be there without moving past this text
+      // lesson, so treat it as visited. This unblocks the sequential gate when
+      // a student arrives at a later lesson via direct navigation / a stale
+      // localStorage resume / a skip — without it the earlier text lesson
+      // would permanently trap forward progress until visited explicitly.
+      $sequence = [];
+      foreach (($courseTree[$courseId]["modules"] ?? []) as $m) {
+        foreach (($m["lessons"] ?? []) as $lid => $_) {
+          $sequence[] = (int) $lid;
+        }
+      }
+      $myPos = array_search((int) $lessonId, $sequence, true);
+      if ($myPos !== false) {
+        $laterLessons = array_slice($sequence, $myPos + 1);
+        if (!empty($laterLessons)) {
+          $laterRows = self::queryLessonsProgress($studentId, $courseId, $laterLessons);
+          foreach ($laterRows as $row) {
+            if ((int) $row['percent'] > 0) {
+              return ['watched' => 1, 'duration' => 1, 'percent' => 100];
+            }
+          }
+        }
+      }
+      return ['watched' => 0, 'duration' => 0, 'percent' => 0];
+    }
+
+    $lessonDuration = (int) ($lessonNode["duration"] ?? 0);
+    if ($lessonDuration > 0) {
+      $result = self::calculate($progressRows, [$lessonId => $lessonDuration]);
+    } else {
+      // No duration meta — fall back to averaged per-video percent (same shape
+      // as the sidebar's green-bar gradient). Strict "every video at exactly
+      // 100%" was wrong here: Vimeo's last timeupdate is often 98–99% rather
+      // than a clean 100, so a fully-watched lesson looked complete in the
+      // sidebar but blocked the sequential gate. The 95% threshold clamp
+      // covers that gap.
+      $videoCount = count($videos);
+      if ($videoCount === 0) {
+        return ['watched' => 0, 'duration' => 0, 'percent' => 0];
+      }
+      $totalPercent = 0;
+      foreach ($progressRows as $row) {
+        if (in_array($row['video_id'], $videos, true)) {
+          $totalPercent += (int) $row['percent'];
+        }
+      }
+      $average = $totalPercent / $videoCount;
+      $result = [
+        'watched'  => $totalPercent,
+        'duration' => $videoCount * 100,
+        'percent'  => $average >= self::COMPLETED_COURSE_THRESHOLD ? 100 : $average,
+      ];
+    }
+
+    // Implicit completion (also applied to video lessons): a student can't
+    // sensibly be on a LATER lesson without having moved past this one. If
+    // any later lesson has progress, treat this lesson as complete — even if
+    // its direct percent is below the threshold. This unblocks long-time
+    // students whose old progress records stopped at 88% / 92% etc. when
+    // sequential gating is later enabled on the course.
+    if (((int) $result['percent']) < 100) {
+      $sequence = [];
+      foreach (($courseTree[$courseId]["modules"] ?? []) as $m) {
+        foreach (($m["lessons"] ?? []) as $lid => $_) {
+          $sequence[] = (int) $lid;
+        }
+      }
+      $myPos = array_search((int) $lessonId, $sequence, true);
+      if ($myPos !== false) {
+        $laterLessons = array_slice($sequence, $myPos + 1);
+        if (!empty($laterLessons)) {
+          $laterRows = self::queryLessonsProgress($studentId, $courseId, $laterLessons);
+          foreach ($laterRows as $row) {
+            if ((int) $row['percent'] > 0) {
+              return [
+                'watched'  => $result['duration'],
+                'duration' => $result['duration'],
+                'percent'  => 100,
+              ];
+            }
+          }
+        }
+      }
+    }
+
+    return $result;
   }
 
   /**
@@ -245,7 +352,7 @@ class ProgressManager {
     return [
       'watched' => $watchedSeconds,
       'duration' => $totalCourseDuration,
-      'percent' => $percentWatched > self::COMPLETED_COURSE_THRESHOLD ? 100 : $percentWatched
+      'percent' => $percentWatched >= self::COMPLETED_COURSE_THRESHOLD ? 100 : $percentWatched
     ];
   }
 
@@ -367,6 +474,54 @@ class ProgressManager {
         ]
       );
     }
+  }
+
+  /**
+   * For "continue where I left off" entry points: returns the lesson id that
+   * makes the most sense to land the student on, given their current progress.
+   *
+   *   - Skip intro/non-counting modules (drip lesson selection still handles
+   *     those explicitly; sequential gating already does too).
+   *   - First counted lesson that the student hasn't finished → resume there.
+   *   - If every counted lesson is 100% complete → land on the last counted
+   *     lesson (so the student can re-watch / read homework).
+   *   - If the course has no counted lessons at all (edge case), return the
+   *     first lesson in the tree.
+   *
+   * Returns 0 when nothing can be resolved (no course / no lessons), so the
+   * caller can fall back to its own default.
+   */
+  public static function findResumeLesson(int $studentId, int $courseId, array $courseTree = null): int {
+    if ($courseTree === null) {
+      $courseTree = Course::get_courses_tree([$courseId]);
+    }
+    $course = $courseTree[$courseId] ?? null;
+    if (!$course) return 0;
+
+    $counted = [];
+    $anyLessonFirst = 0;
+    foreach (($course["modules"] ?? []) as $module) {
+      foreach (($module["lessons"] ?? []) as $lid => $_) {
+        if (!$anyLessonFirst) $anyLessonFirst = (int) $lid;
+      }
+      if (empty($module["count_progress"])) continue;
+      foreach (($module["lessons"] ?? []) as $lid => $_) {
+        $counted[] = (int) $lid;
+      }
+    }
+
+    if (empty($counted)) {
+      return $anyLessonFirst;
+    }
+
+    foreach ($counted as $lid) {
+      $p = self::getLessonProgress($studentId, $courseId, $lid, $courseTree);
+      if (((int) $p['percent']) < 100) {
+        return $lid;
+      }
+    }
+
+    return end($counted) ?: $anyLessonFirst;
   }
 
   public static function queryLessonsProgress(int $studentId, int $courseId, array $lessonIds): array {

@@ -193,23 +193,82 @@ class Student
 
     public function is_lesson_open($courseId, $lessonId)
     {
+        // Live-class drip rule (existing)
         $lessons = $this->get_class_lessons_by_course_id($courseId);
-
-        //if not managed assume open
-        if (!$lessons) {
-            return true;
+        if ($lessons) {
+            $lesson = array_reduce($lessons, function ($result, $item) use ($lessonId) {
+                return intval($item["id"]) === intval($lessonId) ? $item : $result;
+            });
+            // If the lesson is listed and explicitly closed by drip, it's closed.
+            // (Missing-from-list → fall through; drip doesn't manage it.)
+            if (!empty($lesson) && (empty($lesson["open"]) || $lesson["open"] != true)) {
+                return false;
+            }
         }
 
-        $lesson = array_reduce($lessons, function ($result, $item) use ($lessonId) {
-            return intval($item["id"]) === intval($lessonId) ? $item : $result;
-        });
-
-        //if lesson doesn't exist - assume open
-        if (empty($lesson)) {
-            return true;
+        // Sequential-progress rule (new): when the course has the flag on,
+        // each count_progress lesson is locked until the previous count_progress
+        // lesson hits 100%. Non-counting lessons are never locked by this rule.
+        if (get_post_meta($courseId, 'sequential_progress', true) == '1') {
+            $map = $this->sequential_lock_map($courseId);
+            // Lessons not in the map (e.g. non-counted ones, or unknown) are open.
+            if (array_key_exists((int) $lessonId, $map) && $map[(int) $lessonId] === false) {
+                return false;
+            }
         }
 
-        return !empty($lesson["open"]) && $lesson["open"] == true;
+        return true;
+    }
+
+    /**
+     * For a sequential-progress course, returns [lessonId => bool open] for every
+     * count_progress lesson in the course. Lessons in non-counting modules are
+     * NOT included (callers should treat absence-from-map as "always open").
+     *
+     * Walks counted lessons in module-order then lesson-order. The first lesson
+     * not yet at 100% is open; everything after it is locked.
+     *
+     * Text lessons participate in the gate, but their completion is granted
+     * implicitly by ProgressManager::getLessonProgress when a later lesson
+     * has progress — so a student who arrives at a later lesson via direct
+     * navigation isn't trapped by an earlier unvisited text lesson.
+     */
+    public function sequential_lock_map($courseId, $courseTree = null)
+    {
+        if ($courseTree === null) {
+            $courseTree = \FutureLMS\classes\Course::get_courses_tree([$courseId]);
+        }
+        $course = $courseTree[$courseId] ?? null;
+        if (!$course) {
+            return [];
+        }
+
+        $sequence = [];
+        foreach (($course["modules"] ?? []) as $module) {
+            if (empty($module["count_progress"])) continue;
+            foreach (($module["lessons"] ?? []) as $lid => $_) {
+                $sequence[] = (int) $lid;
+            }
+        }
+        if (empty($sequence)) return [];
+
+        $map = [];
+        $gateHit = false;
+        foreach ($sequence as $lid) {
+            if ($gateHit) {
+                $map[$lid] = false;
+                continue;
+            }
+            $map[$lid] = true; // this one is open
+            $p = \FutureLMS\classes\ProgressManager::getLessonProgress(
+                $this->_studentId, $courseId, $lid, $courseTree
+            );
+            if (((int) $p['percent']) < 100) {
+                // This is the gate. Everything after it stays locked.
+                $gateHit = true;
+            }
+        }
+        return $map;
     }
 
     public function get_module_lessons($moduleId)

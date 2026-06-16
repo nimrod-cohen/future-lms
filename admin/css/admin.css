@@ -484,3 +484,37 @@ div.error {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   user-select: all;
 }
+
+/* wpjsutils' shared slideout-form rule sets `input, select { height: 40px; padding: 9px 12px }`,
+   which on native <select> pushes the selected option's text below the visible
+   area in this admin. Override just inside the course modal: trim vertical padding
+   so the chosen option centers properly. */
+.slideout-panel select.course-default-class {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  line-height: 1.4;
+}
+
+/* When wpjsutils' switch wraps a checkbox inside a slideout, slideout.css's
+   `input[type='checkbox'] { width: 1rem; height: 1rem }` wins by source order
+   and otherwise leaves the input visible behind the slider. Hide it visually,
+   but keep it focusable + toggleable so labels and keyboard nav still work.
+   (Do NOT use `pointer-events: none` — labels dispatch a real click on the
+   control, and pointer-events would suppress it.) */
+.slideout-panel .switch-wrapper {
+  flex-shrink: 0;
+}
+.slideout-panel .switch-wrapper > input[type='checkbox'],
+.slideout-panel .switch-wrapper > input[type='radio'] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  border: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  opacity: 0 !important;
+}

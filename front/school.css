@@ -149,7 +149,12 @@ body.school {
           display: none;
           justify-content: space-between;
           align-items: center;
-          grid-template-columns: 1fr 20px;
+          /* Four logical slots, right→left in RTL:
+             ?lock | !label | ?skip | !progress-icon.
+             The two `auto` tracks collapse to 0 when their optional item is
+             absent, so non-locked / non-selected rows look identical to the
+             old 2-column layout. */
+          grid-template-columns: auto 1fr auto 20px;
           width: 100%;
           padding: 0.8rem 1.6rem;
           background: white;
@@ -164,10 +169,16 @@ body.school {
             cursor: pointer;
           }
 
+          /* Pin each item to its logical column so auto-placement can't put
+             the icon (or anything else) on the wrong line if an optional
+             slot is missing. */
+          > label             { grid-column: 2; }
+          > .skip-lesson-sidebar { grid-column: 3; }
           > img.play-icon {
             width: 20px;
             height: 20px;
             border-radius: 50%;
+            grid-column: 4;
           }
 
           &.locked {
@@ -177,11 +188,11 @@ body.school {
               cursor: not-allowed;
             }
             pointer-events: none;
-            grid-template-columns: 20px 1fr 20px;
 
             &::before {
               content: '';
               display: inline-block;
+              grid-column: 1;
               width: 18px;
               height: 18px;
               background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 1024 1024"><path fill="%23ababab" d="M800 384h-32V261.872C768 115.024 661.744 0 510.816 0C359.28 0 256 117.472 256 261.872V384h-32c-70.592 0-128 57.408-128 128v384c0 70.592 57.408 128 128 128h576c70.592 0 128-57.408 128-128V512c0-70.592-57.408-128-128-128zM320 261.872C320 152.784 394.56 64 510.816 64C625.872 64 704 150.912 704 261.872V384H320V261.872zM864.001 896c0 35.28-28.72 64-64 64h-576c-35.28 0-64-28.72-64-64V512c0-35.28 28.72-64 64-64h576c35.28 0 64 28.72 64 64v384zm-352-320c-35.344 0-64 28.656-64 64c0 23.632 12.96 44.032 32 55.12V800c0 17.664 14.336 32 32 32s32-14.336 32-32V695.12c19.04-11.088 32-31.504 32-55.12c0-35.344-28.656-64-64-64z"/></svg>');
@@ -221,7 +232,7 @@ body.school {
           display: none;
         }
         .lesson-materials {
-          grid-template-rows: 58px 58px 1fr;
+          grid-template-rows: 58px 58px auto 1fr;
 
           .lesson-materials-nav {
             height: 60px;
@@ -364,7 +375,10 @@ body.school {
 
       .lesson-materials {
         display: grid;
-        grid-template-rows: 58px 1fr;
+        /* Middle `auto` row holds the floating skip button when it's visible
+           and collapses to 0 when it isn't, so the materials layout stays
+           identical for non-sequential courses. */
+        grid-template-rows: 58px auto 1fr;
         overflow: scroll;
 
         .current-lesson-title {
@@ -410,6 +424,7 @@ body.school {
                 }
               }
             }
+
           }
         }
 
@@ -1355,4 +1370,80 @@ body.school {
   background: darkorange;
   z-index: -1;
   animation: nav-blink 0.5s ease-in-out 4;
+}
+
+/* ---------------------------------------------------------------------------
+   Sequential-progress "Skip lesson" buttons
+   - .skip-lesson-floating: a centered pill below the video, mobile only.
+     Auto-hidden when the mobile sidebar overlay (`.school-sidebar.show`) is
+     open so it can't be seen through it.
+   - .skip-lesson-sidebar: a small inline button rendered into every counted
+     sidebar row; CSS makes it visible only on the currently `.selected` row,
+     so the user always has a one-click skip on the lesson they're playing.
+   --------------------------------------------------------------------------- */
+
+/* Floating skip button — sits inside .lesson-materials between the tab nav
+   and the content viewer (an extra `auto` row in the materials grid holds
+   it). Compact pill, centered, only on mobile, and hidden while the mobile
+   sidebar overlay is up. */
+body.school .lesson-materials .skip-lesson-floating {
+  display: none;
+}
+@media screen and (max-width: 900px) {
+  /* `block` + `width: fit-content` + `margin: 14px auto 8px` is the most
+     reliable centering — it doesn't rely on justify-self (which the grid
+     parent can flake on for inline-block items) or on the parent being a
+     flex/grid with the right alignment. */
+  body.school .lesson-materials .skip-lesson-floating:not(.hidden) {
+    display: block;
+    width: fit-content;
+    margin: 14px auto 0;
+    padding: 4px 14px;
+    background: #fff;
+    color: #1a1a1a;
+    border: 1px solid #1a1a1a;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  body.school .lesson-materials .skip-lesson-floating:not(.hidden):hover {
+    background: #1a1a1a;
+    color: #fff;
+  }
+  /* Hide while the mobile sidebar overlay is up. */
+  body.school:has(.school-sidebar.show) .lesson-materials .skip-lesson-floating {
+    display: none;
+  }
+}
+
+/* Sidebar inline "דלג" button. Always slotted into column 3 by the base
+   .sidebar-lesson grid; CSS just controls whether it's visible. We only
+   show it on the currently `.selected` row — that's the lesson the
+   student is playing, so it's the only one a skip is meaningful for. */
+.sidebar-lesson .skip-lesson-sidebar {
+  display: none;
+}
+.sidebar-lesson.selected .skip-lesson-sidebar {
+  display: inline-block;
+  margin-inline: 8px;
+  padding: 2px 10px;
+  background: #fff;
+  color: #333;
+  border: 1px solid #999;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sidebar-lesson.selected .skip-lesson-sidebar:hover {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
 }

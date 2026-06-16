@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.2.15
+ * Version: 1.3.9
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -31,6 +31,19 @@
  */
 
 namespace FutureLMS;
+
+// Read the version once from the plugin header so it's the single source of
+// truth (kept in sync with the GitHub releases). Every wp_enqueue_* below
+// passes this as the $ver argument — WP then appends `?ver=X.Y.Z` to each
+// asset URL, so a plugin-version bump (which happens on every deploy)
+// automatically busts the browser cache for every student on their next
+// visit. No need for the old per-hour `?time=` trick that left people on
+// stale code for up to 59 minutes after a release.
+if (!defined('FUTURE_LMS_VERSION')) {
+  $flms_header = \get_file_data(__FILE__, ['Version' => 'Version']);
+  define('FUTURE_LMS_VERSION', $flms_header['Version'] ?: '0.0.0');
+  unset($flms_header);
+}
 
 use Exception;
 use FutureLMS\classes\BaseObject;
@@ -193,6 +206,7 @@ class FutureLMS {
     add_action("wp_ajax_get_classes", [$this, "get_student_classes"]);
     add_action("wp_ajax_get_lessons", [$this, "get_class_lessons"]);
     add_action("wp_ajax_get_lesson_content", [$this, "get_lesson_content"]);
+    add_action("wp_ajax_skip_lesson", [$this, "skip_lesson"]);
     add_action("wp_ajax_set_student_notes", [$this, "set_student_notes"]);
     add_action("wp_ajax_get_students", [$this, "get_students"]);
     add_action("wp_ajax_get_student_progress_detail", [$this, "get_student_progress_detail"]);
@@ -447,9 +461,9 @@ class FutureLMS {
   }
 
   public function enqueueSchoolScripts() {
-    wp_enqueue_script('future-lms_main_script', plugin_dir_url(__FILE__) . 'front/main.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
-    wp_enqueue_style('future-lms_style', plugin_dir_url(__FILE__) . 'front/school.css?time=' . date('Y_m_d_H'));
-    wp_enqueue_script('future-lms_school_script', plugin_dir_url(__FILE__) . 'front/school.js?time=' . date('Y_m_d_H'), ['wpjsutils']);
+    wp_enqueue_script('future-lms_main_script', plugin_dir_url(__FILE__) . 'front/main.js', ['wpjsutils'], FUTURE_LMS_VERSION);
+    wp_enqueue_style('future-lms_style', plugin_dir_url(__FILE__) . 'front/school.css', [], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms_school_script', plugin_dir_url(__FILE__) . 'front/school.js', ['wpjsutils'], FUTURE_LMS_VERSION);
 
     wp_localize_script('future-lms_school_script', 'school_info', [
       'ajax_url' => admin_url('admin-ajax.php'),
@@ -473,12 +487,12 @@ class FutureLMS {
     wp_enqueue_script('future-lms-semantic-js', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.js');
     wp_enqueue_style('future-lms-semantic-css', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.css');
 
-    wp_enqueue_script('future-lms-admin-common-js', plugin_dir_url(__FILE__) . 'admin/js/common.js?time=' . date('Y_m_d_H'));
-    wp_enqueue_script('future-lms-admin-students-js', plugin_dir_url(__FILE__) . 'admin/js/students.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
-    wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery']);
-    wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js?time=' . date('Y_m_d_H'), ['wpjsutils', 'jquery', 'future-lms-admin-common-js']);
-    wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js?time=' . date('Y_m_d_H'), ['future-lms-admin-students-js']);
-    wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css?time=' . date('Y_m_d_H'), ['future-lms-semantic-css']);
+    wp_enqueue_script('future-lms-admin-common-js', plugin_dir_url(__FILE__) . 'admin/js/common.js', [], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-students-js', plugin_dir_url(__FILE__) . 'admin/js/students.js', ['wpjsutils', 'jquery'], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js', ['wpjsutils', 'jquery'], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js', ['wpjsutils', 'jquery', 'future-lms-admin-common-js'], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js', ['future-lms-admin-students-js'], FUTURE_LMS_VERSION);
+    wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css'], FUTURE_LMS_VERSION);
 
     wp_localize_script('future-lms-admin-js', '__futurelms', [
       'ajax_url' => admin_url('admin-ajax.php'),
@@ -755,11 +769,18 @@ class FutureLMS {
       }
 
       $course_id = $class->raw("course");
+      $sequential = get_post_meta($course_id, 'sequential_progress', true) == '1';
+      $sequentialLockMap = [];
+      if ($sequential) {
+        $student = new Student(get_current_user_id());
+        $sequentialLockMap = $student->sequential_lock_map($course_id);
+      }
 
       $modules = BaseObject::factory("module", ["where" => "course.id = " . $course_id, "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
       while ($module = $modules->fetch()) {
         $module_id = $module->raw('ID');
+        $module_count_progress = $module->raw("count_progress", true) == "1";
 
         $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $module_id, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
@@ -772,6 +793,10 @@ class FutureLMS {
               $open = $class_lessons[$pos]["open"] ?? false;
             }
           }
+          // Sequential gate: only narrows `open`, never opens what drip closed.
+          if ($sequential && array_key_exists((int) $lesson_id, $sequentialLockMap)) {
+            $open = $open && $sequentialLockMap[(int) $lesson_id];
+          }
 
           $result[] = [
             "module_id" => $module_id,
@@ -781,7 +806,9 @@ class FutureLMS {
             "lesson_number" => $lesson->raw("lesson_number", true),
             "id" => $lesson_id,
             "title" => stripslashes($lesson->raw("title", true)),
-            "open" => $open
+            "open" => $open,
+            "count_progress" => $module_count_progress,
+            "sequential" => $sequential
           ];
         }
       }
@@ -794,6 +821,80 @@ class FutureLMS {
         return $a["module_order"] <=> $b["module_order"];
       });
       wp_send_json($result);
+    } catch (Exception $ex) {
+      wp_send_json(["error" => $ex->getMessage()]);
+    }
+  }
+
+  /**
+   * Escape hatch for sequential-progress courses: marks a lesson's videos
+   * all as 100% complete so the next lesson unlocks. Each video gets
+   * (lesson_duration / video_count) seconds, so course/module/lesson percent
+   * calculations all reflect the skip.
+   *
+   * Fires vi_course_progress_updated with skipped=true so downstream CRMs
+   * can distinguish skipped vs. genuinely-watched.
+   */
+  public function skip_lesson() {
+    try {
+      $studentId = get_current_user_id();
+      $lessonId = intval($_POST["lesson_id"] ?? 0);
+      if (!$studentId || !$lessonId) {
+        throw new Exception("Invalid request");
+      }
+
+      $lesson = BaseObject::factory("lesson", $lessonId);
+      if (!$lesson->exists()) {
+        throw new Exception("Lesson not found");
+      }
+      $moduleId = intval($lesson->raw("module"));
+      $courseId = intval(get_post_meta($moduleId, 'course', true));
+
+      $student = new Student($studentId);
+      if (!$student->is_attending_course($courseId)) {
+        throw new Exception("Not enrolled in course");
+      }
+
+      $videos = $lesson->raw('video_list');
+      $videos = empty($videos) ? [] : json_decode($videos, true);
+      $videoIds = !empty($videos)
+        ? array_map(function ($v) { return $v['video_id']; }, $videos)
+        : ['text'];
+
+      $lessonDuration = (int) get_post_meta($lessonId, 'lesson_duration', true);
+      $perVideoSeconds = max(1, (int) ceil($lessonDuration / max(1, count($videoIds))));
+
+      foreach ($videoIds as $vid) {
+        ProgressManager::saveProgress([
+          'user_id'   => $studentId,
+          'course_id' => $courseId,
+          'module_id' => $moduleId,
+          'lesson_id' => $lessonId,
+          'video_id'  => $vid,
+          'percent'   => 100,
+          'seconds'   => $vid === 'text' ? 0 : $perVideoSeconds,
+        ]);
+      }
+
+      $tree = Course::get_courses_tree([$courseId]);
+      $coursePercent = (int) floor(ProgressManager::getCourseProgress($studentId, $courseId, $tree)['percent']);
+      $modulePercent = (int) floor(ProgressManager::getModuleProgress($studentId, $courseId, $moduleId, $tree)['percent']);
+
+      do_action('vi_course_progress_updated', [
+        'user_id'        => $studentId,
+        'course_id'      => $courseId,
+        'module_id'      => $moduleId,
+        'lesson_id'      => $lessonId,
+        'video_id'       => $videoIds[0],
+        'percent'        => 100,
+        'seconds'        => 0,
+        'course_percent' => $coursePercent,
+        'module_percent' => $modulePercent,
+        'lesson_percent' => 100,
+        'skipped'        => true,
+      ]);
+
+      wp_send_json(["ok" => true]);
     } catch (Exception $ex) {
       wp_send_json(["error" => $ex->getMessage()]);
     }

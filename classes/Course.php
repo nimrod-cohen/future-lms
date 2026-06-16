@@ -111,7 +111,11 @@ class Course extends BaseObject {
         $sql .= " AND pmodule.post_status = 'publish'";
       }
 
-      $sql .= " ORDER BY module_order";
+      // CAST to unsigned so a meta value of "10" sorts AFTER "2" (it's stored
+      // as a string, and a plain alphabetic ORDER BY puts "10" before "2",
+      // which silently breaks every downstream consumer that depends on
+      // module ordering — most importantly the sequential-progress gate.
+      $sql .= " ORDER BY CAST(module_order AS UNSIGNED)";
 
       $moduleRows = $wpdb->get_results($sql, ARRAY_A);
 
@@ -143,7 +147,7 @@ class Course extends BaseObject {
         if ($enabledOnly) {
           $sql .= " AND plesson.post_status = 'publish'";
         }
-        $sql .= " ORDER BY lesson_number";
+        $sql .= " ORDER BY CAST(lesson_number AS UNSIGNED)";
 
         $lessonRows = $wpdb->get_results($sql, ARRAY_A);
 

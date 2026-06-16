@@ -718,7 +718,11 @@ class CoursesTab {
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Enable Diploma</label>
-        <input type='checkbox' name='diploma_enabled' value='1' ${course?.diploma_enabled === '1' ? 'checked' : ''} />
+        <input type='checkbox' class='slideout-switch round' name='diploma_enabled' value='1' ${course?.diploma_enabled === '1' ? 'checked' : ''} />
+      </div>
+      <div class='slideout-form-line'>
+        <label class='slideout-form-line-title' title='Lock each counted lesson until the previous counted lesson is complete. Non-counting (intro) lessons stay always open.'>Sequential Progress</label>
+        <input type='checkbox' class='slideout-switch round' name='sequential_progress' value='1' ${course?.sequential_progress === '1' ? 'checked' : ''} />
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Lecturer Name</label>
@@ -762,6 +766,7 @@ class CoursesTab {
           default_class: vals.course_default_class,
           initial_student_count: vals.initial_student_count || '0',
           diploma_enabled: vals.diploma_enabled ? '1' : '0',
+          sequential_progress: vals.sequential_progress ? '1' : '0',
           lecturer_name: vals.lecturer_name || '',
           lecturer_signature: vals.lecturer_signature || 0
         };
@@ -796,6 +801,31 @@ class CoursesTab {
         });
       });
     }
+
+    // Convert every .slideout-switch checkbox in the modal into a wpjsutils
+    // iOS-style switch. The label-based wrapper (added by JSUtils.switch)
+    // also fixes the raw-checkbox click being swallowed inside this slideout
+    // — the slider track is now a <label>, so clicks reliably toggle the input.
+    const switches = document.querySelectorAll('.slideout-panel input.slideout-switch');
+    console.log('[courses] converting switches:', switches.length, 'JSUtils.switch?', typeof JSUtils.switch);
+    switches.forEach(input => {
+      if (typeof JSUtils.switch === 'function') {
+        JSUtils.switch(input);
+      }
+      // Belt-and-suspenders: manually wire the slider (and the wrapping label)
+      // so clicks toggle even if the browser's label→input synthetic click is
+      // intercepted somewhere in the slideout stack.
+      const wrapper = input.closest('.switch-wrapper');
+      if (wrapper) {
+        wrapper.addEventListener('click', e => {
+          // Don't double-toggle when the click was already on the input itself.
+          if (e.target === input) return;
+          e.preventDefault();
+          input.checked = !input.checked;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+    });
 
     // init color picker
     document

@@ -91,6 +91,7 @@ if ($hours > 0) {
         <li tab-id="student-notes">הערות תלמיד</li>
         <li class="toggle-videos show-popover pop-right" data-content="<?php _e("Toggle videos", "future-lms"); ?>" ><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
       </ul>
+      <button type="button" class="skip-lesson skip-lesson-floating hidden"><?php _e('דלג לשיעור הבא', 'future-lms'); ?></button>
       <div class="lesson-content-viewer"></div>
     </div>
   </div>

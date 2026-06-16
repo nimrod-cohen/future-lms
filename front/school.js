@@ -153,6 +153,14 @@ class Classroom {
       nav.addEventListener('click', e => this.state.set('tab', e.target.getAttribute('tab-id')));
     });
 
+    // Delegated handler: covers the static floating button under the video
+    // AND the inline `דלג` button that showSidebar injects per lesson row.
+    // (Delegation is required for the sidebar buttons because those rows are
+    // built after init runs.) Bubbling will also hit the per-row click
+    // handler attached in showSidebar — changeLesson bails out when the
+    // click was on .skip-lesson so we don't navigate AND skip.
+    JSUtils.addGlobalEventListener(coursePage, '.skip-lesson', 'click', () => this.skipLesson());
+
     coursePage.querySelector('.toggle-videos').addEventListener('click', this.enlargeMaterials);
     document.querySelectorAll('.nav-lessons').forEach(nav =>
       nav.addEventListener('click', () => {
@@ -317,7 +325,37 @@ class Classroom {
 
     this.state.set('tab', 'content');
 
+    // Skip-to-next-lesson is only meaningful when the course locks progression
+    // AND the current lesson is one that the lock applies to (count_progress).
+    // Only the floating (mobile) button is toggled here — the inline sidebar
+    // buttons render unconditionally for count_progress sequential lessons,
+    // and CSS shows them only on the currently-selected lesson.
+    const showSkip = !!(lesson.sequential && lesson.count_progress);
+    coursePage.querySelectorAll('.skip-lesson-floating').forEach(btn => btn.classList.toggle('hidden', !showSkip));
+
     this.persistCurrentLesson(lesson.id);
+  };
+
+  skipLesson = async () => {
+    const lesson = this.state.get('lesson');
+    if (!lesson?.id) return;
+
+    const result = await callServer({
+      action: 'skip_lesson',
+      lesson_id: lesson.id
+    });
+    if (!result) return;
+
+    // Re-fetch lessons (so `open` flags reflect the unlocked next lesson)
+    // and progress (so the sidebar bars re-color), then move on.
+    await this.loadLessons();
+    await this.loadProgress();
+
+    const courseData = this.state.get('course-data');
+    const idx = courseData.findIndex(l => l.id === lesson.id);
+    if (idx > -1 && idx < courseData.length - 1) {
+      this.state.set('lesson', courseData[idx + 1]);
+    }
   };
 
   cleanupVideoEvents = () => {
@@ -435,7 +473,14 @@ class Classroom {
       seconds: seconds,
       progress: currentCoursePercent
     });
-    this.loadProgress();
+
+    // On lesson-completing events, also refresh lessons so a sequential-locked
+    // next lesson updates its `open` flag in the sidebar. Awaited so any
+    // immediately-following auto-advance sees the fresh state.
+    if (percent >= 100) {
+      await this.loadLessons();
+    }
+    await this.loadProgress();
   };
 
   determineInitialLesson = () => {
@@ -486,6 +531,8 @@ class Classroom {
 
       if (currentLessonIndex !== -1 && currentLessonIndex < courseData.length - 1) {
         const nextLesson = courseData[currentLessonIndex + 1];
+        // Sequential gate: don't auto-advance into a still-locked lesson.
+        if (nextLesson.open === false) return;
         this.state.set('lesson', nextLesson);
       }
     }, 3000);
@@ -609,6 +656,11 @@ class Classroom {
 
       const domModule = sidebar.querySelector(`#module_${module.id}`);
       domModule.addEventListener('click', e => {
+        // Only toggle when the user clicks the module header itself.
+        // Lesson rows have their own click semantics (navigate / skip) and
+        // bubble up here — without this guard the module would collapse and
+        // re-open every time the student hits the in-row "דלג" button.
+        if (e.target.closest('.sidebar-lesson')) return;
         e.preventDefault();
         domModule.classList.toggle('open');
       });
@@ -647,6 +699,15 @@ class Classroom {
         }
       } catch (ex) {}
 
+      // Inline "דלג" button is rendered once per row for count_progress
+      // sequential lessons and shown by CSS only on `.sidebar-lesson.selected`.
+      // Always built into the row so we don't have to re-render the sidebar
+      // when the currently-selected lesson changes — selection just moves
+      // the .selected class.
+      const skipBtnHtml = (lesson.sequential && lesson.count_progress)
+        ? `<button type="button" class="skip-lesson skip-lesson-sidebar">דלג</button>`
+        : '';
+
       var lessonDiv = currModule.querySelector(`[lesson-id='${lesson.id}']`);
       if (!lessonDiv) {
         //check if currModule contains lessons and add in the right order
@@ -661,12 +722,13 @@ class Classroom {
         if (!insertBefore) {
           currModule.insertAdjacentHTML(
             'beforeend',
-            `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}" 
+            `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}"
             course-id="${this.state.get('courseId')}"
             module-id="${lesson.module_id}"
             order="${lesson.lesson_number}"
             lesson-id="${lesson.id}">
             <label>${lesson.title}</label>
+            ${skipBtnHtml}
             <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
               showPlay ? 'play' : 'text'
             }.svg" style='background:${background}' />
@@ -675,12 +737,13 @@ class Classroom {
         } else {
           insertBefore.insertAdjacentHTML(
             'beforebegin',
-            `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}" 
+            `<div class="sidebar-lesson${isCurrent ? ' selected' : ''}${lesson.open ? '' : ' locked'}"
             course-id="${this.state.get('courseId')}"
             module-id="${lesson.module_id}"
             order="${lesson.lesson_number}"
             lesson-id="${lesson.id}">
             <label>${lesson.title}</label>
+            ${skipBtnHtml}
             <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
               showPlay ? 'play' : 'text'
             }.svg" style='background:${background}' />
@@ -693,11 +756,18 @@ class Classroom {
         lessonDiv.addEventListener('click', this.changeLesson);
       } else {
         lessonDiv.querySelector('.play-icon').style.background = background;
+        // Keep the lock visual in sync with the latest server-side `open` flag,
+        // so completing a sequential lesson unlocks the next one without a reload.
+        lessonDiv.classList.toggle('locked', !lesson.open);
       }
     });
   };
 
   changeLesson = e => {
+    // The inline `דלג` button lives inside the .sidebar-lesson row so its
+    // click bubbles here before the delegated .skip-lesson handler can
+    // stop propagation — bail out so we don't navigate AND skip.
+    if (e.target.closest('.skip-lesson')) return;
     e.stopPropagation();
     e.preventDefault();
     let lessonId = parseInt(e.target.closest('.sidebar-lesson').getAttribute('lesson-id'));
