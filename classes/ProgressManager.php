@@ -35,6 +35,21 @@ class ProgressManager {
       'seconds' => intval($_POST["seconds"])
     ];
 
+    // Gate enforcement: drop saves for locked lessons. Without this, a stale
+    // browser localStorage (or any direct POST) can route a student into a
+    // gated lesson, fire the auto-100% text save on visit, and the
+    // implicit-completion rule downstream then unlocks every preceding
+    // lesson — effectively bypassing the sequential gate. is_lesson_open
+    // already factors in live-class drip + sequential rules, so it's the
+    // right authoritative check.
+    if ($userId && !empty($data['lesson_id'])) {
+      $gate_student = new Student($userId);
+      if (!$gate_student->is_lesson_open($courseId, $data['lesson_id'])) {
+        wp_send_json(['blocked' => true]);
+        return;
+      }
+    }
+
     // Course tree is needed for both before- and after-save snapshots.
     $courseTree = Course::get_courses_tree([$courseId]);
     $moduleId = (int) $data['module_id'];

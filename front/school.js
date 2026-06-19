@@ -291,6 +291,22 @@ class Classroom {
       return;
     }
 
+    // Defensive: if the requested lesson is locked (e.g. a stale
+    // localStorage value pointing at a now-gated lesson, or a returning
+    // student in a course that became sequential after their last visit),
+    // bounce them to the open gate lesson instead. Without this, the
+    // server-side get_lesson_content refuses to serve and the auto-save in
+    // loadCurrentVideo would attempt to mark the locked text lesson 100%,
+    // re-unlocking everything via implicit-completion.
+    if (courseData[idx].open === false) {
+      const gate = courseData.find(l => l.open === true && l.count_progress);
+      const fallback = gate?.id ?? courseData[0].id;
+      console.log(`lesson ${lesson.id} is locked, redirecting to gate ${fallback}`);
+      this.persistCurrentLesson(fallback);
+      this.state.set('lesson', { id: fallback });
+      return;
+    }
+
     if (!courseData[idx].loaded) {
       console.log(`loading lesson ${lesson.id}`);
       const lessonData = await callServer({
@@ -444,7 +460,14 @@ class Classroom {
         this.blinkNavIcon();
       });
     } else {
-      this.reportProgress(lesson, { video_id: 'text' }, 100, 0);
+      // Don't auto-mark a locked text lesson 100% — the server now rejects
+      // it (gate enforcement in setStudentProgress) but firing the call at
+      // all would still trigger callServer's error modal. loadLesson should
+      // have redirected away from locked lessons by now; this is a safety
+      // belt for stale state or race conditions.
+      if (lesson.open !== false) {
+        this.reportProgress(lesson, { video_id: 'text' }, 100, 0);
+      }
       setTimeout(() => this.blinkNavIcon(), 500);
 
       vc.classList.add('no-videos-available');
