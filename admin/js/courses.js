@@ -280,6 +280,31 @@ class CoursesTab {
     //popover is a global singleton from wpjsutils, no need to instantiate
   };
 
+  // Convert every .slideout-switch checkbox in the currently-open slideout
+  // into a wpjsutils iOS-style switch. The label-based wrapper that
+  // JSUtils.switch adds is what fixes the slideout's swallowed-click bug
+  // — clicking the slider track now forwards to the input — and also gives
+  // the controls a clear ON/OFF affordance. The belt-and-suspenders click
+  // handler on the wrapper is for browsers where the synthetic label→input
+  // click is intercepted somewhere in the slideout stack. Used by both
+  // editCourse and editModule.
+  wireSlideoutSwitches = () => {
+    document.querySelectorAll('.slideout-panel input.slideout-switch').forEach(input => {
+      if (typeof JSUtils.switch === 'function') {
+        JSUtils.switch(input);
+      }
+      const wrapper = input.closest('.switch-wrapper');
+      if (wrapper) {
+        wrapper.addEventListener('click', ev => {
+          if (ev.target === input) return;
+          ev.preventDefault();
+          input.checked = !input.checked;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+    });
+  };
+
   editModule = (e, moduleId) => {
     const course = e.target.closest('.course');
     const courseId = course.dataset.courseId;
@@ -297,10 +322,8 @@ class CoursesTab {
         <input type='text' name='module_name' value='${module?.name || ''}'/>
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title' for='count_progress'>
-          <input type='checkbox' id='count_progress' name='count_progress' ${module?.count_progress ? 'checked' : ''}/>
-          Counts towards progress
-        </label>
+        <label class='slideout-form-line-title'>Counts towards progress</label>
+        <input type='checkbox' class='slideout-switch round' id='count_progress' name='count_progress' value='1' ${module?.count_progress ? 'checked' : ''}/>
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title' for='teaser'>Teaser</label>
@@ -308,10 +331,8 @@ class CoursesTab {
         <small class='desc' style='font-size:0.8rem;'>A less revealing teaser text for course pages</small>
       </div>
       <div class='slideout-form-line'>
-        <label class='slideout-form-line-title' for='intro_module'>
-          <input type='checkbox' id='intro_module' name='intro_module' ${module?.intro_module ? 'checked' : ''}/>
-          Intro module (will not be numbered)
-        </label>        
+        <label class='slideout-form-line-title'>Intro module (will not be numbered)</label>
+        <input type='checkbox' class='slideout-switch round' id='intro_module' name='intro_module' value='1' ${module?.intro_module ? 'checked' : ''}/>
       </div>`,
       type: slideout.types.FORM,
       confirmText: 'Save',
@@ -340,6 +361,8 @@ class CoursesTab {
         }
       }
     });
+
+    this.wireSlideoutSwitches();
   };
 
   editLesson = async (e, lessonId = null, moduleId = null) => {
@@ -802,30 +825,7 @@ class CoursesTab {
       });
     }
 
-    // Convert every .slideout-switch checkbox in the modal into a wpjsutils
-    // iOS-style switch. The label-based wrapper (added by JSUtils.switch)
-    // also fixes the raw-checkbox click being swallowed inside this slideout
-    // — the slider track is now a <label>, so clicks reliably toggle the input.
-    const switches = document.querySelectorAll('.slideout-panel input.slideout-switch');
-    console.log('[courses] converting switches:', switches.length, 'JSUtils.switch?', typeof JSUtils.switch);
-    switches.forEach(input => {
-      if (typeof JSUtils.switch === 'function') {
-        JSUtils.switch(input);
-      }
-      // Belt-and-suspenders: manually wire the slider (and the wrapping label)
-      // so clicks toggle even if the browser's label→input synthetic click is
-      // intercepted somewhere in the slideout stack.
-      const wrapper = input.closest('.switch-wrapper');
-      if (wrapper) {
-        wrapper.addEventListener('click', e => {
-          // Don't double-toggle when the click was already on the input itself.
-          if (e.target === input) return;
-          e.preventDefault();
-          input.checked = !input.checked;
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-      }
-    });
+    this.wireSlideoutSwitches();
 
     // init color picker
     document
