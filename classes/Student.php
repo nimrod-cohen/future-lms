@@ -263,7 +263,11 @@ class Student
             $p = \FutureLMS\classes\ProgressManager::getLessonProgress(
                 $this->_studentId, $courseId, $lid, $courseTree
             );
-            if (((int) $p['percent']) < 100) {
+            // Gate threshold is intentionally lower than the reporting
+            // clamp (80% vs 95%) — a student who watched most of a lesson
+            // still opens the next one. Reporting isn't affected: the
+            // sidebar / CIO events still see the raw or 95%-clamped value.
+            if (((int) $p['percent']) < \FutureLMS\classes\ProgressManager::SEQUENTIAL_GATE_THRESHOLD) {
                 // This is the gate. Everything after it stays locked.
                 $gateHit = true;
             }

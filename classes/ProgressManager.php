@@ -6,7 +6,19 @@ use FutureLMS\FutureLMS;
 class ProgressManager {
   private static $instance;
 
+  // Reporting clamp: percents rendered in the sidebar, sent in the
+  // vi_course_progress_updated event, and factored into course/module
+  // completion get rounded up to 100 once you cross this bar. Unchanged
+  // by design — the CIO milestones + green-bar gradient still speak the
+  // "95% ≈ complete" language.
   const COMPLETED_COURSE_THRESHOLD = 95;
+
+  // Sequential-progress gate ONLY: how much of a lesson counts as
+  // "watched enough to open the next one". Deliberately looser than the
+  // reporting threshold so a returning student who's e.g. 85% through
+  // the last lesson of a module doesn't get stuck behind the gate.
+  const SEQUENTIAL_GATE_THRESHOLD = 80;
+
   const PROGRESS_TABLE_NAME = 'flms_progress';
 
   public static function get_instance() {
@@ -529,9 +541,12 @@ class ProgressManager {
       return $anyLessonFirst;
     }
 
+    // Use the same threshold as the sequential gate so "resume" lands on
+    // the first lesson the student still needs to open, not on lessons
+    // they already watched enough of to satisfy the gate.
     foreach ($counted as $lid) {
       $p = self::getLessonProgress($studentId, $courseId, $lid, $courseTree);
-      if (((int) $p['percent']) < 100) {
+      if (((int) $p['percent']) < self::SEQUENTIAL_GATE_THRESHOLD) {
         return $lid;
       }
     }
