@@ -365,6 +365,21 @@ class CoursesTab {
     this.wireSlideoutSwitches();
   };
 
+  /**
+   * The presentation is a media attachment id, and the front end turns it into
+   * the "לחץ כאן להורדת המצגת של השיעור" link in the materials tab. Without a
+   * summary here the picker showed a bare "Select File" button, so an attached
+   * presentation was invisible in the editor and impossible to remove.
+   */
+  presentationSummary = ({ presentation_id, presentation_url, presentation_filename }) => {
+    if (!presentation_id) return `<span class='presentation-empty'>No presentation attached</span>`;
+    const name = presentation_filename || `Attachment #${presentation_id}`;
+    const link = presentation_url
+      ? `<a href='${presentation_url}' target='_blank' rel='noopener'>${name}</a>`
+      : name;
+    return `${link} <button type='button' class='ui tiny basic button remove-presentation'>Remove</button>`;
+  };
+
   editLesson = async (e, lessonId = null, moduleId = null) => {
     if (this.state.get('editing-lesson')) return; // Prevent multiple simultaneous edits
     this.state.set('editing-lesson', true);
@@ -431,7 +446,8 @@ class CoursesTab {
           <label class='slideout-form-line-title'>Presentation</label>
           <div class='presentation-picker'>
             <input type='hidden' name='lesson_presentation' value='${lesson.presentation_id || 0}' />
-            <button type='button' class='ui tiny button select-presentation'>Select File</button>
+            <div class='presentation-current'>${this.presentationSummary(lesson)}</div>
+            <button type='button' class='ui tiny button select-presentation'>${lesson.presentation_id ? 'Replace File' : 'Select File'}</button>
           </div>
         </div>
         <div class='slideout-form-line'>
@@ -527,15 +543,31 @@ class CoursesTab {
       jQuery('.trumbo[name="lesson_additional_files"]').trumbowyg('html', lesson.additional_files || '');
     }
 
-    if (window.wp && wp.media) {
-      const btn = document.querySelector('.select-presentation');
-      if (btn) {
+    const picker = document.querySelector('.presentation-picker');
+    if (picker) {
+      const input = picker.querySelector('input[name="lesson_presentation"]');
+      const summary = picker.querySelector('.presentation-current');
+      const btn = picker.querySelector('.select-presentation');
+
+      const renderPresentation = attachment => {
+        input.value = attachment?.id || 0;
+        summary.innerHTML = this.presentationSummary({
+          presentation_id: attachment?.id || 0,
+          presentation_url: attachment?.url || '',
+          presentation_filename: attachment?.filename || ''
+        });
+        btn.textContent = attachment?.id ? 'Replace File' : 'Select File';
+      };
+
+      picker.addEventListener('click', e => {
+        if (e.target.closest('.remove-presentation')) renderPresentation(null);
+      });
+
+      if (window.wp && wp.media && btn) {
         btn.addEventListener('click', () => {
           const frame = wp.media({ title: 'Select Presentation', multiple: false });
-          frame.on('select', function () {
-            const attachment = frame.state().get('selection').first().toJSON();
-            const input = document.querySelector('input[name="lesson_presentation"]');
-            if (input) input.value = attachment.id;
+          frame.on('select', () => {
+            renderPresentation(frame.state().get('selection').first().toJSON());
           });
           frame.open();
         });

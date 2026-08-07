@@ -168,7 +168,13 @@ class Admin {
 
       update_post_meta($lessonId, 'homework', wp_kses_post($homework));
       update_post_meta($lessonId, 'additional_files', wp_kses_post($additional_files));
-      update_post_meta($lessonId, 'presentation', $presentationId);
+      // Delete rather than storing 0, so "no presentation" is a genuinely empty
+      // field instead of a falsy-looking id that still reads as a value.
+      if ($presentationId) {
+        update_post_meta($lessonId, 'presentation', $presentationId);
+      } else {
+        delete_post_meta($lessonId, 'presentation');
+      }
 
 
       if ($isNewLesson) {

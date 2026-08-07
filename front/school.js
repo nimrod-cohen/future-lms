@@ -586,7 +586,9 @@ class Classroom {
         break;
       case 'additional':
         content = '';
-        if (lesson.presentation?.length)
+        // Guard against a bare id / "0" leaking through from older data — only
+        // an actual URL should produce a download link.
+        if (/^(https?:)?\/\//i.test(lesson.presentation || ''))
           content += `<p><a target="_blank" href="${lesson.presentation}">לחץ כאן להורדת המצגת של השיעור</a><br/></p>`;
         if (lesson.additionalFiles?.length) content += `<p>${this.autoBr(lesson.additionalFiles)}</p>`;
         break;

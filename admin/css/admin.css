@@ -518,3 +518,23 @@ div.error {
   white-space: nowrap !important;
   opacity: 0 !important;
 }
+
+/* Lesson editor presentation picker: show what's currently attached, since the
+   file is what the front end renders as the presentation download link. */
+.presentation-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.presentation-current {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+.presentation-current .presentation-empty {
+  color: #888;
+  font-style: italic;
+}

@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.3.12
+ * Version: 1.3.13
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -719,7 +719,13 @@ class FutureLMS {
 
       $lesson = new Lesson($lessonId);
 
-      $result["presentation"] = $lesson->display('presentation');
+      // `presentation` holds a media attachment id, but the front end uses this
+      // value directly as the download link's href. Resolve it to a real URL —
+      // passing the bare id through produced a relative href like "1731", and a
+      // detached presentation (id 0) produced href="0". Both rendered a
+      // "download the presentation" link that downloaded nothing.
+      $presentationId = intval($lesson->raw('presentation'));
+      $result["presentation"] = $presentationId ? (wp_get_attachment_url($presentationId) ?: '') : '';
       $result["homework"] = $lesson->display('homework');
       $result["additionalFiles"] = $lesson->display('additional_files');
       $result["lessonContent"] = do_shortcode(wpautop($lesson->display('post_content')));
