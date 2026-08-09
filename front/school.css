@@ -1447,3 +1447,305 @@ body.school .lesson-materials .skip-lesson-floating {
   color: #fff;
   border-color: #1a1a1a;
 }
+
+/* ---------------------------------------------------------------------------
+   Module quiz
+   - The quiz row sits last inside its module in the sidebar and reuses the
+     .sidebar-lesson grid, so it lines up with the lessons above it. The score
+     badge takes the same column the "דלג" button uses on lesson rows.
+   - .quiz-view takes over the whole .lesson area (see .lesson.quiz-mode): a
+     quiz has no video, no materials tabs and no notes, so keeping the lesson
+     chrome around it would just leave dead controls on screen.
+   --------------------------------------------------------------------------- */
+
+/* Quiz shield. Sits in the same 4th column the lesson rows give their
+   play/text icon, so the icons line up down the sidebar. Everything is drawn
+   with currentColor, so state is a single `color` swap — and the
+   `.sidebar-lesson.locked *` rule greys it out on its own. */
+body.school .sidebar-quiz > .quiz-icon {
+  grid-column: 4;
+  width: 20px;
+  height: 20px;
+  color: #4a4a4a;
+  overflow: visible;
+}
+body.school .sidebar-quiz > .quiz-icon .quiz-icon-shield {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  /* Dashed until the student has actually submitted an attempt. Dash lengths
+     match the rhythm of play.svg / text.svg's dashed ring (~4 units in the
+     50-unit viewBox) so the icons still read as a set. */
+  stroke-dasharray: 4 3.4;
+}
+body.school .sidebar-quiz > .quiz-icon.attempted .quiz-icon-shield {
+  stroke-dasharray: none;
+}
+/* Verdict colours only exist for a quiz with a minimum pass score; a
+   completed self-check quiz stays neutral (see showSidebar). */
+body.school .sidebar-quiz > .quiz-icon.passed {
+  color: #16a34a;
+}
+body.school .sidebar-quiz > .quiz-icon.failed {
+  color: #c62828;
+}
+body.school .sidebar-quiz > .quiz-icon .quiz-icon-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+body.school .sidebar-quiz > .quiz-icon .quiz-icon-dot {
+  fill: currentColor;
+}
+
+body.school .sidebar-quiz .quiz-score-badge {
+  grid-column: 3;
+  justify-self: end;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: #333;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+body.school .sidebar-quiz .quiz-score-badge.passed {
+  background: #e8f8f1;
+  border-color: #46da9c;
+  color: #12805a;
+}
+body.school .sidebar-quiz .quiz-score-badge.failed {
+  background: #fdecec;
+  border-color: #e08c8c;
+  color: #a32020;
+}
+
+/* Hidden until showQuiz flips .lesson into quiz-mode. These carry the full
+   `.school-container.classroom` chain on purpose: the base `.lesson`,
+   `.lesson-videos` and `.lesson-materials` rules are nested under it, so a
+   shorter selector here would lose the specificity contest and leave the
+   lesson chrome on screen behind the quiz. */
+body.school .quiz-view {
+  display: none;
+}
+body.school .school-container.classroom .lesson.quiz-mode {
+  grid-template-rows: 1fr;
+}
+body.school .school-container.classroom .lesson.quiz-mode .lesson-videos,
+body.school .school-container.classroom .lesson.quiz-mode .lesson-materials {
+  display: none;
+}
+body.school .school-container.classroom .lesson.quiz-mode .quiz-view {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.school .quiz-view .quiz-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.8rem;
+  border: solid 1px var(--border-color);
+  border-left: 0;
+  border-right: 0;
+}
+body.school .quiz-view .quiz-title {
+  flex-grow: 1;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+body.school .quiz-view .quiz-body {
+  overflow-y: auto;
+  padding: 1.6rem;
+}
+
+body.school .quiz-view .quiz-intro {
+  color: #555;
+  margin-bottom: 1.2rem;
+}
+
+body.school .quiz-view .quiz-question {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+
+body.school .quiz-view .quiz-question-text {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 600;
+  line-height: 1.6em;
+  margin-bottom: 0.8rem;
+}
+body.school .quiz-view .quiz-question-num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sidebar-module-background-color);
+  border: 1px solid var(--border-color);
+  color: #333;
+  font-size: 0.85rem;
+  line-height: 24px;
+  text-align: center;
+}
+
+body.school .quiz-view .quiz-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+body.school .quiz-view .quiz-answer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: normal;
+  margin: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+body.school .quiz-view .quiz-answer:hover {
+  background: var(--sidebar-module-background-color);
+}
+body.school .quiz-view .quiz-answer.checked {
+  border-color: var(--border-emphasis-color);
+  background: var(--selected-color);
+}
+body.school .quiz-view .quiz-answer input[type='radio'] {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Review state — shown only when the quiz reveals its answers. */
+body.school .quiz-view .quiz-answer.reviewed {
+  cursor: default;
+}
+body.school .quiz-view .quiz-answer.reviewed:hover {
+  background: #fff;
+}
+body.school .quiz-view .quiz-answer.reviewed.correct {
+  background: #e8f8f1;
+  border-color: #46da9c;
+}
+body.school .quiz-view .quiz-answer.reviewed.correct:hover {
+  background: #e8f8f1;
+}
+body.school .quiz-view .quiz-answer.reviewed.wrong {
+  background: #fdecec;
+  border-color: #e08c8c;
+}
+body.school .quiz-view .quiz-answer.reviewed.wrong:hover {
+  background: #fdecec;
+}
+/* The student's own pick on a quiz that doesn't reveal answers: shown so the
+   review still says what they chose, but deliberately neutral — no green or
+   red, because we're not telling them whether it was right. */
+body.school .quiz-view .quiz-answer.reviewed.chosen {
+  background: var(--selected-color);
+  border-color: var(--border-emphasis-color);
+}
+body.school .quiz-view .quiz-answer.reviewed.chosen:hover {
+  background: var(--selected-color);
+}
+
+body.school .quiz-view .quiz-answer-mark {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-weight: bold;
+}
+body.school .quiz-view .quiz-answer.reviewed.correct .quiz-answer-mark {
+  color: #12805a;
+}
+body.school .quiz-view .quiz-answer.reviewed.wrong .quiz-answer-mark {
+  color: #a32020;
+}
+
+body.school .quiz-view .quiz-score-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 1.6rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--sidebar-module-background-color);
+}
+body.school .quiz-view .quiz-score-card.passed {
+  background: #e8f8f1;
+  border-color: #46da9c;
+}
+body.school .quiz-view .quiz-score-card.failed {
+  background: #fdecec;
+  border-color: #e08c8c;
+}
+body.school .quiz-view .quiz-score-value {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1.2em;
+}
+body.school .quiz-view .quiz-score-detail {
+  color: #555;
+}
+
+body.school .quiz-view .quiz-verdict {
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+body.school .quiz-view .quiz-verdict.passed { color: #12805a; font-weight: 600; }
+body.school .quiz-view .quiz-verdict.failed { color: #a32020; font-weight: 600; }
+
+body.school .quiz-view .quiz-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 1rem 0 2rem;
+}
+body.school .quiz-view .quiz-actions button {
+  padding: 8px 28px;
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #1a1a1a;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+body.school .quiz-view .quiz-actions button:hover:not(:disabled) {
+  background: #fff;
+  color: #1a1a1a;
+}
+body.school .quiz-view .quiz-actions button:disabled {
+  background: #fff;
+  color: #b0b0b0;
+  border-color: var(--border-color);
+  cursor: not-allowed;
+}
+body.school .quiz-view .quiz-actions .quiz-reset {
+  background: #fff;
+  color: #1a1a1a;
+}
+body.school .quiz-view .quiz-actions .quiz-reset:hover {
+  background: #1a1a1a;
+  color: #fff;
+}

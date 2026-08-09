@@ -30,6 +30,9 @@ class CoursesTab {
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-module']", 'click', e =>
       this.editModule(e, e.target.closest('.course-module').dataset.moduleId)
     );
+    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-quiz']", 'click', e =>
+      this.editQuiz(e.target.closest('.course-module').dataset.moduleId)
+    );
     JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='pause-course']", 'click', e =>
       this.changeCourseStatus(e, 'draft')
     );
@@ -217,10 +220,21 @@ class CoursesTab {
                   module.count_progress
                     ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
                     : ''
+                }${
+                  module.quiz?.enabled
+                    ? `<span class="tooltip" data-content="Quiz: ${module.quiz.question_count} question(s)${
+                        module.quiz.pass_score > 0 ? `, pass ${module.quiz.pass_score}%` : ''
+                      }${
+                        module.quiz.pass_score > 0 && module.quiz.block_progress ? ', blocks progress' : ''
+                      }" data-variation="mini" data-inverted=""><i class="question circle icon purple"></i></span>`
+                    : ''
                 } ${module.name}</span>
                     <span class='entity-id' title='Module ID'>${mid}</span>
                     <span class='module-actions action-bar'>
                       <i class="edit icon blue actionable" data-action='edit-module'></i>
+                      <span class="tooltip" data-content="Edit quiz" data-variation="mini" data-inverted="">
+                        <i class="question circle outline icon purple actionable" data-action='edit-quiz'></i>
+                      </span>
                       ${
                         module.enabled === true
                           ? "<i class='pause icon red actionable' data-action='pause-module'></i>"
@@ -363,6 +377,305 @@ class CoursesTab {
     });
 
     this.wireSlideoutSwitches();
+  };
+
+  /**
+   * Multiple-choice quiz editor for a module.
+   *
+   * The questions live in a plain JS array (`quiz-questions` state) rather
+   * than being read back out of the DOM on every keystroke: structural edits
+   * (add / remove / reorder) re-render the list, and `syncQuizQuestions`
+   * folds the current input values back into the array right before each
+   * re-render and before saving. That keeps the ordering logic trivial and
+   * makes an unsaved half-typed question survive a reorder.
+   */
+  editQuiz = async moduleId => {
+    if (this.state.get('editing-quiz')) return;
+    this.state.set('editing-quiz', true);
+
+    const quiz = await JSUtils.fetch(__futurelms.ajax_url, {
+      action: 'get_quiz_details',
+      module_id: moduleId
+    });
+
+    if (quiz.error) {
+      this.state.set('editing-quiz', false);
+      notifications.show(quiz.message || 'Failed to load quiz', 'error');
+      return;
+    }
+
+    this.state.set('quiz-questions', quiz.questions || []);
+
+    slideout.show({
+      title: 'Edit Quiz',
+      message: `
+        <div class='slideout-form-line slideout-id-row'>
+          <span class='entity-id-label'>Course #${quiz.course_id || '?'} · Module #${moduleId}</span>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Quiz enabled</label>
+          <input type='checkbox' class='slideout-switch round' name='quiz_enabled' value='1' ${
+            quiz.enabled ? 'checked' : ''
+          }/>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Quiz title</label>
+          <input type='text' name='quiz_title' value='${this.escapeAttr(quiz.title || '')}' placeholder='בוחן'/>
+        </div>
+        <div class='slideout-form-line'>
+          <label class='slideout-form-line-title'>Minimum pass score (%)</label>
+          <input type='number' name='quiz_pass_score' min='0' max='100' value='${quiz.pass_score || 0}'/>
+          <small class='desc' style='font-size:0.8rem;'>0 = no minimum score. The student always "passes".</small>
+        </div>
+        <div class='slideout-form-line quiz-line-block'>
+          <label class='slideout-form-line-title' title='Modules after this one stay locked until the student reaches the minimum score.'>Block progress until passed</label>
+          <input type='checkbox' class='slideout-switch round' name='quiz_block_progress' value='1' ${
+            quiz.block_progress ? 'checked' : ''
+          }/>
+          <small class='desc quiz-block-desc' style='font-size:0.8rem;'></small>
+        </div>
+        <div class='slideout-form-line quiz-line-reveal'>
+          <label class='slideout-form-line-title' title='Only available when there is no minimum pass score.'>Reveal correct answers after submitting</label>
+          <input type='checkbox' class='slideout-switch round' name='quiz_reveal_answers' value='1' ${
+            quiz.reveal_answers ? 'checked' : ''
+          }/>
+        </div>
+        <div class='slideout-form-line quiz-questions-line'>
+          <label class='slideout-form-line-title'>Questions</label>
+          <small class='desc' style='font-size:0.8rem;'>Click the ✓ next to an answer to mark it as the correct one.</small>
+          <div class='quiz-builder'></div>
+          <button type='button' class='ui tiny button quiz-add-question'>Add question</button>
+        </div>
+      `,
+      type: slideout.types.FORM,
+      confirmText: 'Save',
+      confirm: async vals => {
+        const questions = this.syncQuizQuestions();
+
+        if (vals.quiz_enabled && questions.length === 0) {
+          notifications.show('A quiz needs at least one question', 'error');
+          return false;
+        }
+
+        const invalid = questions.find(
+          q => !q.text.trim() || q.options.filter(o => o.trim()).length < 2
+        );
+        if (invalid) {
+          notifications.show('Every question needs text and at least 2 answers', 'error');
+          return false;
+        }
+
+        const passScore = Math.max(0, Math.min(100, parseInt(vals.quiz_pass_score, 10) || 0));
+
+        const result = await JSUtils.fetch(__futurelms.ajax_url, {
+          action: 'edit_quiz',
+          module_id: moduleId,
+          enabled: vals.quiz_enabled ? '1' : '0',
+          title: vals.quiz_title || '',
+          pass_score: passScore,
+          block_progress: vals.quiz_block_progress ? '1' : '0',
+          reveal_answers: vals.quiz_reveal_answers ? '1' : '0',
+          questions: JSON.stringify(questions)
+        });
+
+        if (!result.error) {
+          notifications.show('Quiz saved successfully', 'success');
+          this.getCourses();
+        } else {
+          notifications.show(result.message || 'Failed to save quiz', 'error');
+        }
+      },
+      onClose: () => this.state.set('editing-quiz', false)
+    });
+
+    this.wireSlideoutSwitches();
+
+    // The questions builder needs the full panel width — the slideout's
+    // two-column auto-layout would otherwise squeeze it into one half.
+    const panel = document.querySelector('.slideout-panel');
+    const grid = panel?.querySelector('.slideout-form-grid');
+    const questionsLine = panel?.querySelector('.quiz-questions-line');
+    if (grid && questionsLine) {
+      grid.parentNode.appendChild(questionsLine);
+    }
+
+    // Blocking and revealing are mutually exclusive by design (see Quiz.php):
+    // a quiz is either a scored gate or a self-check.
+    const passInput = panel?.querySelector('input[name="quiz_pass_score"]');
+    const blockInput = panel?.querySelector('input[name="quiz_block_progress"]');
+    const blockDesc = panel?.querySelector('.quiz-block-desc');
+    let wasGating = (parseInt(passInput?.value, 10) || 0) > 0;
+
+    const syncQuizMode = () => {
+      const score = parseInt(passInput?.value, 10) || 0;
+      const gating = score > 0;
+      panel?.querySelector('.quiz-line-block')?.classList.toggle('hidden', !gating);
+      panel?.querySelector('.quiz-line-reveal')?.classList.toggle('hidden', gating);
+
+      // Setting a minimum score for the first time turns blocking on. Someone
+      // who types "70" means it to matter — leaving it opt-in produced a quiz
+      // that scored the student, showed them a red fail, and then waved them
+      // through to the next module anyway. Still switchable off for a scored
+      // quiz that's deliberately advisory; only the 0 -> N transition flips it.
+      if (gating && !wasGating && blockInput && !blockInput.checked) {
+        blockInput.checked = true;
+      }
+      wasGating = gating;
+
+      // Spell out the consequence, so a non-blocking scored quiz is a choice
+      // rather than something that got missed.
+      if (blockDesc) {
+        blockDesc.textContent = blockInput?.checked
+          ? `Students scoring under ${score}% can't open anything after this module until they pass.`
+          : `Advisory only — students continue to the next module even if they score under ${score}%.`;
+      }
+    };
+
+    passInput?.addEventListener('input', syncQuizMode);
+    blockInput?.addEventListener('change', syncQuizMode);
+    syncQuizMode();
+
+    panel?.querySelector('.quiz-add-question')?.addEventListener('click', () => {
+      const questions = this.syncQuizQuestions();
+      questions.push({ id: this.nextQuizQuestionId(questions), text: '', options: ['', ''], correct: 0 });
+      this.state.set('quiz-questions', questions);
+      this.renderQuizQuestions();
+    });
+
+    // One delegated handler for the whole builder — the rows are re-rendered
+    // on every structural change, so per-element listeners would be lost.
+    panel?.querySelector('.quiz-builder')?.addEventListener('click', e => {
+      const action = e.target.closest('[data-quiz-action]')?.dataset.quizAction;
+      if (!action) return;
+
+      const questions = this.syncQuizQuestions();
+      const questionEl = e.target.closest('.quiz-question');
+      const index = parseInt(questionEl?.dataset.index, 10);
+      if (isNaN(index)) return;
+
+      switch (action) {
+        case 'delete-question':
+          questions.splice(index, 1);
+          break;
+        case 'move-up-question':
+          if (index === 0) return;
+          [questions[index - 1], questions[index]] = [questions[index], questions[index - 1]];
+          break;
+        case 'move-down-question':
+          if (index >= questions.length - 1) return;
+          [questions[index + 1], questions[index]] = [questions[index], questions[index + 1]];
+          break;
+        case 'add-option':
+          questions[index].options.push('');
+          break;
+        case 'mark-correct':
+          questions[index].correct = parseInt(e.target.closest('.quiz-option').dataset.optionIndex, 10);
+          break;
+        case 'delete-option': {
+          const optionIndex = parseInt(e.target.closest('.quiz-option').dataset.optionIndex, 10);
+          if (questions[index].options.length <= 2) {
+            notifications.show('A question needs at least 2 answers', 'error');
+            return;
+          }
+          questions[index].options.splice(optionIndex, 1);
+          // Keep the answer key pointing at the same option after a removal.
+          if (questions[index].correct === optionIndex) questions[index].correct = 0;
+          else if (questions[index].correct > optionIndex) questions[index].correct--;
+          break;
+        }
+      }
+
+      this.state.set('quiz-questions', questions);
+      this.renderQuizQuestions();
+    });
+
+    this.renderQuizQuestions();
+  };
+
+  /**
+   * Folds the free-text values (question text, answer text) back into the
+   * questions array and returns it. Called before every re-render and before
+   * saving, so nothing typed is ever lost.
+   *
+   * `correct` is deliberately NOT read back from the DOM: it lives only in
+   * this array, set by the mark-correct action. The slideout's
+   * close-on-background-click listener runs with captureChildClicks +
+   * preventDefault, so every click inside the panel has its default action
+   * cancelled — a native radio can never actually become :checked in here.
+   * (Same swallowed-click bug wireSlideoutSwitches works around for
+   * checkboxes.) Reading the answer key from a control that can't change is
+   * how the correct answer silently stayed pinned to the first option.
+   */
+  syncQuizQuestions = () => {
+    const questions = this.state.get('quiz-questions') || [];
+    const panel = document.querySelector('.slideout-panel');
+    if (!panel) return questions;
+
+    panel.querySelectorAll('.quiz-question').forEach(questionEl => {
+      const index = parseInt(questionEl.dataset.index, 10);
+      const question = questions[index];
+      if (!question) return;
+
+      question.text = questionEl.querySelector('.quiz-question-text')?.value ?? question.text;
+      question.options = [...questionEl.querySelectorAll('.quiz-option-text')].map(input => input.value);
+    });
+
+    this.state.set('quiz-questions', questions);
+    return questions;
+  };
+
+  nextQuizQuestionId = questions =>
+    questions.reduce((max, question) => Math.max(max, parseInt(question.id, 10) || 0), 0) + 1;
+
+  escapeAttr = value => String(value ?? '').replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+
+  renderQuizQuestions = () => {
+    const builder = document.querySelector('.slideout-panel .quiz-builder');
+    if (!builder) return;
+
+    const questions = this.state.get('quiz-questions') || [];
+
+    if (questions.length === 0) {
+      builder.innerHTML = `<p class='quiz-empty'>No questions yet. Add the first one below.</p>`;
+      return;
+    }
+
+    builder.innerHTML = questions
+      .map(
+        (question, index) => `
+        <div class='quiz-question' data-index='${index}' data-question-id='${question.id}'>
+          <div class='quiz-question-head'>
+            <span class='quiz-question-num'>${index + 1}</span>
+            <input type='text' class='quiz-question-text' placeholder='Question' value='${this.escapeAttr(
+              question.text
+            )}'/>
+            <span class='quiz-question-actions'>
+              <i class='arrow up icon actionable' data-quiz-action='move-up-question'></i>
+              <i class='arrow down icon actionable' data-quiz-action='move-down-question'></i>
+              <i class='trash alternate outline icon red actionable' data-quiz-action='delete-question'></i>
+            </span>
+          </div>
+          <div class='quiz-options'>
+            ${question.options
+              .map(
+                (option, optionIndex) => `
+              <div class='quiz-option${optionIndex === question.correct ? ' is-correct' : ''}' data-option-index='${optionIndex}'>
+                <button type='button' class='quiz-option-mark' data-quiz-action='mark-correct'
+                  aria-pressed='${optionIndex === question.correct}'
+                  title='Mark as the correct answer' aria-label='Mark as the correct answer'>✓</button>
+                <input type='text' class='quiz-option-text' placeholder='Answer ${
+                  optionIndex + 1
+                }' value='${this.escapeAttr(option)}'/>
+                <span class='quiz-option-badge'>Correct</span>
+                <i class='trash alternate outline icon red actionable' data-quiz-action='delete-option'></i>
+              </div>`
+              )
+              .join('')}
+          </div>
+          <button type='button' class='ui tiny basic button quiz-add-option' data-quiz-action='add-option'>Add answer</button>
+        </div>`
+      )
+      .join('');
   };
 
   /**

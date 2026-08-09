@@ -212,7 +212,19 @@ class Classroom {
       }
     });
 
+    // Delegated because the quiz body is re-rendered on every state change
+    // (answering, submitting, resetting).
+    JSUtils.addGlobalEventListener(coursePage, '.quiz-submit', 'click', () => this.submitQuiz());
+    JSUtils.addGlobalEventListener(coursePage, '.quiz-reset', 'click', () => this.resetQuiz());
+    JSUtils.addGlobalEventListener(coursePage, '.quiz-next-lesson', 'click', () =>
+      this.openLesson(this.nextLessonAfterQuiz(this.state.get('quiz')?.module_id))
+    );
+    JSUtils.addGlobalEventListener(coursePage, '.quiz-answer input[type="radio"]', 'change', e =>
+      this.recordQuizAnswer(e.target)
+    );
+
     await this.loadLessons();
+    await this.loadQuizzes();
     this.state.listen('student-progress', this.showSidebar);
     await this.loadProgress(); //need lesson data
 
@@ -281,6 +293,9 @@ class Classroom {
   loadLesson = async () => {
     let coursePage = this.state.get('coursePage');
     let lesson = this.state.get('lesson');
+
+    //loading a lesson always leaves the quiz view
+    this.setQuizMode(false);
 
     let courseData = this.state.get('course-data');
     let idx = courseData.findIndex(ld => ld.id === lesson.id);
@@ -499,9 +514,13 @@ class Classroom {
 
     // On lesson-completing events, also refresh lessons so a sequential-locked
     // next lesson updates its `open` flag in the sidebar. Awaited so any
-    // immediately-following auto-advance sees the fresh state.
+    // immediately-following auto-advance sees the fresh state. Quizzes come
+    // along for the ride: on a sequential course, finishing the last lesson
+    // of a module is exactly what unlocks that module's quiz, so without this
+    // the quiz row would stay greyed out until a page reload.
     if (percent >= 100) {
       await this.loadLessons();
+      await this.loadQuizzes();
     }
     await this.loadProgress();
   };
@@ -628,6 +647,15 @@ class Classroom {
     this.state.set('course-data', lessondata);
   };
 
+  loadQuizzes = async () => {
+    const quizzes = await callServer({
+      action: 'get_course_quizzes',
+      course_id: this.state.get('courseId')
+    });
+
+    this.state.set('quizzes', Array.isArray(quizzes) ? quizzes : []);
+  };
+
   blinkNavIcon = () => {
     const btns = document.querySelectorAll('.nav-lessons');
     btns.forEach(btn => {
@@ -637,6 +665,35 @@ class Classroom {
     });
     setTimeout(() => btns.forEach(btn => btn.classList.remove('blink')), 2500);
   };
+
+  /**
+   * Sidebar icons are built in JS, so they don't get the ?ver= that
+   * wp_enqueue_* stamps onto scripts and styles. Append the plugin version
+   * ourselves, otherwise a redrawn icon stays invisible behind the cache.
+   */
+  iconUrl = name =>
+    `${window.school_info.theme_url}assets/images/${name}.svg?ver=${window.school_info.version || ''}`;
+
+  /**
+   * Shield-with-a-question-mark marking a module quiz. Inlined rather than
+   * loaded as a file like the lesson icons, because it has three states that
+   * differ only in stroke and colour — one shape driven by CSS beats three
+   * near-identical SVGs kept in sync by hand (and it can't go stale in the
+   * browser cache).
+   *
+   * `state` is '' (not taken → dashed), 'attempted' (done, no pass mark →
+   * solid neutral), or 'attempted passed' / 'attempted failed' (solid green /
+   * red). Strokes use currentColor so the CSS only has to set `color` — which
+   * also means the locked-row rule greys the icon out for free.
+   */
+  quizIconSvg = state =>
+    `<svg class="quiz-icon ${state}" viewBox="0 0 50 50" aria-hidden="true" focusable="false">
+      <path class="quiz-icon-shield" d="M11,4.5 H39 A3.5,3.5 0 0 1 42.5,8 V24 C42.5,34.6 35,42.1 25,45.5 C15,42.1 7.5,34.6 7.5,24 V8 A3.5,3.5 0 0 1 11,4.5 Z"/>
+      <g transform="translate(25,23) scale(0.9) translate(-25,-25)">
+        <path class="quiz-icon-mark" d="M18.7,19.8C18.7,15.5 21.6,13.2 25,13.2C28.6,13.2 31.3,15.7 31.3,19.3C31.3,22.4 29.6,23.8 27.5,25.3C25.9,26.4 25.1,27.5 25.1,29.4"/>
+        <circle class="quiz-icon-dot" cx="25.1" cy="35.4" r="2.2"/>
+      </g>
+    </svg>`;
 
   toggleMobileSidebar = show => {
     if (show) this.state.get('sidebar').classList.add('show');
@@ -656,6 +713,19 @@ class Classroom {
         arr.push({ id: curr.module_id, title: curr.module_title, order: curr.module_order, intro: curr.intro_module });
       return arr;
     }, []);
+
+    // A module can hold nothing but a quiz (a final exam, typically). It has no
+    // lessons, so the reduce above never saw it — add it from the quiz list.
+    const quizzes = this.state.get('quizzes') || [];
+    quizzes.forEach(quiz => {
+      if (modules.find(m => String(m.id) === String(quiz.module_id))) return;
+      modules.push({
+        id: quiz.module_id,
+        title: quiz.module_name,
+        order: quiz.module_order,
+        intro: quiz.intro_module ? 1 : 0
+      });
+    });
 
     modules.sort((a, b) => a.order - b.order);
 
@@ -754,9 +824,7 @@ class Classroom {
             lesson-id="${lesson.id}">
             <label>${lesson.title}</label>
             ${skipBtnHtml}
-            <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
-              showPlay ? 'play' : 'text'
-            }.svg" style='background:${background}' />
+            <img class='play-icon' src="${this.iconUrl(showPlay ? 'play' : 'text')}" style='background:${background}' />
           </div>`
           );
         } else {
@@ -769,9 +837,7 @@ class Classroom {
             lesson-id="${lesson.id}">
             <label>${lesson.title}</label>
             ${skipBtnHtml}
-            <img class='play-icon' src="${window.school_info.theme_url}assets/images/${
-              showPlay ? 'play' : 'text'
-            }.svg" style='background:${background}' />
+            <img class='play-icon' src="${this.iconUrl(showPlay ? 'play' : 'text')}" style='background:${background}' />
           </div>`
           );
         }
@@ -786,6 +852,322 @@ class Classroom {
         lessonDiv.classList.toggle('locked', !lesson.open);
       }
     });
+
+    // Quizzes go in last, after every lesson row exists, so each one lands at
+    // the bottom of its module. (The lesson insertion above orders by the
+    // `order` attribute, which a quiz row deliberately doesn't have.)
+    const currentQuiz = this.state.get('quiz');
+    quizzes.forEach(quiz => {
+      const domModule = sidebar.querySelector(`#module_${quiz.module_id}`);
+      if (!domModule) return;
+
+      const isCurrent = currentQuiz?.module_id === quiz.module_id;
+      if (isCurrent) {
+        domModule.classList.add('open');
+        // The lessons loop above marked the last-visited lesson as selected;
+        // while a quiz is open it owns the selection instead.
+        sidebar.querySelectorAll('.sidebar-lesson.selected').forEach(el => el.classList.remove('selected'));
+      }
+
+      const attempt = quiz.attempt;
+      // Only a quiz that actually gates has a verdict. On a self-check quiz
+      // every submission "passes", so pass/fail colouring there would be
+      // meaningless — it reads as done (solid, neutral) instead.
+      const verdict = !attempt ? '' : quiz.pass_score > 0 ? (attempt.passed ? ' passed' : ' failed') : ' neutral';
+      const badge = attempt ? `<span class="quiz-score-badge${verdict}">${attempt.score}%</span>` : '';
+
+      domModule.insertAdjacentHTML(
+        'beforeend',
+        `<div class="sidebar-lesson sidebar-quiz${isCurrent ? ' selected' : ''}${quiz.locked ? ' locked' : ''}"
+          module-id="${quiz.module_id}">
+          <label>${this.escapeHtml(quiz.title)}</label>
+          ${badge}
+          ${this.quizIconSvg(attempt ? `attempted${verdict}` : '')}
+        </div>`
+      );
+
+      domModule.querySelector(`.sidebar-quiz[module-id='${quiz.module_id}']`).addEventListener('click', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.showQuiz(quiz.module_id);
+        this.toggleMobileSidebar(false);
+      });
+    });
+  };
+
+  // --- Module quiz --------------------------------------------------------
+
+  /**
+   * Quiz titles, questions and answers are plain-text fields in the admin, so
+   * they're rendered as text — unlike lesson content, which is deliberately
+   * HTML.
+   */
+  escapeHtml = value =>
+    String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+  /**
+   * The quiz takes over the whole .lesson area. Lesson navigation exits the
+   * mode again (see loadLesson), so the two views can never be on screen at
+   * the same time.
+   */
+  setQuizMode = on => {
+    const coursePage = this.state.get('coursePage');
+    coursePage.querySelector('.lesson').classList.toggle('quiz-mode', !!on);
+    if (!on) this.state.set('quiz', null);
+  };
+
+  showQuiz = async moduleId => {
+    const quiz = await callServer({
+      action: 'get_quiz',
+      module_id: moduleId
+    });
+    if (!quiz) return;
+
+    // Answers the student has picked but not yet submitted, keyed by question
+    // id. Kept out of `quiz` so re-rendering the results view can't resurrect
+    // them.
+    this.state.set('quiz-answers', {});
+    this.state.set('quiz', quiz);
+    this.setQuizMode(true);
+
+    const coursePage = this.state.get('coursePage');
+    coursePage.querySelector('.quiz-view .quiz-title').innerText = quiz.title;
+
+    const sidebar = this.state.get('sidebar');
+    sidebar.querySelector('.sidebar-lesson.selected')?.classList.remove('selected');
+    sidebar.querySelector(`.sidebar-quiz[module-id='${moduleId}']`)?.classList.add('selected');
+
+    this.renderQuiz();
+    window.scrollTo(0, 0);
+  };
+
+  recordQuizAnswer = radio => {
+    const answers = this.state.get('quiz-answers') || {};
+    answers[parseInt(radio.getAttribute('data-question-id'))] = parseInt(radio.value);
+    this.state.set('quiz-answers', answers);
+
+    const coursePage = this.state.get('coursePage');
+    coursePage.querySelectorAll('.quiz-answer').forEach(answer => answer.classList.remove('checked'));
+    coursePage
+      .querySelectorAll('.quiz-answer input[type="radio"]:checked')
+      .forEach(checked => checked.closest('.quiz-answer').classList.add('checked'));
+
+    const quiz = this.state.get('quiz');
+    const submit = coursePage.querySelector('.quiz-submit');
+    if (submit) submit.disabled = Object.keys(answers).length < quiz.questions.length;
+  };
+
+  renderQuiz = () => {
+    const quiz = this.state.get('quiz');
+    const body = this.state.get('coursePage').querySelector('.quiz-view .quiz-body');
+    if (!quiz || !body) return;
+
+    body.innerHTML = quiz.attempt ? this.quizResultHtml(quiz) : this.quizFormHtml(quiz);
+  };
+
+  quizFormHtml = quiz => {
+    const intro =
+      quiz.pass_score > 0
+        ? `<p class="quiz-intro">ציון עובר: ${quiz.pass_score}%.${
+            quiz.blocking ? ' עד לעמידה בציון העובר, המשך הקורס נעול.' : ''
+          }</p>`
+        : `<p class="quiz-intro">בוחן לתרגול עצמי, ללא ציון עובר.</p>`;
+
+    const questions = quiz.questions
+      .map(
+        (question, index) => `
+        <div class="quiz-question">
+          <div class="quiz-question-text"><span class="quiz-question-num">${index + 1}</span>${this.escapeHtml(
+          question.text
+        )}</div>
+          <div class="quiz-answers">
+            ${question.options
+              .map(
+                (option, optionIndex) => `
+              <label class="quiz-answer">
+                <input type="radio" name="quiz_q_${question.id}" data-question-id="${question.id}" value="${optionIndex}" />
+                <span>${this.escapeHtml(option)}</span>
+              </label>`
+              )
+              .join('')}
+          </div>
+        </div>`
+      )
+      .join('');
+
+    return `${intro}
+      <div class="quiz-questions">${questions}</div>
+      <div class="quiz-actions">
+        <button type="button" class="quiz-submit" disabled>שלח תשובות</button>
+      </div>`;
+  };
+
+  /**
+   * The lesson that follows a module's quiz: the quiz renders after that
+   * module's last lesson, so it's whatever comes next in course order.
+   * Returns null when the quiz closes the course, or when the next lesson is
+   * still gated (drip / sequential) — there'd be nothing to navigate to.
+   */
+  nextLessonAfterQuiz = moduleId => {
+    const courseData = this.state.get('course-data') || [];
+
+    let lastOfModule = -1;
+    courseData.forEach((lesson, i) => {
+      if (parseInt(lesson.module_id) === parseInt(moduleId)) lastOfModule = i;
+    });
+    if (lastOfModule === -1) return null;
+
+    const next = courseData[lastOfModule + 1];
+    return next && next.open !== false ? next : null;
+  };
+
+  quizResultHtml = quiz => {
+    const attempt = quiz.attempt;
+    const gating = quiz.pass_score > 0;
+
+    let verdict = `<p class="quiz-verdict">השלמת את הבוחן.</p>`;
+    if (gating) {
+      verdict = attempt.passed
+        ? `<p class="quiz-verdict passed">עברת בהצלחה! ציון עובר: ${quiz.pass_score}%</p>`
+        : `<p class="quiz-verdict failed">לא עברת. ציון עובר: ${quiz.pass_score}%${
+            quiz.blocking ? ' — המשך הקורס ייפתח לאחר שתעבור.' : ''
+          }</p>`;
+    }
+
+    // The questions always stay on screen after submitting — having your work
+    // vanish and be replaced by a bare number is disorienting, and you can't
+    // learn anything from it. What varies is only how much is marked up:
+    // correct answers are in the payload solely when the quiz permits
+    // revealing them (see Quiz::can_reveal), so without that we still show
+    // every question with the student's own pick highlighted, just no verdict
+    // per answer.
+    const review = `<div class="quiz-questions reviewed">
+          ${quiz.questions
+            .map((question, index) => {
+              const given = attempt.answers?.[question.id];
+              const options = question.options
+                .map((option, optionIndex) => {
+                  const isGiven = optionIndex === given;
+                  const isCorrect = quiz.can_reveal && optionIndex === question.correct;
+                  const isWrongPick = quiz.can_reveal && isGiven && !isCorrect;
+                  const cls = `quiz-answer reviewed${isCorrect ? ' correct' : ''}${
+                    isWrongPick ? ' wrong' : ''
+                  }${!quiz.can_reveal && isGiven ? ' chosen' : ''}`;
+                  const mark = isCorrect ? '✔' : isWrongPick ? '✘' : !quiz.can_reveal && isGiven ? '●' : '';
+                  return `<div class="${cls}"><span class="quiz-answer-mark">${mark}</span><span>${this.escapeHtml(
+                    option
+                  )}</span></div>`;
+                })
+                .join('');
+              return `<div class="quiz-question">
+                <div class="quiz-question-text"><span class="quiz-question-num">${index + 1}</span>${this.escapeHtml(
+                question.text
+              )}</div>
+                <div class="quiz-answers">${options}</div>
+              </div>`;
+            })
+            .join('')}
+        </div>`;
+
+    // Carry on only when the student is actually clear to: `passed` is already
+    // true for every submission on a quiz with no minimum score (see
+    // Quiz::grade), so this covers both "passed" and "nothing to pass".
+    const nextLesson = attempt.passed ? this.nextLessonAfterQuiz(quiz.module_id) : null;
+    const continueButton = nextLesson
+      ? `<button type="button" class="quiz-next-lesson">המשך לשיעור הבא</button>`
+      : '';
+
+    // Answers first, then the reset button, then the score last — the score
+    // reads as the conclusion of the review rather than a headline above it.
+    return `${review}
+      <div class="quiz-actions">
+        ${continueButton}
+        <button type="button" class="quiz-reset">איפוס הבוחן</button>
+      </div>
+      <div class="quiz-score-card${gating ? (attempt.passed ? ' passed' : ' failed') : ''}">
+        <span class="quiz-score-value">${attempt.score}%</span>
+        <span class="quiz-score-detail">${attempt.correct_count} מתוך ${attempt.total_count} תשובות נכונות</span>
+      </div>
+      ${verdict}`;
+  };
+
+  submitQuiz = async () => {
+    const quiz = this.state.get('quiz');
+    const answers = this.state.get('quiz-answers') || {};
+
+    if (Object.keys(answers).length < quiz.questions.length) {
+      notifications.show('יש לענות על כל השאלות', 'error');
+      return;
+    }
+
+    const result = await callServer({
+      action: 'submit_quiz',
+      module_id: quiz.module_id,
+      answers: JSON.stringify(answers)
+    });
+    if (!result) return;
+
+    quiz.attempt = {
+      score: result.score,
+      correct_count: result.correct_count,
+      total_count: result.total_count,
+      passed: result.passed,
+      answers: answers
+    };
+    quiz.can_reveal = result.can_reveal;
+    if (result.questions) quiz.questions = result.questions;
+    this.state.set('quiz', quiz);
+
+    this.renderQuiz();
+
+    // A blocking quiz that just got passed unlocks the rest of the course —
+    // re-pull the lesson gates and the badges before redrawing the sidebar.
+    await this.loadLessons();
+    await this.loadQuizzes();
+    this.showSidebar();
+
+    // The score now sits below the reviewed answers, so on anything longer
+    // than a couple of questions it lands off-screen — bring it into view or
+    // submitting looks like it did nothing. .quiz-body is the scroll
+    // container here, not the window, so scrollIntoView is what moves it.
+    this.state
+      .get('coursePage')
+      .querySelector('.quiz-view .quiz-score-card')
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+
+  resetQuiz = () => {
+    const quiz = this.state.get('quiz');
+
+    // A passed blocking quiz is what's holding the rest of the course open —
+    // say so, because resetting it re-locks everything after this module.
+    const warning =
+      quiz.blocking && quiz.attempt?.passed
+        ? ' שים לב: המשך הקורס יינעל שוב עד שתעבור את הבוחן מחדש.'
+        : '';
+
+    remodaler.show({
+      title: 'איפוס הבוחן',
+      message: `התוצאה הקיימת תימחק ותוכל לענות על הבוחן מחדש. להמשיך?${warning}`,
+      type: remodaler.types.CONFIRM,
+      confirmText: 'איפוס',
+      confirm: async () => {
+        const result = await callServer({
+          action: 'reset_quiz',
+          module_id: quiz.module_id
+        });
+        if (!result) return;
+
+        await this.loadLessons();
+        await this.loadQuizzes();
+        await this.showQuiz(quiz.module_id);
+        this.showSidebar();
+      }
+    });
   };
 
   changeLesson = e => {
@@ -797,8 +1179,31 @@ class Classroom {
     e.preventDefault();
     let lessonId = parseInt(e.target.closest('.sidebar-lesson').getAttribute('lesson-id'));
     let lesson = this.state.get('course-data').find(ld => ld.id === lessonId);
-    this.state.set('lesson', lesson);
+
+    this.openLesson(lesson);
     this.toggleMobileSidebar(false);
+  };
+
+  /**
+   * Navigate to a lesson, leaving the quiz view if it's open.
+   *
+   * The special case: when the target is the lesson we were already on before
+   * opening the quiz, the `lesson` state doesn't change, so its listener never
+   * fires and loadLesson — which is what closes the quiz view — never runs.
+   * Do both of its jobs here instead.
+   */
+  openLesson = lesson => {
+    if (!lesson) return;
+
+    if (this.state.get('quiz') && this.state.get('lesson')?.id === lesson.id) {
+      this.setQuizMode(false);
+      const sidebar = this.state.get('sidebar');
+      sidebar.querySelectorAll('.sidebar-lesson.selected').forEach(el => el.classList.remove('selected'));
+      sidebar.querySelector(`.sidebar-lesson[lesson-id='${lesson.id}']`)?.classList.add('selected');
+      return;
+    }
+
+    this.state.set('lesson', lesson);
   };
 }
 

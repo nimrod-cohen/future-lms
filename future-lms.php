@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 1.3.13
+ * Version: 2.0.11
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -51,6 +51,7 @@ use FutureLMS\classes\Course;
 use FutureLMS\classes\Diploma;
 use FutureLMS\classes\Lesson;
 use FutureLMS\classes\ProgressManager;
+use FutureLMS\classes\Quiz;
 use FutureLMS\classes\SchoolClass;
 use FutureLMS\classes\Settings;
 use FutureLMS\classes\Student;
@@ -237,6 +238,9 @@ class FutureLMS {
 
     // Initialize ProgressManager (registers AJAX handlers)
     ProgressManager::get_instance();
+
+    // Initialize Quiz (registers its student + admin AJAX handlers)
+    Quiz::get_instance();
 
     // Diploma clean URL: /school/diploma/{course_id}
     add_rewrite_rule(
@@ -467,7 +471,12 @@ class FutureLMS {
 
     wp_localize_script('future-lms_school_script', 'school_info', [
       'ajax_url' => admin_url('admin-ajax.php'),
-      'theme_url' => plugin_dir_url(__FILE__)
+      'theme_url' => plugin_dir_url(__FILE__),
+      // The sidebar builds <img> URLs in JS, so those assets miss the ?ver=
+      // that wp_enqueue_* adds to scripts and styles. Hand the version over so
+      // an icon redraw actually reaches people instead of sitting behind the
+      // browser cache.
+      'version' => FUTURE_LMS_VERSION
     ]);
   }
 
@@ -782,6 +791,10 @@ class FutureLMS {
         $sequentialLockMap = $student->sequential_lock_map($course_id);
       }
 
+      // Lessons shut behind an unpassed blocking quiz. Cheap no-op for courses
+      // without one — see Quiz::has_blocking_quiz.
+      $quizLockMap = Quiz::locked_lessons(get_current_user_id(), (int) $course_id);
+
       $modules = BaseObject::factory("module", ["where" => "course.id = " . $course_id, "orderby" => "cast(order.meta_value  as unsigned int) ASC", "limit" => -1]);
 
       while ($module = $modules->fetch()) {
@@ -802,6 +815,10 @@ class FutureLMS {
           // Sequential gate: only narrows `open`, never opens what drip closed.
           if ($sequential && array_key_exists((int) $lesson_id, $sequentialLockMap)) {
             $open = $open && $sequentialLockMap[(int) $lesson_id];
+          }
+          // Quiz gate: likewise only narrows.
+          if (array_key_exists((int) $lesson_id, $quizLockMap)) {
+            $open = false;
           }
 
           $result[] = [

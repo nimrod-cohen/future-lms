@@ -217,6 +217,16 @@ class Student
             }
         }
 
+        // Quiz gate: a module whose quiz has a minimum pass score AND is set to
+        // block progress keeps every LATER module shut until the student
+        // passes it. Independent of sequential_progress — a course can gate on
+        // quizzes alone. Quiz::locked_lessons short-circuits cheaply when the
+        // course has no blocking quiz.
+        $quizLocks = Quiz::locked_lessons($this->_studentId, (int) $courseId);
+        if (array_key_exists((int) $lessonId, $quizLocks)) {
+            return false;
+        }
+
         return true;
     }
 

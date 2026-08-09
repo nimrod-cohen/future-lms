@@ -119,6 +119,23 @@ class Course extends BaseObject {
 
       $moduleRows = $wpdb->get_results($sql, ARRAY_A);
 
+      // One query to load the meta of every module in this course. The quiz
+      // summary below is then read straight out of that cache rather than via
+      // get_post_meta(): this loop runs for every module of every course on
+      // the progress hot path, and Pods filters each metadata read, so a
+      // per-module get_post_meta() call costs more than the query it saves.
+      // Reading raw meta is also consistent with the rest of this method,
+      // which builds the whole tree from raw SQL.
+      $moduleMeta = [];
+      if (!empty($moduleRows)) {
+        $moduleIds = array_map('intval', array_column($moduleRows, 'module_id'));
+        update_meta_cache('post', $moduleIds);
+        foreach ($moduleIds as $id) {
+          $cached = wp_cache_get($id, 'post_meta');
+          if (is_array($cached)) $moduleMeta[$id] = $cached;
+        }
+      }
+
       foreach ($moduleRows as $moduleRow) {
         $moduleId = $moduleRow["module_id"];
         $course["modules"][$moduleId] = [];
@@ -129,6 +146,10 @@ class Course extends BaseObject {
         $module["order"] = $moduleRow["module_order"];
         $module["teaser"] = $moduleRow["teaser"] ?? '';
         $module["enabled"] = $moduleRow["post_status"] == "publish";
+        // Optional multiple-choice quiz that closes off the module. Summary
+        // only — the tree is served to students by `get_all_courses`, so the
+        // questions (and the answer key) deliberately stay out of it.
+        $module["quiz"] = Quiz::summary((int) $moduleId, $moduleMeta[(int) $moduleId] ?? null);
 
         $module["lessons"] = [];
 

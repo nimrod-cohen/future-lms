@@ -94,6 +94,19 @@ if ($hours > 0) {
       <button type="button" class="skip-lesson skip-lesson-floating hidden"><?php _e('דלג לשיעור הבא', 'future-lms'); ?></button>
       <div class="lesson-content-viewer"></div>
     </div>
+    <!-- Module quiz. Takes over the whole .lesson area (videos + materials are
+         hidden by .lesson.quiz-mode) because a quiz has no videos, no
+         materials tabs and no notes — reusing the lesson chrome for it would
+         just leave four dead tabs on screen. -->
+    <div class="quiz-view">
+      <div class="quiz-header">
+        <span class="quiz-title"></span>
+        <button class="nav-lessons show-popover pop-right" type="button" aria-label="<?php _e("Choose Lesson", "future-lms"); ?>" data-content="<?php _e("Choose lesson", "future-lms"); ?>">
+          <img src="<?php echo $images_dir_url; ?>/index.svg" alt="<?php _e("Navigate lessons","future-lms"); ?>" />
+        </button>
+      </div>
+      <div class="quiz-body"></div>
+    </div>
   </div>
   </div>
 </div>

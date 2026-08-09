@@ -70,6 +70,31 @@ class VersionManager {
         update_option(self::SCHOOL_VERSION, '1.1.0');
     }
 
+    if( version_compare($dbVersion, '2.0.0', '<') ) {
+        // One row per (student, module): retaking a quiz overwrites the row,
+        // resetting deletes it. Quiz results never touch the progress table —
+        // a quiz doesn't count towards course completion.
+        $tableName = $prefix . "quiz_attempts";
+        $sql = "CREATE TABLE IF NOT EXISTS $tableName (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          user_id BIGINT(20) NOT NULL,
+          course_id BIGINT(20) NOT NULL,
+          module_id BIGINT(20) NOT NULL,
+          score INT(11) NOT NULL DEFAULT 0,
+          correct_count INT(11) NOT NULL DEFAULT 0,
+          total_count INT(11) NOT NULL DEFAULT 0,
+          passed TINYINT(1) NOT NULL DEFAULT 0,
+          answers TEXT DEFAULT NULL,
+          submitted_at DATETIME NOT NULL,
+          UNIQUE KEY user_module (user_id, module_id),
+          INDEX idx_user (user_id),
+          INDEX idx_course (course_id)
+        ) $charsetCollate";
+        dbDelta($sql);
+
+        update_option(self::SCHOOL_VERSION, '2.0.0');
+    }
+
     //KEEP THIS AT THE END
     if (version_compare($dbVersion, $currentVersion, '<')) {
         update_option(self::SCHOOL_VERSION, $currentVersion);

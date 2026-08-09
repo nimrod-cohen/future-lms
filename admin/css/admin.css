@@ -538,3 +538,143 @@ div.error {
   color: #888;
   font-style: italic;
 }
+
+/* --- Module quiz editor -------------------------------------------------
+   The questions list is moved out of the slideout's two-column grid (see
+   editQuiz in courses.js) so it can use the full panel width. Each question
+   is a card: header row (number / text / row actions), then its answers,
+   each answer preceded by the radio that marks it as the correct one. */
+.slideout-panel .quiz-questions-line {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--wpjs-border, #e2e8f0);
+}
+
+.slideout-panel .quiz-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Same fomantic quirk the #courses-list block above works around: its icons
+   are `position: absolute` and carry an ::after that renders a stray rotated
+   glyph somewhere else on the page. That fix is scoped to #courses-list, and
+   the slideout is appended to <body>, so it has to be repeated here —
+   otherwise the reorder arrows collapse out of flow and their ::after shows
+   up as a rogue icon at the bottom of the panel. */
+.slideout-panel .quiz-builder i.icon {
+  position: static;
+  cursor: pointer;
+}
+.slideout-panel .quiz-builder i.icon::after {
+  content: none;
+}
+
+.slideout-panel .quiz-empty {
+  color: var(--disabled-color, #999);
+  font-style: italic;
+  margin: 0 0 4px;
+}
+
+.slideout-panel .quiz-question {
+  border: 1px solid var(--wpjs-border-strong, #cbd5e1);
+  border-radius: var(--wpjs-radius-sm, 6px);
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.slideout-panel .quiz-question-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slideout-panel .quiz-question-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #6b46c1;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slideout-panel .quiz-question-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.slideout-panel .quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 10px 32px;
+}
+
+.slideout-panel .quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The "this is the correct answer" control is a button, not a radio, on
+   purpose. The slideout's close-on-background-click listener preventDefault()s
+   every click inside the panel, which cancels a radio's activation behaviour —
+   it can be rendered checked but never clicked into that state. A button has
+   no default action to cancel, so it's immune, and it also sidesteps the
+   three-way fight between wp-admin, slideout.css and this file over how a
+   native radio should look. State is carried by .quiz-option.is-correct. */
+.slideout-panel .quiz-option-mark {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.slideout-panel .quiz-option-mark:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+.slideout-panel .quiz-option.is-correct .quiz-option-mark {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+
+.slideout-panel .quiz-option.is-correct .quiz-option-text {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+.slideout-panel .quiz-option-badge {
+  display: none;
+}
+.slideout-panel .quiz-option.is-correct .quiz-option-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.slideout-panel .quiz-add-option {
+  margin-left: 32px !important;
+}
