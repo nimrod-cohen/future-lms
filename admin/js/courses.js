@@ -539,10 +539,10 @@ class CoursesTab {
       const blockingNow = gating && !!blockInput?.checked;
       if (revealDesc) {
         revealDesc.textContent = !revealInput?.checked
-          ? 'Students see which answers they picked, but not which were right.'
+          ? 'Currently, students see which answers they picked, but not which were right.'
           : blockingNow
             ? 'Note: this quiz blocks progress, so a student can reset it and retake it with the answers in hand.'
-            : 'Students see the correct answer for every question after submitting.';
+            : 'Currently, students see the correct answer for every question after submitting.';
         revealDesc.classList.toggle('quiz-warn', !!revealInput?.checked && blockingNow);
       }
     };

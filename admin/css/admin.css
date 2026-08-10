@@ -679,6 +679,16 @@ div.error {
   margin-left: 32px !important;
 }
 
+/* These notes sit under a switch, and a switch is an inline-block label — so
+   an inline <small> would tuck itself alongside the slider instead of below
+   it. Force them onto their own line. */
+.slideout-panel .quiz-block-desc,
+.slideout-panel .quiz-reveal-desc {
+  display: block;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
 /* Advisory note under a quiz switch when the chosen combination undermines
    itself (reveal + block progress). Amber rather than red: it's a legal
    configuration, just one worth a second thought. */
