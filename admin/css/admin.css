@@ -678,3 +678,11 @@ div.error {
 .slideout-panel .quiz-add-option {
   margin-left: 32px !important;
 }
+
+/* Advisory note under a quiz switch when the chosen combination undermines
+   itself (reveal + block progress). Amber rather than red: it's a legal
+   configuration, just one worth a second thought. */
+.slideout-panel .desc.quiz-warn {
+  color: #b45309;
+  font-weight: 600;
+}

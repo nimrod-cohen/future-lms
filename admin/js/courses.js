@@ -435,10 +435,11 @@ class CoursesTab {
           <small class='desc quiz-block-desc' style='font-size:0.8rem;'></small>
         </div>
         <div class='slideout-form-line quiz-line-reveal'>
-          <label class='slideout-form-line-title' title='Only available when there is no minimum pass score.'>Reveal correct answers after submitting</label>
+          <label class='slideout-form-line-title' title='Students see the correct answer for every question once they submit.'>Reveal correct answers after submitting</label>
           <input type='checkbox' class='slideout-switch round' name='quiz_reveal_answers' value='1' ${
             quiz.reveal_answers ? 'checked' : ''
           }/>
+          <small class='desc quiz-reveal-desc' style='font-size:0.8rem;'></small>
         </div>
         <div class='slideout-form-line quiz-questions-line'>
           <label class='slideout-form-line-title'>Questions</label>
@@ -499,18 +500,20 @@ class CoursesTab {
       grid.parentNode.appendChild(questionsLine);
     }
 
-    // Blocking and revealing are mutually exclusive by design (see Quiz.php):
-    // a quiz is either a scored gate or a self-check.
+    // Blocking is the only setting with a dependency — it needs a pass score
+    // to fail against, so its control is hidden without one. Revealing stands
+    // on its own and is always offered.
     const passInput = panel?.querySelector('input[name="quiz_pass_score"]');
     const blockInput = panel?.querySelector('input[name="quiz_block_progress"]');
+    const revealInput = panel?.querySelector('input[name="quiz_reveal_answers"]');
     const blockDesc = panel?.querySelector('.quiz-block-desc');
+    const revealDesc = panel?.querySelector('.quiz-reveal-desc');
     let wasGating = (parseInt(passInput?.value, 10) || 0) > 0;
 
     const syncQuizMode = () => {
       const score = parseInt(passInput?.value, 10) || 0;
       const gating = score > 0;
       panel?.querySelector('.quiz-line-block')?.classList.toggle('hidden', !gating);
-      panel?.querySelector('.quiz-line-reveal')?.classList.toggle('hidden', gating);
 
       // Setting a minimum score for the first time turns blocking on. Someone
       // who types "70" means it to matter — leaving it opt-in produced a quiz
@@ -529,10 +532,24 @@ class CoursesTab {
           ? `Students scoring under ${score}% can't open anything after this module until they pass.`
           : `Advisory only — students continue to the next module even if they score under ${score}%.`;
       }
+
+      // Reveal + blocking is legal but self-defeating: the student can reset
+      // the quiz and retake it with the answer key. Say so at the point of
+      // decision instead of silently disallowing the combination.
+      const blockingNow = gating && !!blockInput?.checked;
+      if (revealDesc) {
+        revealDesc.textContent = !revealInput?.checked
+          ? 'Students see which answers they picked, but not which were right.'
+          : blockingNow
+            ? 'Note: this quiz blocks progress, so a student can reset it and retake it with the answers in hand.'
+            : 'Students see the correct answer for every question after submitting.';
+        revealDesc.classList.toggle('quiz-warn', !!revealInput?.checked && blockingNow);
+      }
     };
 
     passInput?.addEventListener('input', syncQuizMode);
     blockInput?.addEventListener('change', syncQuizMode);
+    revealInput?.addEventListener('change', syncQuizMode);
     syncQuizMode();
 
     panel?.querySelector('.quiz-add-question')?.addEventListener('click', () => {

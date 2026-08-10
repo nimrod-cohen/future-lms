@@ -16,18 +16,17 @@ use FutureLMS\FutureLMS;
  *   quiz_title          heading shown to the student
  *   quiz_pass_score     0-100. 0 (or empty) means "no minimum score"
  *   quiz_block_progress '1' / '0' — only meaningful when quiz_pass_score > 0
- *   quiz_reveal_answers '1' / '0' — only meaningful when quiz_pass_score == 0
+ *   quiz_reveal_answers '1' / '0' — independent of the pass score
  *   quiz_questions      JSON [{id, text, options: [..], correct: <index>}]
  *
  * Attempts live in {prefix}flms_quiz_attempts, one row per (student, module):
  * retaking overwrites, resetting deletes. Quizzes deliberately do NOT write
  * to the progress table — a quiz never counts towards course completion.
  *
- * The two mutually exclusive behaviours mirror how the feature is meant to be
- * used: either the quiz is a real gate (minimum score, optionally blocking the
- * rest of the course), or it's a self-check (no minimum, answers may be
- * revealed after submitting). Revealing correct answers on a gating quiz would
- * make the gate meaningless, so `can_reveal()` refuses it.
+ * The three settings compose freely: a quiz can be a hard gate (minimum score
+ * + block progress), a scored-but-advisory check, or an unscored self-test,
+ * and any of those can reveal its answers afterwards. The only dependency the
+ * code enforces is that blocking needs a minimum score to fail against.
  */
 class Quiz {
   const ATTEMPTS_TABLE = 'quiz_attempts';
@@ -193,11 +192,17 @@ class Quiz {
   }
 
   /**
-   * Correct answers may only be shown when the quiz isn't a scored gate —
-   * see the class docblock.
+   * Whether the correct answers go out to the student after they submit.
+   *
+   * Independent of the pass score: a scored quiz can still teach, and holding
+   * the answers back from an advisory quiz just leaves the student knowing
+   * they got 5/7 with no idea which two. The one combination worth thinking
+   * twice about is reveal + block_progress — a student can reset and retake
+   * with the answer key — so the editor warns about it rather than forbidding
+   * it. That's the operator's call, not ours.
    */
   public static function can_reveal(array $config): bool {
-    return $config['enabled'] && $config['pass_score'] === 0 && $config['reveal_answers'];
+    return $config['enabled'] && $config['reveal_answers'];
   }
 
   /** Questions as the student may see them — never carries `correct`. */
@@ -661,11 +666,9 @@ class Quiz {
       $blockProgress = ($_POST['block_progress'] ?? '0') === '1' ? '1' : '0';
       $revealAnswers = ($_POST['reveal_answers'] ?? '0') === '1' ? '1' : '0';
 
-      // Enforce the mutual exclusion server-side too: the admin UI hides the
-      // irrelevant toggle, but a stale form shouldn't be able to save a
-      // gating quiz that also gives the answers away.
+      // Blocking needs a bar to fail against, so it can't survive a pass score
+      // of 0 no matter what the form said. Revealing is independent of both.
       if ($passScore === 0) $blockProgress = '0';
-      else $revealAnswers = '0';
 
       update_post_meta($moduleId, 'quiz_enabled', $enabled);
       update_post_meta($moduleId, 'quiz_title', sanitize_text_field($_POST['title'] ?? ''));
