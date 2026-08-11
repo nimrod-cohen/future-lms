@@ -260,7 +260,13 @@ class StudentsTab {
       let step2 = modal.querySelector('.content.step-2');
       userData.comment = step2.querySelector('textarea#comment').value;
 
-      this.addStudentToClass(courseId, userData);
+      // This form enrolls a student without a sale — there is no payment step.
+      // Pass the payment fields explicitly rather than leaving them undefined:
+      // every value goes through encodeURIComponent, so an omitted one reaches
+      // the server as the string "undefined" and ends up in the payment record
+      // and in the downstream Customer.io event.
+      userData.method = 'manual';
+      this.addStudentToClass(courseId, userData, 0);
     } catch (ex) {
       alert(ex.message);
     }

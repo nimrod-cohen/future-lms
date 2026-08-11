@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.0.13
+ * Version: 2.0.14
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
