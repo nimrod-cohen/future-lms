@@ -377,9 +377,12 @@ class Classroom {
     });
     if (!result) return;
 
-    // Re-fetch lessons (so `open` flags reflect the unlocked next lesson)
-    // and progress (so the sidebar bars re-color), then move on.
+    // Re-fetch lessons (so `open` flags reflect the unlocked next lesson),
+    // quizzes (skipping the last lesson of a module unlocks its quiz, and the
+    // row keeps its stale `locked` flag until something re-reads it) and
+    // progress (so the sidebar bars re-color), then move on.
     await this.loadLessons();
+    await this.loadQuizzes();
     await this.loadProgress();
 
     const courseData = this.state.get('course-data');
