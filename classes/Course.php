@@ -217,23 +217,40 @@ class Course extends BaseObject {
 
   public function get_featured_image($size = 'thumbnail') {
     $image = $this->field('_thumbnail_id');
-    $genericImage = plugin_dir_url(__FILE__) . 'assets/images/generic-course-placeholder.png';
     $found = true;
     //check if image exists
     if(empty($image) || !is_numeric($image)) {
       $found = false;
-      $image = $genericImage;
+      $image = self::default_image($size);
     } else {
       $image = wp_get_attachment_image_src($image, $size);
       if (empty($image) || !is_array($image)) {
         $found = false;
-        $image = $genericImage;
+        $image = self::default_image($size);
       } else {
         $image = $image[0]; //get the URL
       }
     }
 
     return apply_filters('future-lms/course_image', $image, $found, $this->raw("ID"), $size);
+  }
+
+  /**
+   * What a course without a usable featured image falls back to: the image
+   * chosen in Future LMS settings, or the one bundled with the plugin when
+   * nothing is set or the chosen attachment has since been deleted.
+   */
+  private static function default_image($size) {
+    $configured = (int) Settings::get('default_course_image');
+
+    if ($configured > 0) {
+      $src = wp_get_attachment_image_src($configured, $size);
+      if (!empty($src) && is_array($src)) {
+        return $src[0];
+      }
+    }
+
+    return FUTURE_LMS_URL . 'assets/images/generic-course-placeholder.jpg';
   }
 }
 ?>

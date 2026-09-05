@@ -4,7 +4,10 @@ namespace FutureLMS\classes;
 
 class Settings {
   private const OPTIONS = ['flms_default_lobby_page' => 'mycourses',
-                           'flms_store_currency' => 'ILS'];
+                           'flms_store_currency' => 'ILS',
+                           // Attachment id of the image a course without its own
+                           // falls back to. 0 means "use the bundled one".
+                           'flms_default_course_image' => 0];
   private const PREFIX = 'flms_';
 
   public const CURRENCIES = [

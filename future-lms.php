@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.0.15
+ * Version: 2.1.0
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -43,6 +43,13 @@ if (!defined('FUTURE_LMS_VERSION')) {
   $flms_header = \get_file_data(__FILE__, ['Version' => 'Version']);
   define('FUTURE_LMS_VERSION', $flms_header['Version'] ?: '0.0.0');
   unset($flms_header);
+}
+
+// Asset URLs have to be built from the plugin root, not from whichever file
+// happens to need one: plugin_dir_url(__FILE__) inside classes/ resolves to
+// future-lms/classes/ and silently yields a URL that 404s.
+if (!defined('FUTURE_LMS_URL')) {
+  define('FUTURE_LMS_URL', plugin_dir_url(__FILE__));
 }
 
 use Exception;
@@ -372,6 +379,13 @@ class FutureLMS {
 
   public function get_settings() {
     $result = Settings::all();
+
+    // The option holds an attachment id; the picker needs a URL to preview it.
+    $image_id = (int) ($result['default_course_image'] ?? 0);
+    $result['default_course_image_url'] = $image_id > 0
+    ? (wp_get_attachment_image_url($image_id, 'medium') ?: '')
+    : '';
+
     wp_send_json($result);
   }
 
