@@ -42,32 +42,41 @@ class SettingsTab {
   // Shows an attachment in the picker, or clears it when there is none. Courses
   // without an image of their own fall back to whatever sits here; leaving it
   // empty falls back to the image bundled with the plugin.
+  //
+  // Both states are in the markup and swapped by the has-image class, so the
+  // form does not reflow when an image is chosen or cleared.
   setDefaultImage = (id, url) => {
+    const picker = this.tab.querySelector('.default-course-image-picker');
     const input = this.tab.querySelector('#default_course_image');
     const preview = this.tab.querySelector('.default-course-image-preview');
-    const removeBtn = this.tab.querySelector('.remove-default-course-image');
 
     input.value = id || 0;
-    preview.innerHTML = url ? `<img src='${url}' />` : '';
-    removeBtn.style.display = url ? 'inline-block' : 'none';
+    // An empty src would re-request the page itself, so drop the attribute.
+    if (url) preview.src = url;
+    else preview.removeAttribute('src');
+    picker.classList.toggle('has-image', !!url);
   };
 
   initDefaultImagePicker = () => {
     if (!window.wp || !window.wp.media) return;
 
-    this.tab.querySelector('.select-default-course-image').addEventListener('click', () => {
-      const frame = wp.media({
-        title: 'Select Default Course Image',
-        multiple: false,
-        library: { type: 'image' }
-      });
+    // Two triggers — "Select image" on the empty state, "Replace" over the
+    // image — opening the same frame.
+    this.tab.querySelectorAll('.select-default-course-image').forEach(button => {
+      button.addEventListener('click', () => {
+        const frame = wp.media({
+          title: 'Select Default Course Image',
+          multiple: false,
+          library: { type: 'image' }
+        });
 
-      frame.on('select', () => {
-        const attachment = frame.state().get('selection').first().toJSON();
-        this.setDefaultImage(attachment.id, attachment.url);
-      });
+        frame.on('select', () => {
+          const attachment = frame.state().get('selection').first().toJSON();
+          this.setDefaultImage(attachment.id, attachment.url);
+        });
 
-      frame.open();
+        frame.open();
+      });
     });
 
     this.tab.querySelector('.remove-default-course-image').addEventListener('click', () => {

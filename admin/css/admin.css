@@ -696,3 +696,103 @@ div.error {
   color: #b45309;
   font-weight: 600;
 }
+
+/* Default course image picker (Settings tab).
+   The field IS the image, shown at the 3:2 the course cards render it at, with
+   the actions on the bottom edge — so what you pick is what students see.
+   Both states occupy the same 172px box, so choosing or clearing an image
+   never reflows the form around it. */
+.default-course-image-picker .default-course-image-filled {
+  display: none;
+  position: relative;
+  height: 172px;
+  border-radius: 0.28571429rem;
+  overflow: hidden;
+  border: 1px solid rgba(34, 36, 38, 0.15);
+}
+
+.default-course-image-picker.has-image .default-course-image-filled {
+  display: block;
+}
+
+.default-course-image-picker.has-image .default-course-image-empty {
+  display: none;
+}
+
+.default-course-image-picker .default-course-image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.default-course-image-picker .default-course-image-actions {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px;
+  /* Keeps the buttons legible over whatever image is chosen. */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0));
+}
+
+.default-course-image-picker .default-course-image-actions button {
+  cursor: pointer;
+  border: none;
+  font-family: Lato, 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  font-size: 0.85714286rem;
+  font-weight: 700;
+  line-height: 1em;
+  padding: 0.6em 1.1em;
+  border-radius: 0.28571429rem;
+  transition: background-color 0.1s ease;
+}
+
+.default-course-image-picker .select-default-course-image {
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.default-course-image-picker .default-course-image-actions .select-default-course-image:hover {
+  background: #fff;
+}
+
+.default-course-image-picker .remove-default-course-image {
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+}
+
+.default-course-image-picker .remove-default-course-image:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.default-course-image-picker .default-course-image-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  height: 172px;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px dashed #c3c4c7;
+  border-radius: 0.28571429rem;
+  background: #fbfbfc;
+  color: #b4b6b9;
+}
+
+/* The empty state's trigger is a plain Semantic button, not an overlay one. */
+.default-course-image-picker .default-course-image-empty .select-default-course-image {
+  background: #e0e1e2 none;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.default-course-image-picker .default-course-image-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #8c8f94;
+  text-align: center;
+}
