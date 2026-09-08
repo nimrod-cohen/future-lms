@@ -224,7 +224,13 @@ body.school {
     .lesson {
       height: 100vh;
       display: grid;
-      grid-template-rows: 450px 1fr;
+      /* The video pane caps at 450px but never takes more than 45% of the
+         viewport. A fixed height here was the bug behind "there is no
+         fullscreen button": zoom in, or open a window with enough browser
+         chrome, and the CSS-pixel viewport shrinks until the fixed row is
+         shorter than the fixed player, so the bottom of the player — the strip
+         holding Vimeo's controls — was clipped out of the row. */
+      grid-template-rows: min(450px, 45vh) 1fr;
 
       &.no-videos {
         grid-template-rows: 1fr;
@@ -274,6 +280,11 @@ body.school {
         padding: 0;
         border-left: 0;
         border-right: 0;
+        /* The nav sizes to its content and the player takes whatever is left.
+           minmax(0, 1fr) rather than 1fr so that track is allowed to shrink
+           below the player's natural size instead of overflowing the pane. */
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
 
         .current-lesson-title {
           position: relative;
@@ -351,23 +362,40 @@ body.school {
         .video-container {
           background: black;
           display: grid;
-          justify-items: center;
+          place-items: center;
+          min-height: 0;
+          overflow: hidden;
 
           &.no-videos-available {
             background-color: white;
             color: black;
           }
 
+          /* The player fills the box it is given rather than carrying a size of
+             its own, so its control bar always lands on the bottom edge of
+             something visible. Vimeo letterboxes the video inside the iframe,
+             which is why no aspect-ratio is needed here — and why an
+             aspect-ratio would in fact break it: with width:auto the iframe
+             stretches to the grid area and then derives its height from the
+             ratio, overriding height:100% and growing past the row. */
           iframe {
-            height: 400px;
-            width: calc(400px * 1.88235);
-            max-width: 100vw;
+            width: 100%;
+            height: 100%;
+            /* Explicit rather than relying on the deprecated frameborder
+               attribute: the UA's default 2px iframe border is added outside a
+               content-box height and puts the control bar back over the edge. */
+            border: 0;
+            box-sizing: border-box;
+            /* A grid item will not shrink below its intrinsic size by default,
+               and an iframe's is 150px — enough to push the controls out of a
+               short pane on a small or heavily zoomed window. */
+            min-height: 0;
+            min-width: 0;
           }
 
           video {
             width: 100%;
-            height: auto;
-            max-height: 400px;
+            height: 100%;
             object-fit: contain;
           }
         }
@@ -1206,44 +1234,6 @@ body.school {
 
           textarea.student-notes {
             font-size: 0.8rem;
-          }
-        }
-      }
-    }
-  }
-}
-
-@media screen and (max-height: 800px) {
-  body.school {
-    .school-container.classroom {
-      .lesson {
-        grid-template-rows: 350px 1fr;
-
-        .lesson-videos {
-          .video-container {
-            iframe,
-            video {
-              height: 300px;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-@media screen and (max-height: 580px) {
-  body.school {
-    .school-container.classroom {
-      .lesson {
-        grid-template-rows: 280px 1fr;
-
-        .lesson-videos {
-          .video-container {
-            iframe,
-            video {
-              height: 240px;
-            }
           }
         }
       }
