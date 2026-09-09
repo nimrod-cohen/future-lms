@@ -237,6 +237,23 @@ body.school {
          which renders the full control bar with room to spare. */
       grid-template-rows: clamp(340px, 45vh, 450px) minmax(0, 1fr);
 
+      /* Text folded away: the video takes everything the tabs row does not
+         need. The row stays on screen — it holds the button that unfolds it. */
+      &.no-materials {
+        grid-template-rows: minmax(0, 1fr) auto;
+
+        .lesson-materials {
+          grid-template-rows: auto;
+          overflow: hidden;
+        }
+
+        .lesson-content-viewer,
+        .skip-lesson-floating,
+        .current-lesson-title {
+          display: none;
+        }
+      }
+
       &.no-videos {
         grid-template-rows: 1fr;
         .lesson-videos {
@@ -442,8 +459,12 @@ body.school {
               top: 2px;
             }
 
-            &:last-child {
-              margin-right: auto;
+            /* Two toggles now — one folds the video away, one folds the text
+               away — so this is bound to the classes rather than to
+               :last-child. Only the first of the pair carries the auto margin
+               that pushes the group to the far edge. */
+            &.toggle-videos,
+            &.toggle-materials {
               cursor: pointer;
               img {
                 width: 20px;
@@ -451,10 +472,26 @@ body.school {
                 transition: transform 0.2s ease-in-out;
               }
 
-              &.rotated {
-                img {
-                  transform: rotate(180deg);
-                }
+              &.rotated img {
+                transform: rotate(180deg);
+              }
+            }
+
+            /* On the first of the pair, so in RTL the group is pushed to the
+               far edge and the video toggle keeps the spot it has always had. */
+            &.toggle-materials {
+              margin-right: auto;
+            }
+
+            /* Same asset as the other toggle, pointing the other way: down to
+               fold the text, back up once it is folded. */
+            &.toggle-materials {
+              img {
+                transform: rotate(180deg);
+              }
+
+              &.rotated img {
+                transform: rotate(0deg);
               }
             }
 

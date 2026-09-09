@@ -149,8 +149,13 @@ class Classroom {
 
     let navs = document.querySelectorAll('.lesson-materials-nav li');
     navs.forEach(nav => {
-      if (nav.classList.contains('toggle-videos')) return;
-      nav.addEventListener('click', e => this.state.set('tab', e.target.getAttribute('tab-id')));
+      if (nav.classList.contains('toggle-videos') || nav.classList.contains('toggle-materials')) return;
+      nav.addEventListener('click', e => {
+        // Picking a tab while the text is folded away means you want to read
+        // it, so unfold rather than switching a tab nobody can see.
+        this.unfoldMaterials();
+        this.state.set('tab', e.target.getAttribute('tab-id'));
+      });
     });
 
     // Delegated handler: covers the static floating button under the video
@@ -162,6 +167,7 @@ class Classroom {
     JSUtils.addGlobalEventListener(coursePage, '.skip-lesson', 'click', () => this.skipLesson());
 
     coursePage.querySelector('.toggle-videos').addEventListener('click', this.enlargeMaterials);
+    coursePage.querySelector('.toggle-materials').addEventListener('click', this.enlargeVideo);
     document.querySelectorAll('.nav-lessons').forEach(nav =>
       nav.addEventListener('click', () => {
         this.toggleMobileSidebar(true);
@@ -203,6 +209,7 @@ class Classroom {
     //add listeners
     this.state.listen('tab', this.showLessonTab);
     this.state.listen('show-videos', this.showVideos);
+    this.state.listen('show-materials', this.showMaterials);
     this.state.listen('curr-video', this.loadCurrentVideo);
     this.state.listen('lesson', async (val, old) => {
       if (val.id !== old.id) {
@@ -247,8 +254,29 @@ class Classroom {
 
   enlargeMaterials = e => {
     let show = this.state.get('show-videos');
+    // Folding one pane unfolds the other: with both folded there is nothing
+    // left on screen and no obvious way back.
+    if (show) this.unfoldMaterials();
     this.state.set('show-videos', !show);
     e.target.closest('.toggle-videos').classList.toggle('rotated');
+  };
+
+  enlargeVideo = e => {
+    let show = this.state.get('show-materials') !== false;
+    if (show && !this.state.get('show-videos')) {
+      this.state.set('show-videos', true);
+      this.state.get('coursePage').querySelector('.toggle-videos').classList.remove('rotated');
+    }
+    this.state.set('show-materials', !show);
+    e.target.closest('.toggle-materials').classList.toggle('rotated');
+  };
+
+  /** Puts the text back without going through the button, for the other toggle. */
+  unfoldMaterials = () => {
+    if (this.state.get('show-materials') === false) {
+      this.state.set('show-materials', true);
+      this.state.get('coursePage').querySelector('.toggle-materials').classList.remove('rotated');
+    }
   };
 
   promoteVideo = add => {
@@ -269,6 +297,10 @@ class Classroom {
     setTimeout(() => multiIndication.classList.add('hidden'), 8000);
 
     this.state.set('curr-video', current + add);
+  };
+
+  showMaterials = show => {
+    this.state.get('coursePage').querySelector('.lesson').classList.toggle('no-materials', show === false);
   };
 
   showVideos = show => {
