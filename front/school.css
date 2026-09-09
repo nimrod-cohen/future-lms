@@ -235,12 +235,23 @@ body.school {
          is letterboxed to 16:9, so 250px tall is only ~444px wide). 340px of
          pane leaves ~284px for the player once the nav has taken its share,
          which renders the full control bar with room to spare. */
-      grid-template-rows: clamp(340px, 45vh, 450px) minmax(0, 1fr);
+      /* The video pane's height is one length that all three layouts write, so
+         switching between them interpolates instead of jumping — the panes
+         grow and shrink into place. --tabs-height is what the materials pane
+         keeps when it is folded, and is the one number the maximised video
+         state has to know. */
+      --tabs-height: 58px;
+      grid-template-rows: var(--video-pane, clamp(340px, 45vh, 450px)) minmax(0, 1fr);
+      transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
       /* Text folded away: the video takes everything the tabs row does not
          need. The row stays on screen — it holds the button that unfolds it. */
       &.no-materials {
-        grid-template-rows: minmax(0, 1fr) auto;
+        --video-pane: calc(100% - var(--tabs-height));
 
         .lesson-materials {
           /* The same 58px the row has when open — collapsing it to `auto` let
@@ -257,9 +268,12 @@ body.school {
       }
 
       &.no-videos {
-        grid-template-rows: 1fr;
+        --video-pane: 0px;
+
         .lesson-videos {
-          display: none;
+          /* Collapsed to nothing rather than display:none, so the pane can be
+             seen shrinking on the way out. */
+          overflow: hidden;
         }
         .lesson-materials {
           grid-template-rows: 58px 58px auto 1fr;
@@ -1335,7 +1349,10 @@ body.school {
           }
 
           /* A stacked switch is taller than the 58px the row has on a desktop,
-             so the row takes its height from its content here. */
+             so the row takes its height from its content here — and the
+             maximised video state has to leave that much behind. */
+          --tabs-height: 104px;
+
           .lesson-materials {
             grid-template-rows: auto auto 1fr;
           }
