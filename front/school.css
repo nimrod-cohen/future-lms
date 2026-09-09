@@ -224,13 +224,18 @@ body.school {
     .lesson {
       height: 100vh;
       display: grid;
-      /* The video pane caps at 450px but never takes more than 45% of the
-         viewport. A fixed height here was the bug behind "there is no
-         fullscreen button": zoom in, or open a window with enough browser
-         chrome, and the CSS-pixel viewport shrinks until the fixed row is
-         shorter than the fixed player, so the bottom of the player — the strip
-         holding Vimeo's controls — was clipped out of the row. */
-      grid-template-rows: min(450px, 45vh) 1fr;
+      /* The video pane caps at 450px and takes 45% of the viewport below that,
+         but never goes under 340px. A fixed height here was the original bug
+         behind "there is no fullscreen button": the row grew shorter than the
+         fixed-size player and clipped the control strip out of view.
+         The 340px floor answers the second half of the same complaint. Vimeo
+         collapses its right-hand controls — fullscreen included — behind a
+         "more" chevron once the video is too narrow, and measured against the
+         real player that happens at a player box under ~250px tall (the video
+         is letterboxed to 16:9, so 250px tall is only ~444px wide). 340px of
+         pane leaves ~284px for the player once the nav has taken its share,
+         which renders the full control bar with room to spare. */
+      grid-template-rows: clamp(340px, 45vh, 450px) minmax(0, 1fr);
 
       &.no-videos {
         grid-template-rows: 1fr;
