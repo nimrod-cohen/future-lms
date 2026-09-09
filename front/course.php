@@ -89,8 +89,14 @@ if ($hours > 0) {
         <li tab-id="additional">חומרים ועזרים נלווים</li>
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
-        <li class="toggle-materials show-popover pop-right" data-content="<?php _e("Toggle text", "future-lms"); ?>" ><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
-        <li class="toggle-videos show-popover pop-right" data-content="<?php _e("Toggle videos", "future-lms"); ?>" ><img src="<?php echo $images_dir_url; ?>/toggle-up.svg" /></li>
+        <li class="layout-toggle">
+          <button type="button" class="layout-option" data-layout="video"
+                  aria-label="<?php esc_attr_e("Video only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 13.5 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="9" fill="currentColor" opacity=".35"/></svg></button>
+          <button type="button" class="layout-option" data-layout="split"
+                  aria-label="<?php esc_attr_e("Video and text", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 10 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="5.5" fill="currentColor" opacity=".35"/></svg></button>
+          <button type="button" class="layout-option" data-layout="text"
+                  aria-label="<?php esc_attr_e("Text only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 7 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="2.5" fill="currentColor" opacity=".35"/></svg></button>
+        </li>
       </ul>
       <button type="button" class="skip-lesson skip-lesson-floating hidden"><?php _e('דלג לשיעור הבא', 'future-lms'); ?></button>
       <div class="lesson-content-viewer"></div>

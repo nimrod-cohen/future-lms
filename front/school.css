@@ -243,7 +243,9 @@ body.school {
         grid-template-rows: minmax(0, 1fr) auto;
 
         .lesson-materials {
-          grid-template-rows: auto;
+          /* The same 58px the row has when open — collapsing it to `auto` let
+             the tabs lose height the moment the text folded away. */
+          grid-template-rows: 58px;
           overflow: hidden;
         }
 
@@ -459,39 +461,37 @@ body.school {
               top: 2px;
             }
 
-            /* Two toggles now — one folds the video away, one folds the text
-               away — so this is bound to the classes rather than to
-               :last-child. Only the first of the pair carries the auto margin
-               that pushes the group to the far edge. */
-            &.toggle-videos,
-            &.toggle-materials {
-              cursor: pointer;
-              img {
-                width: 20px;
-                height: 20px;
-                transition: transform 0.2s ease-in-out;
-              }
-
-              &.rotated img {
-                transform: rotate(180deg);
-              }
-            }
-
-            /* On the first of the pair, so in RTL the group is pushed to the
-               far edge and the video toggle keeps the spot it has always had. */
-            &.toggle-materials {
+            /* One three-state control instead of a pair of folds: the icons
+               show how the pane is divided, and the filled band is the share
+               the video gets. */
+            &.layout-toggle {
               margin-right: auto;
-            }
+              display: flex;
+              align-items: center;
+              gap: 2px;
+              padding: 0;
 
-            /* Same asset as the other toggle, pointing the other way: down to
-               fold the text, back up once it is folded. */
-            &.toggle-materials {
-              img {
-                transform: rotate(180deg);
-              }
+              .layout-option {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 3px 5px;
+                border: 0;
+                border-radius: 4px;
+                background: transparent;
+                color: #9aa0a6;
+                cursor: pointer;
+                transition: background-color 0.15s ease, color 0.15s ease;
 
-              &.rotated img {
-                transform: rotate(0deg);
+                &:hover {
+                  color: #4a4f54;
+                  background: rgba(0, 0, 0, 0.05);
+                }
+
+                &.selected {
+                  color: #1a1a1a;
+                  background: rgba(0, 0, 0, 0.08);
+                }
               }
             }
 

@@ -149,11 +149,11 @@ class Classroom {
 
     let navs = document.querySelectorAll('.lesson-materials-nav li');
     navs.forEach(nav => {
-      if (nav.classList.contains('toggle-videos') || nav.classList.contains('toggle-materials')) return;
+      if (nav.classList.contains('layout-toggle')) return;
       nav.addEventListener('click', e => {
         // Picking a tab while the text is folded away means you want to read
-        // it, so unfold rather than switching a tab nobody can see.
-        this.unfoldMaterials();
+        // it, so open it rather than switching a tab nobody can see.
+        if (this.state.get('layout') === 'video') this.setLayout('split');
         this.state.set('tab', e.target.getAttribute('tab-id'));
       });
     });
@@ -166,8 +166,9 @@ class Classroom {
     // click was on .skip-lesson so we don't navigate AND skip.
     JSUtils.addGlobalEventListener(coursePage, '.skip-lesson', 'click', () => this.skipLesson());
 
-    coursePage.querySelector('.toggle-videos').addEventListener('click', this.enlargeMaterials);
-    coursePage.querySelector('.toggle-materials').addEventListener('click', this.enlargeVideo);
+    coursePage.querySelectorAll('.layout-option').forEach(option =>
+      option.addEventListener('click', () => this.setLayout(option.dataset.layout))
+    );
     document.querySelectorAll('.nav-lessons').forEach(nav =>
       nav.addEventListener('click', () => {
         this.toggleMobileSidebar(true);
@@ -208,8 +209,7 @@ class Classroom {
 
     //add listeners
     this.state.listen('tab', this.showLessonTab);
-    this.state.listen('show-videos', this.showVideos);
-    this.state.listen('show-materials', this.showMaterials);
+    this.state.listen('layout', this.applyLayout);
     this.state.listen('curr-video', this.loadCurrentVideo);
     this.state.listen('lesson', async (val, old) => {
       if (val.id !== old.id) {
@@ -252,31 +252,17 @@ class Classroom {
     }
   };
 
-  enlargeMaterials = e => {
-    let show = this.state.get('show-videos');
-    // Folding one pane unfolds the other: with both folded there is nothing
-    // left on screen and no obvious way back.
-    if (show) this.unfoldMaterials();
-    this.state.set('show-videos', !show);
-    e.target.closest('.toggle-videos').classList.toggle('rotated');
-  };
-
-  enlargeVideo = e => {
-    let show = this.state.get('show-materials') !== false;
-    if (show && !this.state.get('show-videos')) {
-      this.state.set('show-videos', true);
-      this.state.get('coursePage').querySelector('.toggle-videos').classList.remove('rotated');
-    }
-    this.state.set('show-materials', !show);
-    e.target.closest('.toggle-materials').classList.toggle('rotated');
-  };
-
-  /** Puts the text back without going through the button, for the other toggle. */
-  unfoldMaterials = () => {
-    if (this.state.get('show-materials') === false) {
-      this.state.set('show-materials', true);
-      this.state.get('coursePage').querySelector('.toggle-materials').classList.remove('rotated');
-    }
+  /**
+   * How the lesson pane is split, as one of three states rather than two
+   * independent folds — two toggles could put the page into a fourth state
+   * with both panes folded and nothing on screen.
+   *
+   *   video — the video takes the pane, the tabs row stays for getting back
+   *   split — the default
+   *   text  — the text takes the pane, no video
+   */
+  setLayout = mode => {
+    this.state.set('layout', mode);
   };
 
   promoteVideo = add => {
@@ -299,18 +285,16 @@ class Classroom {
     this.state.set('curr-video', current + add);
   };
 
-  showMaterials = show => {
-    this.state.get('coursePage').querySelector('.lesson').classList.toggle('no-materials', show === false);
-  };
+  applyLayout = mode => {
+    const coursePage = this.state.get('coursePage');
+    const lesson = coursePage.querySelector('.lesson');
 
-  showVideos = show => {
-    let coursePage = this.state.get('coursePage');
+    lesson.classList.toggle('no-materials', mode === 'video');
+    lesson.classList.toggle('no-videos', mode === 'text');
 
-    if (show) {
-      coursePage.querySelector('.lesson').classList.remove('no-videos');
-    } else {
-      coursePage.querySelector('.lesson').classList.add('no-videos');
-    }
+    coursePage.querySelectorAll('.layout-option').forEach(option =>
+      option.classList.toggle('selected', option.dataset.layout === mode)
+    );
   };
 
   loadProgress = async () => {
@@ -373,7 +357,7 @@ class Classroom {
       this.state.set('lesson', lesson);
     }
 
-    this.state.set('show-videos', lesson.videos?.length);
+    this.setLayout(lesson.videos?.length ? 'split' : 'text');
 
     const lessonTitles = coursePage.querySelectorAll('.current-lesson-title .lesson-title');
     lessonTitles.forEach(title => (title.innerText = lesson.title));
@@ -449,7 +433,7 @@ class Classroom {
 
     if (lesson.videos?.length) {
       vc.classList.remove('no-videos-available');
-      coursePage.querySelector('.toggle-videos').classList.remove('rotated');
+      if (this.state.get('layout') === 'text') this.setLayout('split');
 
       if (lesson.videos.length > 1) {
         coursePage.querySelector('.lesson-videos .current-lesson-title .lesson-title').innerText = `${
@@ -521,7 +505,7 @@ class Classroom {
       setTimeout(() => this.blinkNavIcon(), 500);
 
       vc.classList.add('no-videos-available');
-      coursePage.querySelector('.toggle-videos').classList.add('rotated');
+      this.setLayout('text');
       coursePage.querySelector('.next-video').classList.add('hide');
       coursePage.querySelector('.prev-video').classList.add('hide');
       vc.innerHTML = `<label>לשיעור זה אין סרטונים</label>`;
