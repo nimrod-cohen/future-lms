@@ -292,9 +292,43 @@ class Classroom {
     lesson.classList.toggle('no-materials', mode === 'video');
     lesson.classList.toggle('no-videos', mode === 'text');
 
-    coursePage.querySelectorAll('.layout-option').forEach(option =>
-      option.classList.toggle('selected', option.dataset.layout === mode)
-    );
+    let selected = null;
+    coursePage.querySelectorAll('.layout-option').forEach(option => {
+      const isCurrent = option.dataset.layout === mode;
+      option.classList.toggle('selected', isCurrent);
+      if (isCurrent) selected = option;
+    });
+
+    this.moveLayoutThumb(selected);
+  };
+
+  /**
+   * Slides the switch's thumb onto the chosen segment. Measured from the
+   * segment's own box rather than computed from an index, so the segments do
+   * not have to be equal widths and RTL needs no special case.
+   *
+   * On the first paint the control can still be unlaid-out (zero width), so
+   * that case is retried on the next frame and lands without animating.
+   */
+  moveLayoutThumb = selected => {
+    if (!selected) return;
+
+    const toggle = selected.closest('.layout-toggle');
+    const thumb = toggle?.querySelector('.layout-thumb');
+    if (!thumb) return;
+
+    if (!selected.offsetWidth) {
+      requestAnimationFrame(() => this.moveLayoutThumb(selected));
+      return;
+    }
+
+    if (!thumb.style.getPropertyValue('--thumb-w')) {
+      thumb.style.transition = 'none';
+      requestAnimationFrame(() => (thumb.style.transition = ''));
+    }
+
+    thumb.style.setProperty('--thumb-w', `${selected.offsetWidth}px`);
+    thumb.style.setProperty('--thumb-x', `${selected.offsetLeft - toggle.clientLeft}px`);
   };
 
   loadProgress = async () => {

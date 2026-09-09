@@ -463,15 +463,42 @@ body.school {
 
             /* One three-state control instead of a pair of folds: the icons
                show how the pane is divided, and the filled band is the share
-               the video gets. */
+               the video gets. Wrapped in a hairline frame so the three read as
+               one switch, with a thumb that slides between them. */
             &.layout-toggle {
               margin-right: auto;
+              align-self: center;
+              position: relative;
               display: flex;
               align-items: center;
               gap: 2px;
-              padding: 0;
+              padding: 2px;
+              border: 1px solid #e6e8ea;
+              border-radius: 7px;
+              background: rgba(0, 0, 0, 0.02);
+
+              /* The selected segment's fill, as one element that moves instead
+                 of three that light up — that is what makes it read as a
+                 switch being thrown. JS sets the two custom properties from
+                 the segment's own box, so this needs no arithmetic and works
+                 in either text direction. */
+              .layout-thumb {
+                position: absolute;
+                top: 2px;
+                bottom: 2px;
+                left: 0;
+                width: var(--thumb-w, 0);
+                border-radius: 4px;
+                background: rgba(0, 0, 0, 0.08);
+                transform: translateX(var(--thumb-x, 0));
+                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                            width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                pointer-events: none;
+              }
 
               .layout-option {
+                position: relative;
+                z-index: 1;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -481,16 +508,14 @@ body.school {
                 background: transparent;
                 color: #9aa0a6;
                 cursor: pointer;
-                transition: background-color 0.15s ease, color 0.15s ease;
+                transition: color 0.15s ease;
 
                 &:hover {
                   color: #4a4f54;
-                  background: rgba(0, 0, 0, 0.05);
                 }
 
                 &.selected {
                   color: #1a1a1a;
-                  background: rgba(0, 0, 0, 0.08);
                 }
               }
             }

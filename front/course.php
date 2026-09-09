@@ -90,6 +90,7 @@ if ($hours > 0) {
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
         <li class="layout-toggle">
+          <span class="layout-thumb" aria-hidden="true"></span>
           <button type="button" class="layout-option" data-layout="video"
                   aria-label="<?php esc_attr_e("Video only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 13.5 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="9" fill="currentColor" opacity=".35"/></svg></button>
           <button type="button" class="layout-option" data-layout="split"
