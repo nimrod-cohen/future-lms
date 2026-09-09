@@ -484,15 +484,16 @@ body.school {
                  in either text direction. */
               .layout-thumb {
                 position: absolute;
-                top: 2px;
-                bottom: 2px;
+                top: 0;
                 left: 0;
                 width: var(--thumb-w, 0);
+                height: var(--thumb-h, 0);
                 border-radius: 4px;
                 background: rgba(0, 0, 0, 0.08);
-                transform: translateX(var(--thumb-x, 0));
+                transform: translate(var(--thumb-x, 0), var(--thumb-y, 0));
                 transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                            width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                            width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                            height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 pointer-events: none;
               }
 
@@ -1297,6 +1298,34 @@ body.school {
           .lesson-materials .lesson-materials-nav {
             gap: 0.2rem;
             font-size: 0.8rem;
+
+            /* Stacked on a phone: the four tab labels need the width more than
+               the switch does. The thumb follows without any change — it is
+               placed from the segment's box, which is now above or below its
+               neighbours rather than beside them. */
+            .layout-toggle {
+              flex-direction: column;
+              gap: 1px;
+
+              .layout-option {
+                padding: 2px 4px;
+
+                svg {
+                  width: 16px;
+                  height: 16px;
+                }
+              }
+            }
+          }
+
+          /* A stacked switch is taller than the 58px the row has on a desktop,
+             so the row takes its height from its content here. */
+          .lesson-materials {
+            grid-template-rows: auto auto 1fr;
+          }
+
+          &.no-materials .lesson-materials {
+            grid-template-rows: auto;
           }
 
           textarea.student-notes {

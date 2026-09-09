@@ -328,7 +328,9 @@ class Classroom {
     }
 
     thumb.style.setProperty('--thumb-w', `${selected.offsetWidth}px`);
+    thumb.style.setProperty('--thumb-h', `${selected.offsetHeight}px`);
     thumb.style.setProperty('--thumb-x', `${selected.offsetLeft - toggle.clientLeft}px`);
+    thumb.style.setProperty('--thumb-y', `${selected.offsetTop - toggle.clientTop}px`);
   };
 
   loadProgress = async () => {
