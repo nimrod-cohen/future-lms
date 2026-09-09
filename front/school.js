@@ -169,6 +169,7 @@ class Classroom {
     coursePage.querySelectorAll('.layout-option').forEach(option =>
       option.addEventListener('click', () => this.setLayout(option.dataset.layout))
     );
+    this.watchLayoutSwitch();
     document.querySelectorAll('.nav-lessons').forEach(nav =>
       nav.addEventListener('click', () => {
         this.toggleMobileSidebar(true);
@@ -310,7 +311,23 @@ class Classroom {
    * On the first paint the control can still be unlaid-out (zero width), so
    * that case is retried on the next frame and lands without animating.
    */
-  moveLayoutThumb = selected => {
+  /**
+   * The switch turns from a row into a column at the phone breakpoint, and the
+   * thumb is placed in pixels — so it has to be put back whenever the control's
+   * own box changes, not only when the layout state does. Without this the
+   * highlight is left behind at the old coordinates as the window is resized
+   * across the breakpoint.
+   */
+  watchLayoutSwitch = () => {
+    const toggle = this.state.get('coursePage').querySelector('.layout-toggle');
+    if (!toggle || typeof ResizeObserver === 'undefined') return;
+
+    new ResizeObserver(() =>
+      this.moveLayoutThumb(toggle.querySelector('.layout-option.selected'), false)
+    ).observe(toggle);
+  };
+
+  moveLayoutThumb = (selected, animate = true) => {
     if (!selected) return;
 
     const toggle = selected.closest('.layout-toggle');
@@ -318,11 +335,13 @@ class Classroom {
     if (!thumb) return;
 
     if (!selected.offsetWidth) {
-      requestAnimationFrame(() => this.moveLayoutThumb(selected));
+      requestAnimationFrame(() => this.moveLayoutThumb(selected, animate));
       return;
     }
 
-    if (!thumb.style.getPropertyValue('--thumb-w')) {
+    // Sliding is for a deliberate switch of layout. A first paint, or a window
+    // being dragged, should just put the highlight where it belongs.
+    if (!animate || !thumb.style.getPropertyValue('--thumb-w')) {
       thumb.style.transition = 'none';
       requestAnimationFrame(() => (thumb.style.transition = ''));
     }

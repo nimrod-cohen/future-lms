@@ -466,7 +466,11 @@ body.school {
                the video gets. Wrapped in a hairline frame so the three read as
                one switch, with a thumb that slides between them. */
             &.layout-toggle {
-              margin-right: auto;
+              /* Logical, so the auto margin still pushes it to the far edge in
+                 either direction — and the switch keeps clear of the screen
+                 edge instead of sitting flush against it. */
+              margin-inline-start: auto;
+              margin-inline-end: 0.8rem;
               align-self: center;
               position: relative;
               display: flex;
