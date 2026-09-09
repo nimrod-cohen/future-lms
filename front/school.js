@@ -346,10 +346,22 @@ class Classroom {
       requestAnimationFrame(() => (thumb.style.transition = ''));
     }
 
-    thumb.style.setProperty('--thumb-w', `${selected.offsetWidth}px`);
-    thumb.style.setProperty('--thumb-h', `${selected.offsetHeight}px`);
-    thumb.style.setProperty('--thumb-x', `${selected.offsetLeft - toggle.clientLeft}px`);
-    thumb.style.setProperty('--thumb-y', `${selected.offsetTop - toggle.clientTop}px`);
+    // Measured from the rendered boxes rather than offsetLeft/offsetTop, which
+    // are relative to the offsetParent's inner border edge and left the
+    // highlight a pixel off the segment. The thumb is positioned from the
+    // padding box, so the frame's own borders come off the offset — read as
+    // computed widths, since clientLeft/clientTop are integer-rounded and also
+    // carry the scrollbar.
+    const frame = toggle.getBoundingClientRect();
+    const box = selected.getBoundingClientRect();
+    const style = getComputedStyle(toggle);
+    const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+    const borderTop = parseFloat(style.borderTopWidth) || 0;
+
+    thumb.style.setProperty('--thumb-w', `${box.width}px`);
+    thumb.style.setProperty('--thumb-h', `${box.height}px`);
+    thumb.style.setProperty('--thumb-x', `${box.left - frame.left - borderLeft}px`);
+    thumb.style.setProperty('--thumb-y', `${box.top - frame.top - borderTop}px`);
   };
 
   loadProgress = async () => {

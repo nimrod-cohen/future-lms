@@ -1302,6 +1302,18 @@ body.school {
           .lesson-materials .lesson-materials-nav {
             gap: 0.2rem;
             font-size: 0.8rem;
+            /* The row is as tall as the stacked switch here, so it needs room
+               under the tabs as well as over them for the switch to look
+               centred in it rather than sitting low. */
+            padding-bottom: 0.8rem;
+
+            /* Labels sit on the bottom edge by the active-tab underline. The
+               items still stretch, so the underline stays on the row's edge —
+               only the text moves down. Scoped to the tabs so the switch keeps
+               its own centring. */
+            li[tab-id] {
+              align-items: end;
+            }
 
             /* Stacked on a phone: the four tab labels need the width more than
                the switch does. The thumb follows without any change — it is
