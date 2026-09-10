@@ -697,12 +697,15 @@ div.error {
   font-weight: 600;
 }
 
-/* Default course image picker (Settings tab).
-   The field IS the image, shown at the 3:2 the course cards render it at, with
-   the actions on the bottom edge — so what you pick is what students see.
-   Both states occupy the same 172px box, so choosing or clearing an image
-   never reflows the form around it. */
-.default-course-image-picker .default-course-image-filled {
+/* Image picker — the settings tab's default course image, and a course's own
+   featured image. The field IS the image, shown at the 3:2 the course cards
+   render it at, with the actions on the bottom edge, so what you pick is what
+   students see. Both states occupy the same box, so choosing or clearing an
+   image never reflows the form around it.
+
+   The buttons are styled by their place in the markup rather than by name:
+   each screen keeps its own class on them to hang its behaviour off. */
+.flms-image-picker .flms-image-picker-filled {
   display: none;
   position: relative;
   height: 172px;
@@ -711,22 +714,22 @@ div.error {
   border: 1px solid rgba(34, 36, 38, 0.15);
 }
 
-.default-course-image-picker.has-image .default-course-image-filled {
+.flms-image-picker.has-image .flms-image-picker-filled {
   display: block;
 }
 
-.default-course-image-picker.has-image .default-course-image-empty {
+.flms-image-picker.has-image .flms-image-picker-empty {
   display: none;
 }
 
-.default-course-image-picker .default-course-image-preview {
+.flms-image-picker .flms-image-picker-preview {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.default-course-image-picker .default-course-image-actions {
+.flms-image-picker .flms-image-picker-actions {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -739,7 +742,7 @@ div.error {
   background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0));
 }
 
-.default-course-image-picker .default-course-image-actions button {
+.flms-image-picker .flms-image-picker-actions button {
   cursor: pointer;
   border: none;
   font-family: Lato, 'Helvetica Neue', Arial, Helvetica, sans-serif;
@@ -751,25 +754,25 @@ div.error {
   transition: background-color 0.1s ease;
 }
 
-.default-course-image-picker .select-default-course-image {
+.flms-image-picker-actions button:first-child {
   background: rgba(255, 255, 255, 0.92);
   color: rgba(0, 0, 0, 0.7);
 }
 
-.default-course-image-picker .default-course-image-actions .select-default-course-image:hover {
+.flms-image-picker-actions button:first-child:hover {
   background: #fff;
 }
 
-.default-course-image-picker .remove-default-course-image {
+.flms-image-picker-actions button:last-child {
   background: rgba(0, 0, 0, 0.38);
   color: #fff;
 }
 
-.default-course-image-picker .remove-default-course-image:hover {
+.flms-image-picker-actions button:last-child:hover {
   background: rgba(0, 0, 0, 0.55);
 }
 
-.default-course-image-picker .default-course-image-empty {
+.flms-image-picker .flms-image-picker-empty {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -785,12 +788,12 @@ div.error {
 }
 
 /* The empty state's trigger is a plain Semantic button, not an overlay one. */
-.default-course-image-picker .default-course-image-empty .select-default-course-image {
+.flms-image-picker-empty button {
   background: #e0e1e2 none;
   color: rgba(0, 0, 0, 0.6);
 }
 
-.default-course-image-picker .default-course-image-hint {
+.flms-image-picker .flms-image-picker-hint {
   font-size: 12px;
   line-height: 1.4;
   color: #8c8f94;

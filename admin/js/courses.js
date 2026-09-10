@@ -1072,15 +1072,26 @@ class CoursesTab {
       </div>
       <div class='slideout-form-line'>
         <label class='slideout-form-line-title'>Featured Image</label>
-        <div class='featured-image-picker'>
+        <div class='flms-image-picker featured-image-picker ${course?.course_image ? 'has-image' : ''}'>
           <input type='hidden' name='course_image' value='${course?._thumbnail_id || 0}' />
-          <div class='ui mini image featured-image-preview'>
-            ${course?.course_image ? `<img src='${course.course_image}' />` : ''}
+          <div class='flms-image-picker-filled'>
+            <img class='flms-image-picker-preview featured-image-preview' alt='' ${
+              course?.course_image ? `src='${course.course_image}'` : ''
+            } />
+            <div class='flms-image-picker-actions'>
+              <button type='button' class='select-course-image'>Replace</button>
+              <button type='button' class='remove-course-image'>Remove</button>
+            </div>
           </div>
-          <button type='button' class='ui tiny button select-course-image'>Select Image</button>
-          <button type='button' class='ui tiny button remove-course-image' style='display: ${
-            course?.course_image ? 'inline-block' : 'none'
-          };'>Remove</button>
+          <div class='flms-image-picker-empty'>
+            <svg width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>
+              <rect x='3' y='4' width='18' height='16' rx='2'></rect>
+              <circle cx='8.5' cy='9.5' r='1.5'></circle>
+              <path d='M21 15l-5-5L5 20'></path>
+            </svg>
+            <button type='button' class='ui tiny button select-course-image'>Select image</button>
+            <span class='flms-image-picker-hint'>Students see the default course image when this is empty</span>
+          </div>
         </div>
       </div>
       <div class='slideout-form-line'>
@@ -1357,14 +1368,31 @@ class CoursesTab {
     }
   };
 
+  /**
+   * Shows an attachment in the picker, or clears it. Both states are in the
+   * markup and swapped by the has-image class, as in the settings tab — so the
+   * form does not reflow when an image is chosen or cleared.
+   */
+  setFeaturedImage = (id, url) => {
+    const picker = document.querySelector('.featured-image-picker');
+    const input = document.querySelector('input[name="course_image"]');
+    const preview = document.querySelector('.featured-image-preview');
+    if (!picker || !input || !preview) return;
+
+    input.value = id || 0;
+    // An empty src would re-request the page itself, so drop the attribute.
+    if (url) preview.src = url;
+    else preview.removeAttribute('src');
+    picker.classList.toggle('has-image', !!url);
+  };
+
   initFeaturedImagePicker = () => {
     if (!window.wp || !window.wp.media) return;
 
-    const selectBtn = document.querySelector('.select-course-image');
-    const removeBtn = document.querySelector('.remove-course-image');
-
-    if (selectBtn) {
-      selectBtn.addEventListener('click', () => {
+    // Two triggers — "Select image" on the empty state, "Replace" over the
+    // image — opening the same frame.
+    document.querySelectorAll('.select-course-image').forEach(button => {
+      button.addEventListener('click', () => {
         const frame = wp.media({
           title: 'Select Featured Image',
           multiple: false,
@@ -1373,30 +1401,14 @@ class CoursesTab {
 
         frame.on('select', () => {
           const attachment = frame.state().get('selection').first().toJSON();
-          const input = document.querySelector('input[name="course_image"]');
-          const preview = document.querySelector('.featured-image-preview');
-
-          if (input) input.value = attachment.id;
-          if (preview) {
-            preview.innerHTML = `<img src='${attachment.url}' />`;
-          }
-          if (removeBtn) removeBtn.style.display = 'inline-block';
+          this.setFeaturedImage(attachment.id, attachment.url);
         });
 
         frame.open();
       });
-    }
+    });
 
-    if (removeBtn) {
-      removeBtn.addEventListener('click', () => {
-        const input = document.querySelector('input[name="course_image"]');
-        const preview = document.querySelector('.featured-image-preview');
-
-        if (input) input.value = '0';
-        if (preview) preview.innerHTML = '';
-        removeBtn.style.display = 'none';
-      });
-    }
+    document.querySelector('.remove-course-image')?.addEventListener('click', () => this.setFeaturedImage(0, ''));
   };
 
   initSignaturePicker = () => {

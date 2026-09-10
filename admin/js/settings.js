@@ -46,9 +46,9 @@ class SettingsTab {
   // Both states are in the markup and swapped by the has-image class, so the
   // form does not reflow when an image is chosen or cleared.
   setDefaultImage = (id, url) => {
-    const picker = this.tab.querySelector('.default-course-image-picker');
+    const picker = this.tab.querySelector('.flms-image-picker');
     const input = this.tab.querySelector('#default_course_image');
-    const preview = this.tab.querySelector('.default-course-image-preview');
+    const preview = this.tab.querySelector('.flms-image-picker-preview');
 
     input.value = id || 0;
     // An empty src would re-request the page itself, so drop the attribute.

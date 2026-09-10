@@ -345,17 +345,31 @@ class StudentsTab {
   }
 
   /**
-   * Fetch the full module/lesson tree + per-lesson completion status,
-   * then render it inside a remodaler popup. Uses wpjsutils' remodaler
-   * so the look is consistent with the rest of the admin.
+   * Fetch the full module/lesson tree + per-lesson completion status, then
+   * render it in a slide-out drawer — the same panel the course and lesson
+   * editors use, so a long course tree gets the height to be read in rather
+   * than a popup's worth.
+   *
+   * The content is written into the panel rather than passed as `message`:
+   * the slideout's layout step keeps only `.slideout-form-line` children, so
+   * anything else handed to it is dropped. Nothing here is a form field.
    */
   async showProgressDetail(studentId, courseId, studentName, courseName) {
-    remodaler.show({
+    slideout.show({
       title: `${studentName || 'Student'} — ${courseName || 'Course'}`,
-      message: '<div class="flms-progress-loading"><div class="ui active inline loader"></div> Loading...</div>',
-      type: remodaler.types.OK,
-      confirmText: 'Close',
+      message: '',
+      cancelText: 'Close',
     });
+
+    const panel = document.querySelector('.slideout-bg:last-of-type');
+    if (!panel) return;
+
+    // Read-only: there is nothing to submit, so Close is the only action.
+    panel.querySelector("button[data-panel-action='confirm']")?.remove();
+
+    const msgEl = panel.querySelector('[data-panel-message]');
+    if (!msgEl) return;
+    msgEl.innerHTML = '<div class="flms-progress-loading"><div class="ui active inline loader"></div> Loading...</div>';
 
     try {
       const data = await JSUtils.fetch(ajaxurl, {
@@ -364,16 +378,16 @@ class StudentsTab {
         course_id: courseId,
       });
 
+      // The drawer can be closed while the request is still out.
+      if (!msgEl.isConnected) return;
+
       if (!data || !data.success) {
         const msg = (data && data.data && data.data.message) || 'Failed to load progress.';
-        const msgEl = document.querySelector('[data-remodal-message]');
-        if (msgEl) msgEl.innerHTML = `<p style="color:#b91c1c">${msg}</p>`;
+        msgEl.innerHTML = `<p style="color:#b91c1c">${msg}</p>`;
         return;
       }
 
       const { student, course, progress, modules } = data.data;
-      const msgEl = document.querySelector('[data-remodal-message]');
-      if (!msgEl) return;
 
       let html = '';
 
@@ -419,8 +433,9 @@ class StudentsTab {
 
       msgEl.innerHTML = html;
     } catch (ex) {
-      const msgEl = document.querySelector('[data-remodal-message]');
-      if (msgEl) msgEl.innerHTML = `<p style="color:#b91c1c">Error: ${ex.message || 'Unknown error'}</p>`;
+      if (msgEl.isConnected) {
+        msgEl.innerHTML = `<p style="color:#b91c1c">Error: ${ex.message || 'Unknown error'}</p>`;
+      }
     }
   }
 
