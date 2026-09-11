@@ -304,26 +304,37 @@ class Classroom {
   };
 
   /**
-   * Turns Hebrew captions on by default when the video has them — an uploaded
-   * track first, otherwise Vimeo's auto-generated one (he-x-autogen).
+   * Opens the video with captions in the school's language when it has them —
+   * an uploaded track first, otherwise Vimeo's auto-generated one
+   * (<lang>-x-autogen). The language comes from the site (school_info), since
+   * the same plugin serves schools in different languages.
    *
-   * Nothing else is switched on. Some lessons carry only English auto-captions
-   * because Vimeo misheard the Hebrew as English, and those read as nonsense;
-   * no captions is better than those. A student can still turn any track on
-   * or off from the player.
+   * Only that language is ever switched on. On a Hebrew school some lessons
+   * carry only English auto-captions because Vimeo misheard the Hebrew, and
+   * those read as nonsense — while on an English school the very same kind of
+   * track is exactly right. Matching the school's language gets both cases
+   * right without a special case for either. A student can still turn any
+   * track on or off from the player.
    *
    * Captions are a nicety, so a failure here must never interfere with
    * playback — hence the swallowed error.
    */
-  enableHebrewCaptions = async player => {
+  enableDefaultCaptions = async player => {
+    const wanted = (window.school_info?.caption_language || '').toLowerCase();
+    if (!wanted) return;
+
+    // Hebrew has two codes in the wild; "iw" is the legacy one.
+    const codes = wanted === 'he' || wanted === 'iw' ? ['he', 'iw'] : [wanted];
+    const inLanguage = t => codes.includes(t.language.toLowerCase().split('-')[0]);
+
     try {
       await player.ready();
       const tracks = await player.getTextTracks();
-      const hebrew =
-        tracks.find(t => /^he(-|$)/i.test(t.language) && !/autogen/i.test(t.language)) ||
-        tracks.find(t => /^(he|iw)(-|$)/i.test(t.language));
+      const track =
+        tracks.find(t => inLanguage(t) && !/autogen/i.test(t.language)) ||
+        tracks.find(t => inLanguage(t));
 
-      if (hebrew) await player.enableTextTrack(hebrew.language, hebrew.kind);
+      if (track) await player.enableTextTrack(track.language, track.kind);
     } catch (e) {}
   };
 
@@ -563,7 +574,7 @@ class Classroom {
       let iframe = document.querySelector(`#${iframeId}`);
       let player = new Vimeo.Player(iframe);
       this.state.set('vimeo-player', player);
-      this.enableHebrewCaptions(player);
+      this.enableDefaultCaptions(player);
 
       const savedProgress = this.state.get('student-progress')?.course_progress?.[lesson.id]?.[lesson.videos[current].video_id];
       if (this.state.get('auto-advancing')) {

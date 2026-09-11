@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.7.0
+ * Version: 2.8.0
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -490,7 +490,15 @@ class FutureLMS {
       // that wp_enqueue_* adds to scripts and styles. Hand the version over so
       // an icon redraw actually reaches people instead of sitting behind the
       // browser cache.
-      'version' => FUTURE_LMS_VERSION
+      'version' => FUTURE_LMS_VERSION,
+      // Lessons open with captions in this language when the video has them.
+      // Taken from the site's own language, so each school gets its own
+      // without configuration; the filter is there for a site that wants
+      // something else, or '' to turn default captions off.
+      'caption_language' => apply_filters(
+        'future-lms/caption_language',
+        strtolower(strtok(determine_locale(), '_-'))
+      ),
     ]);
   }
 
