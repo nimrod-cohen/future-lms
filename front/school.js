@@ -304,6 +304,30 @@ class Classroom {
   };
 
   /**
+   * Turns Hebrew captions on by default when the video has them — an uploaded
+   * track first, otherwise Vimeo's auto-generated one (he-x-autogen).
+   *
+   * Nothing else is switched on. Some lessons carry only English auto-captions
+   * because Vimeo misheard the Hebrew as English, and those read as nonsense;
+   * no captions is better than those. A student can still turn any track on
+   * or off from the player.
+   *
+   * Captions are a nicety, so a failure here must never interfere with
+   * playback — hence the swallowed error.
+   */
+  enableHebrewCaptions = async player => {
+    try {
+      await player.ready();
+      const tracks = await player.getTextTracks();
+      const hebrew =
+        tracks.find(t => /^he(-|$)/i.test(t.language) && !/autogen/i.test(t.language)) ||
+        tracks.find(t => /^(he|iw)(-|$)/i.test(t.language));
+
+      if (hebrew) await player.enableTextTrack(hebrew.language, hebrew.kind);
+    } catch (e) {}
+  };
+
+  /**
    * Slides the switch's thumb onto the chosen segment. Measured from the
    * segment's own box rather than computed from an index, so the segments do
    * not have to be equal widths and RTL needs no special case.
@@ -539,6 +563,7 @@ class Classroom {
       let iframe = document.querySelector(`#${iframeId}`);
       let player = new Vimeo.Player(iframe);
       this.state.set('vimeo-player', player);
+      this.enableHebrewCaptions(player);
 
       const savedProgress = this.state.get('student-progress')?.course_progress?.[lesson.id]?.[lesson.videos[current].video_id];
       if (this.state.get('auto-advancing')) {
