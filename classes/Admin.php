@@ -26,7 +26,17 @@ class Admin {
 	  add_action( "wp_ajax_edit_lesson", [ $this, "edit_lesson" ] );
   }
 
+  // wp_ajax_* runs for any logged-in user - students included - so every
+  // admin-screen handler has to check for itself.
+  private function guard_admin() {
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error(['message' => 'Unauthorized'], 403);
+    }
+  }
+
   public function edit_class() {
+    $this->guard_admin();
+
     try{
       $classId = isset($_POST["class_id"]) ? $_POST["class_id"] : "";
       $name = $_POST["name"];
@@ -60,6 +70,8 @@ class Admin {
 
 
   public function get_lesson_details() {
+    $this->guard_admin();
+
     try {
       $lessonId = intval($_POST["lesson_id"]);
 
@@ -118,6 +130,8 @@ class Admin {
   }
 
   public function edit_lesson() {
+    $this->guard_admin();
+
     try {
       $lessonId = intval($_POST["lesson_id"]);
       $name = isset($_POST["name"]) ? stripslashes($_POST["name"]) : '';
@@ -225,6 +239,8 @@ class Admin {
   }
 
   public function reorder_lesson() {
+    $this->guard_admin();
+
     global $wpdb;
 
     $moduleId = $_POST["module_id"];
@@ -280,6 +296,8 @@ class Admin {
   }
 
   public function reorder_module() {
+    $this->guard_admin();
+
     global $wpdb;
 
     $courseId = $_POST["course_id"];
@@ -334,6 +352,8 @@ class Admin {
   }
 
   public function edit_module() {
+    $this->guard_admin();
+
     global $wpdb;
 
     $courseId = $_POST["course_id"];
@@ -375,6 +395,8 @@ class Admin {
 
 
   public function change_lesson_status() {
+    $this->guard_admin();
+
     global $wpdb;
 
     $lessonId = $_POST["lesson_id"];
@@ -408,6 +430,8 @@ class Admin {
   }
 
   public function change_module_status() {
+    $this->guard_admin();
+
     global $wpdb;
 
     $courseId = $_POST["course_id"];
@@ -442,6 +466,8 @@ class Admin {
   }
 
   public function change_course_status() {
+    $this->guard_admin();
+
     global $wpdb;
 
     $courseId = $_POST["course_id"];
@@ -453,6 +479,8 @@ class Admin {
   }
 
   public function edit_course() {
+    $this->guard_admin();
+
     try {
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
       $name = $_POST["name"];

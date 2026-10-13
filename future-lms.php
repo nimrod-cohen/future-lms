@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.8.0
+ * Version: 2.9.0
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -377,7 +377,17 @@ class FutureLMS {
     echo $result;
   }
 
+  // wp_ajax_* runs for any logged-in user - students included - so every
+  // admin-screen handler has to check for itself.
+  private function guard_admin() {
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error(['message' => 'Unauthorized'], 403);
+    }
+  }
+
   public function get_settings() {
+    $this->guard_admin();
+
     $result = Settings::all();
 
     // The option holds an attachment id; the picker needs a URL to preview it.
@@ -390,6 +400,8 @@ class FutureLMS {
   }
 
   public function set_settings() {
+    $this->guard_admin();
+
     //loop through all POST variables and update options
     Settings::set_many($_POST);
     wp_send_json(["error" => false, "message" => "Settings saved successfully"]);
@@ -545,6 +557,8 @@ class FutureLMS {
   }
 
   public function remove_student_from_class() {
+    $this->guard_admin();
+
     $courseId = $_REQUEST["course_id"];
     $studentId = $_REQUEST["student_id"];
     $classId = $_REQUEST["class_id"];
@@ -563,6 +577,8 @@ class FutureLMS {
   }
 
   public function get_student_classes() {
+    $this->guard_admin();
+
     $courseId = $_REQUEST["course_id"];
     $studentId = $_REQUEST["student_id"];
 
@@ -588,6 +604,8 @@ class FutureLMS {
   }
 
   public function get_students() {
+    $this->guard_admin();
+
     try {
       $courseId = intval($_REQUEST["course_id"]);
       $classId = intval($_REQUEST["class_id"]);
@@ -618,6 +636,8 @@ class FutureLMS {
   }
 
   public function get_student_progress_detail() {
+    $this->guard_admin();
+
     try {
       $studentId = intval($_REQUEST["student_id"]);
       $courseId   = intval($_REQUEST["course_id"]);
@@ -946,6 +966,8 @@ class FutureLMS {
   }
 
   public function sendEmail() {
+    $this->guard_admin();
+
     $courseId = $_REQUEST["course_id"];
     $classId = $_REQUEST["class_id"];
     $subject = $_REQUEST["subject"];
@@ -988,6 +1010,8 @@ class FutureLMS {
   }
 
   public function setLesson() {
+    $this->guard_admin();
+
     $classId = $_REQUEST["class_id"];
     $lessonId = $_REQUEST["lesson_id"];
 
@@ -1026,10 +1050,18 @@ class FutureLMS {
   }
 
   public function get_all_Courses() {
+    // Other back-office screens list courses too (a sales panel, say); they
+    // opt their users in through the filter.
+    if (!apply_filters('future-lms/can_list_courses', current_user_can('manage_options'))) {
+      wp_send_json_error(['message' => 'Unauthorized'], 403);
+    }
+
     wp_send_json(["courses" => Course::get_courses_tree(null, false)]);
   }
 
   public function search_classes() {
+    $this->guard_admin();
+
     try {
       $search = isset($_REQUEST['search']) ? $_REQUEST['search'] : false;
       $courseId = $_REQUEST['course_id'];
@@ -1052,6 +1084,8 @@ class FutureLMS {
   }
 
   public function search_students() {
+    $this->guard_admin();
+
     $search = $_REQUEST['search'];
 
     if (empty($search)) {
