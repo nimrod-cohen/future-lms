@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.9.0
+ * Version: 2.9.1
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -415,7 +415,9 @@ class FutureLMS {
     $date = date("Y-m-d");
     $datetime = date("Y-m-d H:i:s");
     file_put_contents(
-      ABSPATH . DIRECTORY_SEPARATOR . "logs" . DIRECTORY_SEPARATOR . "debug-$date.log",
+      // SITE_LOGS_DIR (wp-config.php) keeps logs out of the web root; without it,
+      // or when it cannot be written, they stay in the site's own logs folder.
+      (defined('SITE_LOGS_DIR') && is_writable(SITE_LOGS_DIR) ? SITE_LOGS_DIR : ABSPATH . DIRECTORY_SEPARATOR . "logs") . DIRECTORY_SEPARATOR . "debug-$date.log",
       "$datetime | $msg\r\n",
       FILE_APPEND);
   }
