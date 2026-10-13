@@ -24,6 +24,9 @@ class Admin {
 	  add_action( "wp_ajax_edit_class", [ $this, "edit_class" ] );
 	  add_action( "wp_ajax_get_lesson_details", [ $this, "get_lesson_details" ] );
 	  add_action( "wp_ajax_edit_lesson", [ $this, "edit_lesson" ] );
+    add_action("wp_ajax_set_video_duration", [$this, "set_video_duration"]);
+    add_action("wp_ajax_set_lesson_duration", [$this, "set_lesson_duration"]);
+    add_action("wp_ajax_set_course_duration", [$this, "set_course_duration"]);
   }
 
   // wp_ajax_* runs for any logged-in user - students included - so every
@@ -32,6 +35,124 @@ class Admin {
     if (!current_user_can('manage_options')) {
       wp_send_json_error(['message' => 'Unauthorized'], 403);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Durations. The course editor measures each video in the browser and
+  // reports it here; lesson and course lengths are derived from those, and
+  // progress percentages are derived from the lengths.
+  // ---------------------------------------------------------------------------
+
+  public function set_video_duration() {
+    $this->guard_admin();
+
+    $lessonId = absint($_POST["lesson_id"] ?? 0);
+    $videoId = sanitize_text_field($_POST['video_id'] ?? '');
+    $duration = absint($_POST["duration"] ?? 0);
+
+    $videos = $this->lesson_videos($lessonId);
+    $updated = false;
+
+    foreach ($videos as &$video) {
+      if (($video['video_id'] ?? null) === $videoId && $duration > 0) {
+        $video['video_duration'] = $duration;
+        $updated = true;
+      }
+    }
+    unset($video);
+
+    if ($updated) {
+      update_post_meta($lessonId, 'video_list', wp_json_encode($videos));
+    }
+
+    $this->update_lesson_duration($lessonId);
+    wp_send_json_success();
+  }
+
+  public function set_lesson_duration() {
+    $this->guard_admin();
+
+    $lessonId = absint($_POST["lesson_id"] ?? 0);
+    if (!$lessonId || !get_post($lessonId)) {
+      wp_send_json_error('Lesson not found');
+    }
+
+    $this->update_lesson_duration($lessonId);
+    wp_send_json_success();
+  }
+
+  public function set_course_duration() {
+    $this->guard_admin();
+
+    global $wpdb;
+    $course_id = absint($_POST["course_id"] ?? 0);
+
+    if (!$course_id || get_post($course_id) === null) {
+      wp_send_json_error(['message' => 'Course not found.']);
+    }
+
+    // Published lessons of the course's published modules; the second sum
+    // leaves out modules that do not count towards progress.
+    $sql = "SELECT SUM(CAST(ld.meta_value AS UNSIGNED))
+      FROM {$wpdb->postmeta} l
+      JOIN {$wpdb->postmeta} ld ON ld.post_id = l.post_id AND ld.meta_key = 'lesson_duration'
+      JOIN {$wpdb->posts} p_lesson ON p_lesson.ID = l.post_id AND p_lesson.post_status = 'publish'
+      WHERE l.meta_key = 'module'
+        AND l.meta_value IN (
+          SELECT p.ID
+          FROM {$wpdb->posts} p
+          JOIN {$wpdb->postmeta} pm_course
+            ON pm_course.post_id = p.ID AND pm_course.meta_key = 'course' AND pm_course.meta_value = %d
+          %COUNTED%
+          WHERE p.post_type = 'module' AND p.post_status = 'publish'
+        )";
+    $counted_join = "JOIN {$wpdb->postmeta} pm_count
+            ON pm_count.post_id = p.ID AND pm_count.meta_key = 'count_progress' AND pm_count.meta_value = '1'";
+
+    $total_duration = $wpdb->get_var($wpdb->prepare(str_replace('%COUNTED%', '', $sql), $course_id));
+    $counted_duration = $wpdb->get_var($wpdb->prepare(str_replace('%COUNTED%', $counted_join, $sql), $course_id));
+
+    update_post_meta($course_id, 'course_total_duration', $total_duration);
+    update_post_meta($course_id, 'course_counted_duration', $counted_duration);
+
+    wp_send_json_success([
+      'message' => 'Course duration updated successfully.',
+      'lesson_duration' => $total_duration,
+      'counted_duration' => $counted_duration
+    ]);
+  }
+
+  private function lesson_videos($lessonId) {
+    $raw = get_post_meta($lessonId, 'video_list', true);
+    $videos = is_string($raw) ? json_decode($raw, true) : $raw;
+    return is_array($videos) ? $videos : [];
+  }
+
+  // A lesson is as long as its videos; a lesson without videos is as long as
+  // its text takes to read, and never under a minute.
+  private function update_lesson_duration($lessonId) {
+    $post = get_post($lessonId);
+    if (!$post) {
+      return;
+    }
+
+    $videos = $this->lesson_videos($lessonId);
+    $duration = 0;
+
+    if (!empty($videos)) {
+      foreach ($videos as $video) {
+        if (!empty($video['video_id']) && !empty($video['video_duration'])) {
+          $duration += absint($video['video_duration']);
+        }
+      }
+    } else {
+      $text = html_entity_decode(strip_tags((string) $post->post_content), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      preg_match_all('/\p{L}+/u', $text, $words);
+      $minutes = round(count($words[0]) / 200); // 200 words a minute
+      $duration = max(60, $minutes * 60);
+    }
+
+    update_post_meta($lessonId, 'lesson_duration', $duration);
   }
 
   public function edit_class() {
