@@ -1,3 +1,5 @@
-# Release zips come from GitHub's archive of the tag: keep the test suites out of production.
+# Release zips come from GitHub's archive of the tag: keep dev-only folders out of production.
 /tests export-ignore
 /tests/** export-ignore
+/assets-src export-ignore
+/assets-src/** export-ignore

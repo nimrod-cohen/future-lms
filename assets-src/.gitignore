@@ -1,0 +1,5 @@
+node_modules/
+
+# The plugin's own .gitignore drops every package.json; this one is needed.
+!package.json
+!package-lock.json

@@ -2,90 +2,232 @@ class CoursesTab {
   state = window.StateManagerFactory();
 
   constructor() {
-    this.state.set('open-courses', []);
-    this.state.set('open-modules', []);
+    this.openCourses = new Set();
+    this.openModules = new Set();
     this.state.listen('courses', this.render);
 
     this.getCourses();
     this.loadVimeoSDK();
 
-    JSUtils.addGlobalEventListener('#courses-list', '.course .course-module .module-name', 'click', this.openModule);
-    JSUtils.addGlobalEventListener('#courses-list', '.course .course-name', 'click', this.openCourse);
-    JSUtils.addGlobalEventListener(
-      '#courses-list',
-      ".actionable[data-action='edit-course']",
-      'click',
-      this.updateCourse
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='move-up-module']", 'click', e =>
-      this.reoderModule(e, -1)
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='move-down-module']", 'click', e =>
-      this.reoderModule(e, 1)
-    );
+    const tab = (this.tab = COMMON.getTab(COMMON.TABS.COURSES));
+    this.list = tab.querySelector('#courses-list');
 
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='add-module']", 'click', e =>
-      this.editModule(e, null)
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-module']", 'click', e =>
-      this.editModule(e, e.target.closest('.course-module').dataset.moduleId)
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-quiz']", 'click', e =>
-      this.editQuiz(e.target.closest('.course-module').dataset.moduleId)
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='pause-course']", 'click', e =>
-      this.changeCourseStatus(e, 'draft')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='resume-course']", 'click', e =>
-      this.changeCourseStatus(e, 'publish')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='delete-course']", 'click', e =>
-      this.changeCourseStatus(e, 'trash')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='delete-module']", 'click', e =>
-      this.changeModuleStatus(e, 'trash')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='pause-module']", 'click', e =>
-      this.changeModuleStatus(e, 'draft')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='resume-module']", 'click', e =>
-      this.changeModuleStatus(e, 'publish')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='delete-lesson']", 'click', e =>
-      this.changeLessonStatus(e, 'trash')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='pause-lesson']", 'click', e =>
-      this.changeLessonStatus(e, 'draft')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='resume-lesson']", 'click', e =>
-      this.changeLessonStatus(e, 'publish')
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='move-up-lesson']", 'click', e =>
-      this.reoderLesson(e, -1)
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='move-down-lesson']", 'click', e =>
-      this.reoderLesson(e, 1)
-    );
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='add-lesson']", 'click', this.addLesson);
+    // One delegated handler for the whole tree: it is re-rendered on every change.
+    this.list.addEventListener('click', this.onTreeClick);
 
-    JSUtils.addGlobalEventListener('#courses-list', ".actionable[data-action='edit-lesson']", 'click', e =>
-      this.editLesson(e)
-    );
+    tab.querySelector('[data-action="add-course"]').addEventListener('click', this.addCourse);
+    document.querySelector('[data-action="add-class"]')?.addEventListener('click', this.addClass);
 
-    JSUtils.addGlobalEventListener('#courses-list', '.refresh-durations', 'click', e => {
-      this.refreshLessonDuration(e.target, true);
-    });
 
-    JSUtils.addGlobalEventListener(
-      '#courses-list',
-      ".actionable[data-action='refresh-course-durations']",
-      'click',
-      this.refreshAllLessonDurations
-    );
-
-    document.querySelector('.action-bar [data-action="add-course"]').addEventListener('click', this.addCourse);
-    document.querySelector('.action-bar [data-action="add-class"]').addEventListener('click', this.addClass);
   }
+
+  onTreeClick = e => {
+    const target = e.target.closest('[data-action]');
+    if (!target || !this.list.contains(target)) return;
+    e.preventDefault();
+
+    const handlers = {
+      'toggle-course': () => this.toggle(this.openCourses, target.closest('.course'), 'courseId'),
+      'toggle-module': () => this.toggle(this.openModules, target.closest('.course-module'), 'moduleId'),
+      'edit-course': () => this.updateCourse(e),
+      'pause-course': () => this.changeCourseStatus(e, 'draft'),
+      'resume-course': () => this.changeCourseStatus(e, 'publish'),
+      'delete-course': () => this.changeCourseStatus(e, 'trash'),
+      'refresh-course-durations': () => this.refreshAllLessonDurations(e),
+      'add-module': () => this.editModule(e, null),
+      'edit-module': () => this.editModule(e, target.closest('.course-module').dataset.moduleId),
+      'edit-quiz': () => this.editQuiz(target.closest('.course-module').dataset.moduleId),
+      'pause-module': () => this.changeModuleStatus(e, 'draft'),
+      'resume-module': () => this.changeModuleStatus(e, 'publish'),
+      'delete-module': () => this.changeModuleStatus(e, 'trash'),
+      'move-up-module': () => this.reoderModule(e, -1),
+      'move-down-module': () => this.reoderModule(e, 1),
+      'add-lesson': () => this.addLesson(e),
+      'edit-lesson': () => this.editLesson(e),
+      'pause-lesson': () => this.changeLessonStatus(e, 'draft'),
+      'resume-lesson': () => this.changeLessonStatus(e, 'publish'),
+      'delete-lesson': () => this.changeLessonStatus(e, 'trash'),
+      'move-up-lesson': () => this.reoderLesson(e, -1),
+      'move-down-lesson': () => this.reoderLesson(e, 1),
+      'refresh-lesson-durations': () => this.refreshLessonDuration(target, true)
+    };
+    handlers[target.dataset.action]?.();
+  };
+
+  toggle = (set, el, key) => {
+    const id = el.dataset[key];
+    const open = !set.has(id);
+    open ? set.add(id) : set.delete(id);
+    el.classList.toggle('is-open', open);
+    el.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', String(open));
+  };
+
+  getCourses = async () => {
+    const data = await JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' });
+    this.state.set('courses', data.courses);
+  };
+
+  actionButton = (action, icon, tip, extra = '', attrs = '') =>
+    `<button type="button" class="flms-iconbtn ${extra}" data-action="${action}" data-tip="${tip}" aria-label="${tip}" ${attrs}>${COMMON.icon(icon)}</button>`;
+
+  render = () => {
+    const courses = this.state.get('courses');
+    const esc = COMMON.esc;
+    const btn = this.actionButton;
+
+    if (!courses || Object.keys(courses).length === 0) {
+      this.list.innerHTML = `<div class="flms-card"><div class="flms-empty">${COMMON.icon('book-open')}<strong>No courses yet</strong><span>Add the first course to get started.</span></div></div>`;
+      return;
+    }
+
+    const courseIds = Object.keys(courses).sort((a, b) => courses[a].name.localeCompare(courses[b].name));
+
+    this.list.innerHTML = courseIds
+      .map(cid => {
+        const course = courses[cid];
+        const open = this.openCourses.has(cid);
+        const moduleIds = Object.keys(course.modules).sort((a, b) => course.modules[a].order - course.modules[b].order);
+        const introCount = Object.values(course.modules).filter(m => m.intro_module).length;
+        const durations = course.total_duration
+          ? `Total ${this.formatDuration(course.total_duration)} · Counted ${course.counted_duration ? this.formatDuration(course.counted_duration) : '0'}`
+          : '';
+
+        return `<article class="flms-card flms-course course ${open ? 'is-open' : ''} ${course.enabled ? '' : 'is-draft'}" data-course-id="${cid}">
+          <div class="flms-course-head">
+            <button type="button" class="flms-toggle" data-action="toggle-course" aria-expanded="${open}">
+              ${COMMON.icon('chevron-right', 'flms-chevron')}
+              <span class="min-w-0">
+                <span class="flex items-center gap-2 min-w-0">
+                  <span class="flms-course-name">${esc(course.name)}</span>
+                  ${course.enabled ? '' : '<span class="flms-badge">Draft</span>'}
+                </span>
+                <span class="flex flex-wrap items-center gap-x-3 text-xs text-slate-500 mt-0.5">
+                  <span class="flms-id">#${cid}</span>
+                  <span>${moduleIds.length} ${moduleIds.length === 1 ? 'module' : 'modules'}</span>
+                  <span id="course-duration-${cid}" class="tabular-nums">${durations}</span>
+                </span>
+              </span>
+            </button>
+            <div class="flms-actions">
+              ${btn('refresh-course-durations', 'refresh-cw', 'Recalculate durations', '', `data-course-id="${cid}"`)}
+              ${btn('edit-course', 'pencil', 'Edit course')}
+              ${course.enabled ? btn('pause-course', 'pause', 'Unpublish course') : btn('resume-course', 'play', 'Publish course')}
+              ${btn('add-module', 'folder-plus', 'Add module')}
+              ${btn('delete-course', 'trash-2', 'Delete course', 'is-danger')}
+            </div>
+          </div>
+          <div class="flms-course-body">
+            ${moduleIds.length === 0 ? '<p class="text-sm text-slate-500 px-1 py-2">No modules yet.</p>' : ''}
+            ${moduleIds.map((mid, idx) => this.renderModule(cid, mid, course.modules[mid], idx + 1 - introCount)).join('')}
+          </div>
+        </article>`;
+      })
+      .join('');
+  };
+
+  renderModule = (cid, mid, module, number) => {
+    if (typeof module !== 'object') return '';
+    const esc = COMMON.esc;
+    const btn = this.actionButton;
+    const open = this.openModules.has(mid);
+    const lessonIds = Object.keys(module.lessons).sort((a, b) => module.lessons[a].order - module.lessons[b].order);
+    const quiz = module.quiz?.enabled
+      ? `<span class="flms-badge flms-badge-violet" data-tip="${esc(
+          `${module.quiz.question_count} question(s)${module.quiz.pass_score > 0 ? `, pass ${module.quiz.pass_score}%` : ''}${
+            module.quiz.pass_score > 0 && module.quiz.block_progress ? ', blocks progress' : ''
+          }`
+        )}">${COMMON.icon('list-checks')}Quiz</span>`
+      : '';
+
+    return `<div class="flms-module course-module ${open ? 'is-open' : ''} ${module.enabled ? '' : 'is-draft'}" data-module-id="${mid}">
+      <div class="flms-module-head">
+        <button type="button" class="flms-toggle" data-action="toggle-module" aria-expanded="${open}">
+          ${COMMON.icon('chevron-right', 'flms-chevron')}
+          <span class="flms-module-order">${module.intro_module ? 'Intro' : number}</span>
+          <span class="flms-module-name">${esc(module.name)}</span>
+        </button>
+        <span class="flex items-center gap-1.5 shrink-0">
+          ${module.count_progress ? `<span class="flms-badge flms-badge-amber" data-tip="Counts towards progress">${COMMON.icon('clock')}<span class="flms-hide-mobile">Counted</span></span>` : ''}
+          ${quiz}
+          ${module.enabled ? '' : '<span class="flms-badge">Draft</span>'}
+          <span class="flms-id flms-hide-mobile" title="Module ID">#${mid}</span>
+        </span>
+        <div class="flms-actions">
+          ${btn('edit-module', 'pencil', 'Edit module')}
+          ${btn('edit-quiz', 'list-checks', 'Edit quiz')}
+          ${module.enabled ? btn('pause-module', 'pause', 'Unpublish module') : btn('resume-module', 'play', 'Publish module')}
+          ${btn('move-up-module', 'arrow-up', 'Move up')}
+          ${btn('move-down-module', 'arrow-down', 'Move down')}
+          ${btn('add-lesson', 'plus', 'Add lesson')}
+          ${btn('delete-module', 'trash-2', 'Delete module', 'is-danger')}
+        </div>
+      </div>
+      <div class="flms-module-lessons">
+        ${lessonIds.length === 0 ? '<p class="text-sm text-slate-500 px-2 py-1.5">No lessons yet.</p>' : ''}
+        ${lessonIds
+          .map((lid, i) => {
+            const lesson = module.lessons[lid];
+            if (typeof lesson !== 'object') return '';
+            const videos = lesson.videos.filter(v => v !== 'text');
+            return `<div class="flms-lesson module-lesson ${lesson.enabled ? '' : 'is-draft'}" data-lesson-id="${lid}" data-course-id="${cid}">
+              <span class="flms-lesson-num">${i + 1}</span>
+              <span class="flms-lesson-main">
+                <span class="flms-lesson-name">${esc(lesson.name)}</span>
+                ${lesson.duration ? `<span class="flms-duration">${this.formatDuration(lesson.duration)}</span>` : ''}
+                ${videos.length ? `<span class="flms-badge flms-badge-brand" data-tip="Vimeo ${esc(videos.join(', '))}">${COMMON.icon('video')}${videos.length}</span>` : ''}
+                ${lesson.enabled ? '' : '<span class="flms-badge">Draft</span>'}
+              </span>
+              <span class="flms-id flms-hide-mobile" title="Lesson ID">#${lid}</span>
+              <div class="flms-actions">
+                ${videos.length ? btn('refresh-lesson-durations', 'refresh-cw', 'Refresh durations', 'refresh-durations', `data-content="${esc(videos.join(','))}"`) : ''}
+                ${btn('edit-lesson', 'pencil', 'Edit lesson')}
+                ${lesson.enabled ? btn('pause-lesson', 'pause', 'Unpublish lesson') : btn('resume-lesson', 'play', 'Publish lesson')}
+                ${btn('move-up-lesson', 'arrow-up', 'Move up')}
+                ${btn('move-down-lesson', 'arrow-down', 'Move down')}
+                ${btn('delete-lesson', 'trash-2', 'Delete lesson', 'is-danger')}
+              </div>
+            </div>`;
+          })
+          .join('')}
+      </div>
+    </div>`;
+  };
+
+  /* ------------------------------------------------------------- search */
+
+  /** Shows a search hit in the tree and, for mode 'edit', opens its editor. */
+  openHit = (hit, mode = 'show') => {
+    const el = this.reveal(hit);
+    if (!el || mode !== 'edit') return;
+    if (hit.type === 'course') this.editCourse(String(hit.id));
+    else if (hit.type === 'module') this.editModule({ target: el }, String(hit.id));
+    else this.editLesson({ target: el });
+  };
+
+  /** Opens an item's course (and module) in the tree, scrolls to it and flashes it. */
+  reveal = hit => {
+    this.openCourses.add(String(hit.course_id));
+    if (hit.module_id) this.openModules.add(String(hit.module_id));
+    this.render();
+
+    const selector = {
+      course: `.course[data-course-id='${hit.id}']`,
+      module: `.course-module[data-module-id='${hit.id}']`,
+      lesson: `.module-lesson[data-lesson-id='${hit.id}']`
+    }[hit.type];
+    const el = this.list.querySelector(selector);
+    if (!el) {
+      notifications.show(`That ${hit.type} is not in the course list`, 'error');
+      return null;
+    }
+    // Flash the row itself, not a whole open course or module.
+    const row = el.querySelector(':scope > .flms-course-head, :scope > .flms-module-head') || el;
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    row.classList.remove('flms-flash');
+    void row.offsetWidth; // restart the animation
+    row.classList.add('flms-flash');
+    return el;
+  };
 
   reoderLesson = async (e, direction) => {
     const domLesson = e.target.closest('.module-lesson');
@@ -143,155 +285,6 @@ class CoursesTab {
     if (!result.error) {
       this.getCourses();
     }
-  };
-
-  getCourses = async () => {
-    const data = await JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'get_all_courses'
-    });
-    this.state.set('courses', data.courses);
-  };
-
-  render = () => {
-    const courses = this.state.get('courses');
-    const openCourses = this.state.get('open-courses');
-    const openModules = this.state.get('open-modules');
-
-    if (!courses) {
-      document.querySelector('#courses-list').innerHTML = 'No courses found';
-      return;
-    }
-
-    const sortedCourseIds = Object.entries(courses)
-      // Sort the entries based on the course name
-      .sort((a, b) => a[1].name.localeCompare(b[1].name))
-      // Map the sorted entries to get the course IDs (the keys)
-      .map(entry => entry[0]);
-
-    document.querySelector('#courses-list').innerHTML = sortedCourseIds
-      .map(cid => {
-        const course = courses[cid];
-        var moduleIds = Object.keys(course.modules);
-        moduleIds = moduleIds.sort((a, b) => {
-          return course.modules[a].order - course.modules[b].order;
-        });
-
-        const formattedTotalDuration = course.total_duration ? this.formatDuration(course.total_duration) : '';
-        const formattedCountedDuration = course.counted_duration ? this.formatDuration(course.counted_duration) : '';
-
-        return `<div class="course ${openCourses.indexOf(cid) !== -1 ? '' : 'closed'}" data-course-id="${cid}">
-          <div class="course-header">
-            <span class='course-id'>${cid}</span>
-            <h3 class='course-name ${course.enabled === true ? '' : 'disabled'}'>${course.name}</h3>
-            <strong id="course-duration-${cid}">${formattedTotalDuration ? ` - (Total: ${formattedTotalDuration} / Counted: ${formattedCountedDuration || '0m'})` : ''}</strong>
-            <span class='course-actions action-bar'>
-              <i class="sync alternate icon orange actionable" data-action="refresh-course-durations" title="Recalculate Total Duration" data-course-id="${cid}"></i>
-              <i class="edit icon blue actionable" data-action='edit-course'></i>
-              ${
-                course.enabled === true
-                  ? "<i class='pause icon red actionable' data-action='pause-course'></i>"
-                  : "<i class='play icon green actionable' data-action='resume-course'></i>"
-              }
-              <span class="tooltip" data-content="Add module" data-variation="mini" data-inverted=""><i class="plus square outline icon actionable" data-action='add-module'></i></span>
-              <i class="trash alternate outline icon red actionable" data-action='delete-course'></i>
-            </span>
-          </div>
-          <div class="course-modules">
-          ${moduleIds.length === 0 ? '<p class="no-modules">No modules found</p>' : ''}
-            ${moduleIds
-              .map((mid, idx) => {
-                if (typeof course.modules[mid] !== 'object') return '';
-                let module = course.modules[mid];
-
-                var lessonIds = Object.keys(module.lessons);
-                lessonIds = lessonIds.sort((a, b) => {
-                  return module.lessons[a].order - module.lessons[b].order;
-                });
-                //count intro modules in this course
-                const introModules = Object.values(course.modules).filter(m => m.intro_module).length;
-
-                return `<div class="course-module ${
-                  openModules.indexOf(mid) !== -1 ? '' : 'closed'
-                }" data-module-id='${mid}'>
-                    <span class='module-order ${module.intro_module ? 'intro' : ''}'>${
-                  module.intro_module ? 'In' : idx + 1 - introModules
-                }</span>
-                    <span class='module-name ${module.enabled === true ? '' : 'disabled'}'>${
-                  module.count_progress
-                    ? '<span class="tooltip" data-content="Counts towards progress" data-variation="mini" data-inverted=""><i class="clock icon yellow"></i></span>'
-                    : ''
-                }${
-                  module.quiz?.enabled
-                    ? `<span class="tooltip" data-content="Quiz: ${module.quiz.question_count} question(s)${
-                        module.quiz.pass_score > 0 ? `, pass ${module.quiz.pass_score}%` : ''
-                      }${
-                        module.quiz.pass_score > 0 && module.quiz.block_progress ? ', blocks progress' : ''
-                      }" data-variation="mini" data-inverted=""><i class="question circle icon purple"></i></span>`
-                    : ''
-                } ${module.name}</span>
-                    <span class='entity-id' title='Module ID'>${mid}</span>
-                    <span class='module-actions action-bar'>
-                      <i class="edit icon blue actionable" data-action='edit-module'></i>
-                      <span class="tooltip" data-content="Edit quiz" data-variation="mini" data-inverted="">
-                        <i class="question circle outline icon purple actionable" data-action='edit-quiz'></i>
-                      </span>
-                      ${
-                        module.enabled === true
-                          ? "<i class='pause icon red actionable' data-action='pause-module'></i>"
-                          : "<i class='play icon green actionable' data-action='resume-module'></i>"
-                      }
-                      <i class="arrow up icon actionable" data-action='move-up-module'></i>
-                      <i class="arrow down icon actionable" data-action='move-down-module'></i>
-                      <span class="tooltip" data-content="Add lesson" data-variation="mini" data-inverted="">
-                        <i class="plus square outline icon actionable" data-action='add-lesson'></i>
-                      </span>
-                      <i class="trash alternate outline icon red actionable" data-action='delete-module'></i>
-                    </span>
-                    <div class='module-lessons'>
-                     ${lessonIds.length === 0 ? '<p class="no-lessons">No lessons found</p>' : ''}
-                    ${lessonIds
-                      .map((lessonId, idx2) => {
-                        const lesson = module.lessons[lessonId];
-                        if (typeof lesson !== 'object') return '';
-                        //copy the videos array to a new array, and remove the "text" instance from the array
-                        const vidoes = lesson.videos.filter(v => v !== 'text');
-                        const videoIds = vidoes.join(',');
-                        const formattedLessonDuration = lesson.duration ? this.formatDuration(lesson.duration) : '';
-
-                        return `<div class='module-lesson' data-lesson-id='${lessonId}' data-course-id='${cid}'>
-                          <span class='lesson-order'>${idx2 + 1}</span>
-                          <span class='lesson-name ${lesson.enabled === true ? '' : 'disabled'}'>${lesson.name}
-                            ${formattedLessonDuration ? ` - <strong class="video-duration">(${formattedLessonDuration})</strong>` : ''}
-                            ${vidoes.length
-                              ? `<i class='play circle outline icon green tooltip' data-content='${videoIds}'></i>
-                                 <i class='sync alternate icon blue refresh-durations' title='Refresh durations' data-content='${videoIds}'></i>`
-                              : ''
-                            }
-                          </span>
-                          <span class='entity-id' title='Lesson ID'>${lessonId}</span>
-                          <span class='lesson-actions action-bar'>
-                            <i class="edit icon blue actionable" data-action='edit-lesson'></i>
-                            ${
-                              lesson.enabled === true
-                                ? "<i class='pause icon red actionable' data-action='pause-lesson'></i>"
-                                : "<i class='play icon green actionable' data-action='resume-lesson'></i>"
-                            }
-                            <i class="arrow up icon actionable" data-action='move-up-lesson'></i>
-                            <i class="arrow down icon actionable" data-action='move-down-lesson'></i>
-                            <i class="trash alternate outline icon red actionable" data-action='delete-lesson'></i>
-                          </span>
-                        </div>`;
-                      })
-                      .join('')}</div>
-                  </div>`;
-              })
-              .join('')}
-          </div>
-        </div>`;
-      })
-      .join('');
-
-    //popover is a global singleton from wpjsutils, no need to instantiate
   };
 
   // Convert every .slideout-switch checkbox in the currently-open slideout
@@ -445,7 +438,7 @@ class CoursesTab {
           <label class='slideout-form-line-title'>Questions</label>
           <small class='desc' style='font-size:0.8rem;'>Click the ✓ next to an answer to mark it as the correct one.</small>
           <div class='quiz-builder'></div>
-          <button type='button' class='ui tiny button quiz-add-question'>Add question</button>
+          <button type='button' class='flms-btn quiz-add-question'>${COMMON.icon('plus')}Add question</button>
         </div>
       `,
       type: slideout.types.FORM,
@@ -667,9 +660,9 @@ class CoursesTab {
               question.text
             )}'/>
             <span class='quiz-question-actions'>
-              <i class='arrow up icon actionable' data-quiz-action='move-up-question'></i>
-              <i class='arrow down icon actionable' data-quiz-action='move-down-question'></i>
-              <i class='trash alternate outline icon red actionable' data-quiz-action='delete-question'></i>
+              <button type='button' class='flms-iconbtn' data-quiz-action='move-up-question' aria-label='Move up'>${COMMON.icon('arrow-up')}</button>
+              <button type='button' class='flms-iconbtn' data-quiz-action='move-down-question' aria-label='Move down'>${COMMON.icon('arrow-down')}</button>
+              <button type='button' class='flms-iconbtn is-danger' data-quiz-action='delete-question' aria-label='Delete question'>${COMMON.icon('trash-2')}</button>
             </span>
           </div>
           <div class='quiz-options'>
@@ -679,17 +672,17 @@ class CoursesTab {
               <div class='quiz-option${optionIndex === question.correct ? ' is-correct' : ''}' data-option-index='${optionIndex}'>
                 <button type='button' class='quiz-option-mark' data-quiz-action='mark-correct'
                   aria-pressed='${optionIndex === question.correct}'
-                  title='Mark as the correct answer' aria-label='Mark as the correct answer'>✓</button>
+                  title='Mark as the correct answer' aria-label='Mark as the correct answer'>${COMMON.icon('check')}</button>
                 <input type='text' class='quiz-option-text' placeholder='Answer ${
                   optionIndex + 1
                 }' value='${this.escapeAttr(option)}'/>
                 <span class='quiz-option-badge'>Correct</span>
-                <i class='trash alternate outline icon red actionable' data-quiz-action='delete-option'></i>
+                <button type='button' class='flms-iconbtn is-danger' data-quiz-action='delete-option' aria-label='Delete answer'>${COMMON.icon('x')}</button>
               </div>`
               )
               .join('')}
           </div>
-          <button type='button' class='ui tiny basic button quiz-add-option' data-quiz-action='add-option'>Add answer</button>
+          <button type='button' class='flms-btn quiz-add-option' data-quiz-action='add-option'>${COMMON.icon('plus')}Add answer</button>
         </div>`
       )
       .join('');
@@ -707,7 +700,7 @@ class CoursesTab {
     const link = presentation_url
       ? `<a href='${presentation_url}' target='_blank' rel='noopener'>${name}</a>`
       : name;
-    return `${link} <button type='button' class='ui tiny basic button remove-presentation'>Remove</button>`;
+    return `${link} <button type='button' class='flms-btn remove-presentation'>Remove</button>`;
   };
 
   editLesson = async (e, lessonId = null, moduleId = null) => {
@@ -746,6 +739,7 @@ class CoursesTab {
     }
 
     if (lesson.error) {
+      this.state.set('editing-lesson', false);
       notifications.show(lesson.message || 'Failed to load lesson', 'error');
       return;
     }
@@ -777,11 +771,11 @@ class CoursesTab {
           <div class='presentation-picker'>
             <input type='hidden' name='lesson_presentation' value='${lesson.presentation_id || 0}' />
             <div class='presentation-current'>${this.presentationSummary(lesson)}</div>
-            <button type='button' class='ui tiny button select-presentation'>${lesson.presentation_id ? 'Replace File' : 'Select File'}</button>
+            <button type='button' class='flms-btn select-presentation'>${lesson.presentation_id ? 'Replace File' : 'Select File'}</button>
           </div>
         </div>
         <div class='slideout-form-line'>
-          <label class='slideout-form-line-title'>Videos (one per line)</label>
+          <label class='slideout-form-line-title'>Videos (one per line: Vimeo ID or link)</label>
           <textarea name='lesson_videos' style='height:120px;'>${videosToTextarea(lesson.videos)}</textarea>
         </div>
         <div class='slideout-form-line'>
@@ -809,7 +803,7 @@ class CoursesTab {
           .split(/\r?\n/)
           .map(v => v.trim())
           .filter(Boolean)
-          .map(v => ({ video_id: v }));
+          .map(v => ({ video_id: COMMON.vimeoId(v) || v }));
 
         const $ = window.jQuery;
         const trumbo = $ && $.fn.trumbowyg;
@@ -903,34 +897,6 @@ class CoursesTab {
         });
       }
     }
-  };
-
-  openModule = e => {
-    const module = e.target.closest('.course-module');
-    const isOpen = !module.classList.contains('closed');
-    var openModules = this.state.get('open-modules');
-
-    if (isOpen) {
-      module.classList.add('closed');
-      openModules = openModules.filter(m => m !== module.dataset.moduleId);
-    } else {
-      module.classList.remove('closed');
-      openModules.push(module.dataset.moduleId);
-    }
-  };
-
-  openCourse = e => {
-    const course = e.target.closest('.course');
-    var openCourses = this.state.get('open-courses');
-
-    if (!course.classList.contains('closed')) {
-      openCourses = openCourses.filter(c => c !== course.dataset.courseId);
-      course.classList.add('closed');
-    } else {
-      openCourses.push(course.dataset.courseId);
-      course.classList.remove('closed');
-    }
-    this.state.set('open-courses', openCourses);
   };
 
   addLesson = e => {
@@ -1079,8 +1045,8 @@ class CoursesTab {
               course?.course_image ? `src='${course.course_image}'` : ''
             } />
             <div class='flms-image-picker-actions'>
-              <button type='button' class='select-course-image'>Replace</button>
-              <button type='button' class='remove-course-image'>Remove</button>
+              <button type='button' class='flms-btn select-course-image'>Replace</button>
+              <button type='button' class='flms-btn remove-course-image'>Remove</button>
             </div>
           </div>
           <div class='flms-image-picker-empty'>
@@ -1089,7 +1055,7 @@ class CoursesTab {
               <circle cx='8.5' cy='9.5' r='1.5'></circle>
               <path d='M21 15l-5-5L5 20'></path>
             </svg>
-            <button type='button' class='ui tiny button select-course-image'>Select image</button>
+            <button type='button' class='flms-btn select-course-image'>Select image</button>
             <span class='flms-image-picker-hint'>Students see the default course image when this is empty</span>
           </div>
         </div>
@@ -1128,11 +1094,11 @@ class CoursesTab {
         <label class='slideout-form-line-title'>Lecturer Signature</label>
         <div class='signature-picker'>
           <input type='hidden' name='lecturer_signature' value='${course?.lecturer_signature || 0}' />
-          <div class='ui mini image signature-preview'>
+          <div class='signature-preview'>
             ${course?.lecturer_signature_url ? `<img src='${course.lecturer_signature_url}' style='max-width:150px;max-height:80px;' />` : ''}
           </div>
-          <button type='button' class='ui tiny button select-signature'>Select Image</button>
-          <button type='button' class='ui tiny button remove-signature' style='display: ${
+          <button type='button' class='flms-btn select-signature'>Select Image</button>
+          <button type='button' class='flms-btn remove-signature' style='display: ${
             course?.lecturer_signature_url ? 'inline-block' : 'none'
           };'>Remove</button>
         </div>
@@ -1221,11 +1187,12 @@ class CoursesTab {
         .map(id => id.trim())
         .filter(Boolean) || [];
 
-    if (icon.classList.contains('loading')) return;
+    if (icon.classList.contains('is-busy')) return;
 
     console.log(`[Duration] Lesson ${lessonId} — videoIds:`, videoIds);
     console.log(`[Duration] Vimeo SDK loaded:`, !!window.Vimeo);
-    icon.classList.add('loading', 'grey');
+    icon.classList.remove('is-done');
+    icon.classList.add('is-busy');
 
     try {
       if (videoIds.length === 0) {
@@ -1278,9 +1245,9 @@ class CoursesTab {
     } catch (e) {
       console.error('[Duration] Failed updating durations', e);
     } finally {
-      icon.classList.remove('loading', 'grey');
-      icon.classList.add('check', 'blue');
-      icon.title = 'Durations fetched';
+      icon.classList.remove('is-busy');
+      icon.classList.add('is-done');
+      icon.setAttribute('data-tip', 'Durations fetched');
       console.log(`[Duration] Done for lesson ${lessonId}`);
     }
   };
@@ -1289,7 +1256,7 @@ class CoursesTab {
     const icon = e.target.closest('[data-action="refresh-course-durations"]');
     if (!icon) return;
 
-    icon.classList.add('loading');
+    icon.classList.add('is-busy');
     const courseId = icon.dataset.courseId;
     const courseEl = icon.closest('.course');
 
@@ -1308,7 +1275,7 @@ class CoursesTab {
     }
 
     await this.refreshCourseDuration(courseId);
-    icon.classList.remove('loading');
+    icon.classList.remove('is-busy');
   };
 
   refreshCourseDuration = async courseId => {
@@ -1345,10 +1312,8 @@ class CoursesTab {
 
     if (!progressContainer.querySelector('.progress-bar')) {
       progressContainer.innerHTML = `
-      <div class="progress-text">Refreshing 0/${total}</div>
-      <div class="progress-bar-container" style="background:#eee; height: 8px; width: 100%; border-radius: 4px; margin-top: 4px;">
-        <div class="progress-bar" style="background: #0073aa; width: 0%; height: 100%; border-radius: 4px;"></div>
-      </div>`;
+      <span class="inline-flex items-center gap-2"><span class="progress-text">Refreshing 0/${total}</span>
+      <span class="flms-bar w-24 inline-block"><span class="progress-bar" style="width:0%"></span></span></span>`;
     }
 
     const progressText = progressContainer.querySelector('.progress-text');

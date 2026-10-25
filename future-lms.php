@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.14.0
+ * Version: 3.0.13
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -212,6 +212,7 @@ class FutureLMS {
     add_action("wp_ajax_search_students", [$this, "search_students"]);
     add_action("wp_ajax_get_all_courses", [$this, "get_all_Courses"]);
     add_action("wp_ajax_search_classes", [$this, "search_classes"]);
+    add_action("wp_ajax_search_catalog", [$this, "search_catalog"]);
     add_action("wp_ajax_get_classes", [$this, "get_student_classes"]);
     add_action("wp_ajax_get_lessons", [$this, "get_class_lessons"]);
     add_action("wp_ajax_get_lesson_content", [$this, "get_lesson_content"]);
@@ -531,15 +532,14 @@ class FutureLMS {
     wp_enqueue_style('wp-pointer');
     wp_enqueue_script('wp-pointer');
 
-    wp_enqueue_script('future-lms-semantic-js', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.js');
-    wp_enqueue_style('future-lms-semantic-css', plugin_dir_url(__FILE__) . 'assets/semantic/semantic.min.css');
-
-    wp_enqueue_script('future-lms-admin-common-js', plugin_dir_url(__FILE__) . 'admin/js/common.js', [], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-icons-js', plugin_dir_url(__FILE__) . 'admin/js/icons.js', [], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-common-js', plugin_dir_url(__FILE__) . 'admin/js/common.js', ['future-lms-admin-icons-js', 'wpjsutils'], FUTURE_LMS_VERSION);
     wp_enqueue_script('future-lms-admin-students-js', plugin_dir_url(__FILE__) . 'admin/js/students.js', ['wpjsutils', 'jquery'], FUTURE_LMS_VERSION);
     wp_enqueue_script('future-lms-admin-courses-js', plugin_dir_url(__FILE__) . 'admin/js/courses.js', ['wpjsutils', 'jquery'], FUTURE_LMS_VERSION);
     wp_enqueue_script('future-lms-admin-settings-js', plugin_dir_url(__FILE__) . 'admin/js/settings.js', ['wpjsutils', 'jquery', 'future-lms-admin-common-js'], FUTURE_LMS_VERSION);
-    wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js', ['future-lms-admin-students-js'], FUTURE_LMS_VERSION);
-    wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['future-lms-semantic-css'], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-palette-js', plugin_dir_url(__FILE__) . 'admin/js/palette.js', ['future-lms-admin-common-js'], FUTURE_LMS_VERSION);
+    wp_enqueue_script('future-lms-admin-js', plugin_dir_url(__FILE__) . 'admin/js/admin.js', ['future-lms-admin-students-js', 'future-lms-admin-palette-js'], FUTURE_LMS_VERSION);
+    wp_enqueue_style('future-lms-admin-css', plugin_dir_url(__FILE__) . 'admin/css/admin.css', ['trumbowyg-css'], FUTURE_LMS_VERSION);
 
     wp_localize_script('future-lms-admin-js', '__futurelms', [
       'ajax_url' => admin_url('admin-ajax.php'),
@@ -553,8 +553,24 @@ class FutureLMS {
     wp_enqueue_style('trumbowyg-css', plugin_dir_url(__FILE__) . 'assets/trumbowyg/ui/trumbowyg.min.css');
   }
 
+  /**
+   * The graduation cap from the app's logo (Lucide "graduation-cap") as a menu
+   * icon. WordPress recolors menu SVGs by rewriting `fill` only, and Lucide
+   * draws with strokes: so the strokes are a mask and a filled square shows
+   * through it - that fill is what WordPress recolors per color scheme and on
+   * hover. The mask paths carry no fill attribute for it to rewrite.
+   */
+  public static function menu_icon() {
+    $paths = '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>'
+      . '<path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>';
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+      . '<mask id="c"><g stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $paths . '</g></mask>'
+      . '<rect width="24" height="24" fill="#a7aaad" mask="url(#c)"/></svg>';
+    return 'data:image/svg+xml;base64,' . base64_encode($svg);
+  }
+
   public function add_admin_menu() {
-    add_menu_page('Future LMS', 'Future LMS', 'manage_options', 'future-lms-settings', [$this, 'show_admin_page'], 'dashicons-schedule', 30);
+    add_menu_page('Future LMS', 'Future LMS', 'manage_options', 'future-lms-settings', [$this, 'show_admin_page'], self::menu_icon(), 30);
   }
 
   // The Future LMS screen is a full-window app: no WP admin bar, menu,
@@ -565,6 +581,8 @@ class FutureLMS {
       return $classes . ' flms-fullscreen';
     });
     add_filter('screen_options_show_screen', '__return_false');
+    // WordPress's own ⌘K command palette would open underneath ours.
+    remove_action('admin_enqueue_scripts', 'wp_enqueue_command_palette_assets');
     add_action('in_admin_header', function () {
       remove_all_actions('admin_notices');
       remove_all_actions('all_admin_notices');
@@ -1102,6 +1120,144 @@ class FutureLMS {
     }
 
     wp_send_json(["courses" => Course::get_courses_tree(null, false)]);
+  }
+
+  /**
+   * The Vimeo id in a bare id or any Vimeo link
+   * ("https://vimeo.com/813709147", ".../video/813709147?h=..", "player.vimeo.com/video/813709147"),
+   * or '' when there is none.
+   */
+  public static function vimeo_id($value) {
+    $value = trim((string) $value);
+    if (preg_match('/^\d+$/', $value)) return $value;
+    if (preg_match('~vimeo\.com/(?:[^?#]*/)?(\d+)~i', $value, $m)) return $m[1];
+    return '';
+  }
+
+  /**
+   * Lessons whose video list includes a Vimeo video:
+   * [lesson_id => ['position' => n (1-based), 'video_count' => n]].
+   */
+  public static function lessons_using_video($videoId) {
+    global $wpdb;
+    // The LIKE only narrows the rows; the JSON check below decides.
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT pm.post_id, pm.meta_value FROM {$wpdb->postmeta} pm
+       INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id AND p.post_type = 'lesson' AND p.post_status <> 'trash'
+       WHERE pm.meta_key = 'video_list' AND pm.meta_value LIKE %s",
+      '%' . $wpdb->esc_like($videoId) . '%'
+    ));
+
+    $found = [];
+    foreach ($rows as $row) {
+      $videos = json_decode($row->meta_value, true);
+      if (!is_array($videos)) continue;
+      foreach (array_values($videos) as $i => $video) {
+        $stored = is_array($video) ? ($video['video_id'] ?? '') : $video;
+        if (self::vimeo_id($stored) === $videoId) {
+          $found[(int) $row->post_id] = ['position' => $i + 1, 'video_count' => count($videos)];
+          break;
+        }
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * A course, module or lesson and where it sits in the tree, or null when it
+   * isn't one, or it or a parent is in the trash.
+   */
+  public static function catalog_entry($postId) {
+    $post = get_post((int) $postId);
+    if (!$post || $post->post_status === 'trash' || !in_array($post->post_type, ['course', 'module', 'lesson'], true)) {
+      return null;
+    }
+
+    $type = $post->post_type;
+    $moduleId = $type === 'module' ? $post->ID : ($type === 'lesson' ? (int) get_post_meta($post->ID, 'module', true) : 0);
+    $courseId = $type === 'course' ? $post->ID : ($moduleId ? (int) get_post_meta($moduleId, 'course', true) : 0);
+    foreach ([$moduleId, $courseId] as $parent) {
+      if ($parent && $parent !== $post->ID && get_post_status($parent) === 'trash') return null;
+    }
+
+    // Raw titles: WordPress's display title comes back texturized, with
+    // entities like &#8221; that the screen would then escape a second time.
+    $title = function ($id) { return $id ? get_post_field('post_title', $id, 'raw') : ''; };
+
+    return [
+      'type' => $type,
+      'id' => $post->ID,
+      'name' => $title($post->ID),
+      'enabled' => $post->post_status === 'publish',
+      'course_id' => $courseId,
+      'course_name' => $title($courseId),
+      'module_id' => $moduleId,
+      'module_name' => $type === 'lesson' ? $title($moduleId) : '',
+      'module_order' => $moduleId ? (int) get_post_meta($moduleId, 'order', true) : 0,
+      'lesson_number' => $type === 'lesson' ? (int) get_post_meta($post->ID, 'lesson_number', true) : 0,
+    ];
+  }
+
+  /**
+   * One search over the catalog. q can be a title (or part of one), a
+   * course/module/lesson id, a Vimeo video id, or a Vimeo link. Matches come
+   * back as id first, then video, then title; each item once.
+   */
+  public function search_catalog() {
+    $this->guard_admin();
+    global $wpdb;
+
+    $q = trim(wp_unslash($_REQUEST['q'] ?? ''));
+    $isNumber = ctype_digit($q);
+    if ($q === '' || (!$isNumber && mb_strlen($q) < 2)) {
+      wp_send_json_error(['message' => 'Type at least 2 characters'], 400);
+    }
+
+    $limit = 100;
+    $results = [];
+    $add = function ($entry, $match, array $extra = []) use (&$results) {
+      if (!$entry) return;
+      $key = $entry['type'] . ':' . $entry['id'];
+      if (isset($results[$key])) return; // already listed under a stronger match
+      $results[$key] = $entry + ['match' => $match] + $extra;
+    };
+
+    if ($isNumber) {
+      $add(self::catalog_entry((int) $q), 'id');
+    }
+
+    $videoId = self::vimeo_id($q);
+    if ($videoId !== '') {
+      foreach (self::lessons_using_video($videoId) as $lessonId => $info) {
+        $add(self::catalog_entry($lessonId), 'video', ['video_id' => $videoId] + $info);
+      }
+    }
+
+    if (!preg_match('~vimeo\.com~i', $q)) {
+      $ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT ID FROM {$wpdb->posts}
+         WHERE post_type IN ('course', 'module', 'lesson') AND post_status <> 'trash' AND post_title LIKE %s
+         LIMIT %d",
+        '%' . $wpdb->esc_like($q) . '%',
+        $limit + 1
+      ));
+      foreach ($ids as $id) $add(self::catalog_entry($id), 'title');
+    }
+
+    $results = array_values($results);
+    $rank = ['id' => 0, 'video' => 1, 'title' => 2];
+    $typeRank = ['course' => 0, 'module' => 1, 'lesson' => 2];
+    usort($results, function ($a, $b) use ($rank, $typeRank) {
+      return [$rank[$a['match']], $typeRank[$a['type']], $a['course_name'], $a['module_order'], $a['lesson_number'], $a['name']]
+        <=> [$rank[$b['match']], $typeRank[$b['type']], $b['course_name'], $b['module_order'], $b['lesson_number'], $b['name']];
+    });
+
+    wp_send_json_success([
+      'query' => $q,
+      'video_id' => $videoId,
+      'results' => array_slice($results, 0, $limit),
+      'truncated' => count($results) > $limit,
+    ]);
   }
 
   public function search_classes() {

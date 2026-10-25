@@ -1,0 +1,16 @@
+{
+  "name": "future-lms-assets",
+  "private": true,
+  "description": "Builds the admin stylesheet (Tailwind) and the Lucide icon subset. Outputs are committed; nothing here ships.",
+  "scripts": {
+    "build": "npm run build:css && npm run build:icons",
+    "build:css": "tailwindcss -i ./admin.css -o ../admin/css/admin.css --minify",
+    "build:icons": "node build-icons.js",
+    "watch": "tailwindcss -i ./admin.css -o ../admin/css/admin.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "lucide": "1.55.0",
+    "tailwindcss": "4.3.3"
+  }
+}

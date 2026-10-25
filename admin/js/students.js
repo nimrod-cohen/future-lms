@@ -1,477 +1,153 @@
 class StudentsTab {
   state = window.StateManagerFactory();
-  currentClassName = '';
   LAST_STEP = 2;
 
   constructor() {
-    this.changeStep = this.changeStep.bind(this);
-    this.enableWizardButtons = this.enableWizardButtons.bind(this);
-    this.fetchStudents = this.fetchStudents.bind(this);
-    this.render = this.render.bind(this);
-    this.removeStudentFromClass = this.removeStudentFromClass.bind(this);
-    this.addStudentToClass = this.addStudentToClass.bind(this);
-    this.clickNext = this.clickNext.bind(this);
-    this.clickPrev = this.clickPrev.bind(this);
-    this.showAddStudent = this.showAddStudent.bind(this);
-    this.validateStep = this.validateStep.bind(this);
+    const tab = (this.tab = COMMON.getTab(COMMON.TABS.STUDENTS));
+    const modal = (this.modal = document.querySelector('#add-student-modal'));
 
-    this.state.listen('register-current-step', this.changeStep);
-    this.state.listen('register-current-step', this.enableWizardButtons);
-
-    let tab = COMMON.getTab(COMMON.TABS.STUDENTS);
-
-    //init values
-    this.state.set('register-current-step', 1);
-    this.state.set('add-student-is-existing', true);
-    this.state.set('modal', document.querySelector('#add-student-modal'));
     this.state.listen('students', this.render);
-    this.state.set('students', []);
+    this.state.listen('step', this.showStep);
+    this.state.set('step', 1);
+    this.state.set('existing', true);
 
-    jQuery(tab.querySelector('#registration_month')).calendar({
-      type: 'month'
+    this.courseSelect = COMMON.select(tab.querySelector('select.courses'), [], this.onCourse, 'All courses');
+    this.classSelect = COMMON.select(tab.querySelector('select.classes'), [], this.onClass, 'All classes');
+
+    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
+      const courses = Object.keys(data.courses)
+        .map(cid => ({ name: data.courses[cid].name, value: cid }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      this.courseSelect.setValues(courses);
     });
 
-    tab.querySelector('.search-students').addEventListener('click', e => {
+    tab.querySelector('.students-search-form').addEventListener('submit', e => {
       e.preventDefault();
       this.fetchStudents();
     });
 
-    JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
-      var coursesNameValue = Object.keys(data.courses).map(cid => {
-        let course = data.courses[cid];
-        return { name: course.name, value: cid };
-      });
-
-      //sort by name
-      coursesNameValue = coursesNameValue.sort((a, b) => a.name.localeCompare(b.name));
-
-      COMMON.wireDropdown(
-        tab.querySelector('.ui.search.courses'),
-        coursesNameValue,
-        item => {
-          let classes = jQuery(`${COMMON.getTabSelector(COMMON.TABS.STUDENTS)} .ui.search.classes`);
-
-          if (!item || item == '') {
-            classes.dropdown('clear');
-            classes.dropdown('change values', []);
-            return;
-          }
-
-          JSUtils.fetch(__futurelms.ajax_url, {
-            action: 'search_classes',
-            course_id: item
-          }).then(data => {
-            COMMON.wireDropdown(
-              classes,
-              data.results,
-              item => {
-                item !== ''
-                  ? tab.querySelector('.add-student').classList.remove('disabled')
-                  : tab.querySelector('.add-student').classList.add('disabled');
-              },
-              'Select class'
-            );
-          });
-        },
-        'Select course'
-      );
+    // Add-student dialog
+    this.studentSearch = COMMON.autocomplete(modal.querySelector('.flms-combo.student'), {
+      action: 'search_students',
+      extra: () => ({ class_id: this.classSelect.value() })
     });
 
-    //student search in add student modal
-    let modal = this.state.get('modal');
+    tab.querySelector('.add-student').addEventListener('click', this.showAddStudent);
+    modal.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => modal.close()));
+    modal.addEventListener('close', () => this.resetDialog());
+    modal.querySelector('.next').addEventListener('click', this.clickNext);
+    modal.querySelector('.prev').addEventListener('click', () => this.state.set('step', this.state.get('step') - 1));
 
-    modal.querySelector('.ui.search.student input').addEventListener('focus', e => {
-      e.target.closest('.ui.search').removeAttribute('data-id');
-      e.target.value = '';
-    });
-
-    COMMON.wireSearch(
-      `#add-student-modal .ui.search.student`,
-      'search_students',
-      student => {},
-      () => {
-        return {
-          class_id: tab.querySelector('.ui.search.classes').getAttribute('data-id')
-        };
-      }
+    modal.querySelectorAll('.flms-segmented [data-mode]').forEach(button =>
+      button.addEventListener('click', () => this.setMode(button.dataset.mode === 'existing'))
     );
-
-    //clear errors on field entry
-    let inputs = modal.querySelectorAll('.ui.input input');
-    inputs.forEach(input =>
-      input.addEventListener('focus', e => e.target.closest('.ui.input').classList.remove('error'))
+    modal.querySelectorAll('.flms-input').forEach(input =>
+      input.addEventListener('input', () => input.classList.remove('is-invalid'))
     );
-
-    //add student to class
-    tab.querySelector('button.add-student').addEventListener('click', this.showAddStudent);
-
-    modal.querySelector('.button.next').addEventListener('click', this.clickNext);
-    modal.querySelector('.button.prev').addEventListener('click', this.clickPrev);
-
-    let step1 = modal.querySelector('.step-1');
-
-    let radios = step1.querySelectorAll('input[type=radio]');
-    radios.forEach(radio =>
-      radio.addEventListener('change', e => {
-        this.state.set('add-student-is-existing', e.target.getAttribute('data-target') === 'add-existing-student');
-      })
-    );
-
-    //disable/enable inputs of selected option
-    this.state.listen('add-student-is-existing', value => {
-      var inps = step1.querySelectorAll('.input');
-      inps.forEach(inp => inp.classList.add('disabled'));
-      let selector = value === true ? 'add-existing-student' : 'add-new-student';
-      inps = step1.querySelectorAll(`#${selector} .input`);
-      inps.forEach(inp => inp.classList.remove('disabled'));
-    });
   }
 
+  onCourse = async courseId => {
+    this.classSelect.setValues([]);
+    this.classSelect.disable(!courseId);
+    this.onClass('');
+    if (!courseId) return;
+
+    const data = await JSUtils.fetch(__futurelms.ajax_url, { action: 'search_classes', course_id: courseId });
+    if (this.courseSelect.value() !== courseId) return; // changed again meanwhile
+    this.classSelect.setValues((data.results || []).map(c => ({ name: c.title, value: String(c.id) })));
+  };
+
+  onClass = classId => {
+    this.tab.querySelector('.add-student').disabled = !classId;
+  };
+
+  setMode = existing => {
+    this.state.set('existing', existing);
+    this.modal.querySelectorAll('.flms-segmented [data-mode]').forEach(b =>
+      b.setAttribute('aria-pressed', String((b.dataset.mode === 'existing') === existing))
+    );
+    this.modal.querySelector('#add-existing-student').hidden = !existing;
+    this.modal.querySelector('#add-new-student').hidden = existing;
+    (existing ? this.modal.querySelector('#existing-student-search') : this.modal.querySelector('#new-student-name')).focus();
+  };
+
+  showAddStudent = () => {
+    const className = this.classSelect.value()
+      ? this.tab.querySelector('select.classes').selectedOptions[0]?.textContent
+      : '';
+    this.modal.querySelector('.header').textContent = className ? `Add student to ${className}` : 'Add student';
+    this.state.set('step', 1);
+    this.modal.showModal();
+    this.setMode(true);
+  };
+
+  resetDialog = () => {
+    this.studentSearch.reset();
+    this.modal.querySelectorAll('#add-new-student input, #comment').forEach(i => {
+      i.value = '';
+      i.classList.remove('is-invalid');
+    });
+    this.modal.querySelector('.next').disabled = false;
+    this.state.set('step', 1);
+  };
+
+  showStep = step => {
+    this.modal.querySelectorAll('[data-step]').forEach(s => (s.hidden = String(step) !== s.dataset.step));
+    this.modal.querySelector('.prev').disabled = step === 1;
+    this.modal.querySelector('.next').innerHTML = step === this.LAST_STEP ? 'Add student' : 'Next';
+  };
+
+  clickNext = e => {
+    e.preventDefault();
+    const step = this.state.get('step');
+    if (!this.validateStep(step)) return;
+    if (step === this.LAST_STEP) this.submitAddStudent();
+    else this.state.set('step', step + 1);
+  };
+
   validateStep(step) {
-    let modal = this.state.get('modal');
+    if (step !== 1) return true;
+    const invalid = el => {
+      el.classList.add('is-invalid');
+      return true;
+    };
     let failed = false;
-    switch (step) {
-      case 1:
-        let step1 = modal.querySelector('.step-1');
-        if (this.state.get('add-student-is-existing')) {
-          let student = modal.querySelector('.search.student');
-          let id = student.getAttribute('data-id');
-          if (!id) {
-            student.querySelector('.ui.input').classList.add('error');
-            failed = true;
-          }
-        } else {
-          let email = step1.querySelector('.ui.input input[name=student-email]').value.trim();
-          let name = step1.querySelector('.ui.input input[name=full-name]').value.trim();
-          let phone = step1.querySelector('.ui.input input[name=phone]').value.trim();
 
-          email = COMMON.removeNonAsciiChars(email);
-
-          if (!email || email.length === 0) {
-            step1.querySelector('.ui.input input[name=student-email]').closest('.ui.input').classList.add('error');
-            failed = true;
-          }
-          if (!phone || phone.length === 0) {
-            step1.querySelector('.ui.input input[name=phone]').closest('.ui.input').classList.add('error');
-            failed = true;
-          }
-          if (!name || name.length === 0) {
-            step1.querySelector('.ui.input input[name=full-name]').closest('.ui.input').classList.add('error');
-            failed = true;
-          }
-        }
-        break;
+    if (this.state.get('existing')) {
+      const combo = this.modal.querySelector('.flms-combo.student');
+      if (!combo.getAttribute('data-id')) failed = invalid(combo.querySelector('input'));
+    } else {
+      ['full-name', 'student-email', 'phone'].forEach(name => {
+        const input = this.modal.querySelector(`input[name='${name}']`);
+        if (!input.value.trim()) failed = invalid(input);
+      });
     }
-
+    if (failed) notifications.show(this.state.get('existing') ? 'Pick a student from the list' : 'Fill in name, email and phone', 'error');
     return !failed;
   }
 
-  showAddStudent() {
-    console.log('show add student');
-    let modal = document.querySelector('#add-student-modal');
-
-    jQuery(modal)
-      .modal({
-        inverted: true,
-        onHidden: () => {
-          this.state.set('register-current-step', 1);
-        }
-      })
-      .modal('show');
-
-    modal.querySelector('.header').innerText = `Add student to class ${this.currentClassName}`;
-  }
-
-  clickNext(e) {
-    e.stopPropagation();
-    let step = this.state.get('register-current-step');
-    if (this.validateStep(step)) {
-      if (step === this.LAST_STEP) {
-        this.submitAddStudent();
-      } else {
-        step++;
-        this.state.set('register-current-step', step);
-      }
-    }
-  }
-
-  clickPrev(e) {
-    e.stopPropagation();
-    let step = this.state.get('register-current-step');
-    step--;
-    this.state.set('register-current-step', step);
-  }
-
-  enableWizardButtons(step) {
-    let modal = document.querySelector('#add-student-modal');
-
-    if (step === 1) {
-      modal.querySelector('.button.prev').classList.add('disabled');
-      modal.querySelector('.button.next').classList.remove('disabled');
-      modal.querySelector('.button.next').innerText = 'Next';
-    } else if (step === this.LAST_STEP) {
-      modal.querySelector('.button.prev').classList.remove('disabled');
-      modal.querySelector('.button.next').classList.remove('disabled');
-      modal.querySelector('.button.next').innerText = 'Submit';
-    } else {
-      modal.querySelector('.button.prev').classList.remove('disabled');
-      modal.querySelector('.button.next').classList.remove('disabled');
-    }
-  }
-
-  changeStep(step) {
-    try {
-      let modal = document.querySelector('#add-student-modal');
-
-      let steps = modal.querySelectorAll(':scope > .content');
-      steps.forEach(stp => stp.classList.add('hidden'));
-      modal.querySelector(`:scope > .content.step-${step}`).classList.remove('hidden');
-    } catch (ex) {
-      alert(ex.message);
-    }
-  }
-
   submitAddStudent() {
-    try {
-      let modal = document.querySelector('#add-student-modal');
-      let tab = COMMON.getTab(COMMON.TABS.STUDENTS);
-
-      let userData = {};
-
-      if (this.state.get('add-student-is-existing')) {
-        userData = {
-          id: modal.querySelector('.search.student').getAttribute('data-id'),
-          name: modal.querySelector('.search.student input.prompt').value
-        };
-      } else {
-        let email = modal.querySelector('.ui.input input[name=student-email]').value.trim();
-        email = COMMON.removeNonAsciiChars(email);
-
-        userData = {
-          email: email,
-          name: modal.querySelector('.ui.input input[name=full-name]').value.trim(),
-          phone: modal.querySelector('.ui.input input[name=phone]').value.trim()
-        };
-      }
-      let courseId = tab.querySelector('.ui.search.courses').getAttribute('data-id');
-
-      userData.class_id = tab.querySelector('.ui.search.classes').getAttribute('data-id');
-
-      let step2 = modal.querySelector('.content.step-2');
-      userData.comment = step2.querySelector('textarea#comment').value;
-
-      // This form enrolls a student without a sale — there is no payment step.
-      // Pass the payment fields explicitly rather than leaving them undefined:
-      // every value goes through encodeURIComponent, so an omitted one reaches
-      // the server as the string "undefined" and ends up in the payment record
-      // and in the downstream Customer.io event.
-      userData.method = 'manual';
-      this.addStudentToClass(courseId, userData, 0);
-    } catch (ex) {
-      alert(ex.message);
-    }
-  }
-
-  render() {
-    const tab = COMMON.getTab(COMMON.TABS.STUDENTS);
-
-    let studentTable = tab.querySelector('table.students tbody');
-    studentTable.innerHTML = '';
-
-    let data = this.state.get('students');
-
-    let students = Object.values(data);
-    if (students.length === 0) {
-      studentTable.insertAdjacentHTML('beforeend', "<tr><td colspan='9'>No results</td></tr>");
-      tab.querySelector('.result-count').innerText = '0 students';
-    }
-
-    tab.querySelector('.result-count').innerText = `${students.length} students`;
-    students.forEach(student => {
-      let phone = [false, '', 'undefined'].some(v => v === student.phone) ? '' : student.phone;
-      let name = [false, '', 'undefined'].some(v => v === student.display_name) ? '' : student.display_name;
-      //add row
-      studentTable.insertAdjacentHTML(
-        'beforeend',
-        `<tr data-id=${student.id} class-id=${student.class_id} course-id=${student.course_id}>
-        <td>${student.id}</td>
-        <td>${student.course_name}</td>
-        <td>${student.class_name}</td>
-        <td>${student.registration_date.substring(0, 10)}</td>
-        <td>${student.user_email}</td>
-        <td>${name}</td>
-        <td>${phone}</td>
-        <td class="progress-cell">${student.progress != null ? `<span class="progress-link">${student.progress}% <svg class="progress-expand-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m7 10 5 5 5-5"/></svg></span>` : '-'}</td>
-        <td>
-          <span data-inverted='' data-position='top right' data-tooltip='Remove student'><i class="minus red circle icon clickable remove-class"></i></span>
-        </td>
-      </tr>`
-      );
-
-      //attach removal event
-      let studentRow = studentTable.querySelector(`tr[data-id='${student.id}'][class-id='${student.class_id}']`);
-      let td = studentRow.querySelector(`td:last-child`);
-      let remove = td.querySelector('i.remove-class');
-      const courseId = studentRow.getAttribute('course-id');
-
-      const removeStudentClick = e => {
-        remodaler.show({
-          title: `Remove student ${student.display_name}`,
-          type: remodaler.types.CONFIRM,
-          message: 'Are you sure?',
-          confirmText: 'Yes, Remove',
-          confirm: () => {
-            let classId = studentRow.getAttribute('class-id');
-
-            remove.removeEventListener('click', removeStudentClick);
-            td.innerHTML = "<div class='ui active tiny inline loader'></div>";
-            this.removeStudentFromClass(student.id, classId, courseId);
-          }
-        });
+    let userData;
+    if (this.state.get('existing')) {
+      const combo = this.modal.querySelector('.flms-combo.student');
+      userData = { id: combo.getAttribute('data-id'), name: combo.querySelector('input').value };
+    } else {
+      userData = {
+        email: COMMON.removeNonAsciiChars(this.modal.querySelector("input[name='student-email']").value.trim()),
+        name: this.modal.querySelector("input[name='full-name']").value.trim(),
+        phone: this.modal.querySelector("input[name='phone']").value.trim()
       };
-
-      remove.addEventListener('click', removeStudentClick);
-
-      // Click on progress % → open detailed course-tree popup.
-      const progressCell = studentRow.querySelector('.progress-cell');
-      if (progressCell && student.progress != null) {
-        progressCell.style.cursor = 'pointer';
-        progressCell.title = 'Click to view lesson details';
-        progressCell.addEventListener('click', () => {
-          this.showProgressDetail(student.id, studentRow.getAttribute('course-id'), student.display_name, student.course_name);
-        });
-      }
-    });
-  }
-
-  /**
-   * Fetch the full module/lesson tree + per-lesson completion status, then
-   * render it in a slide-out drawer — the same panel the course and lesson
-   * editors use, so a long course tree gets the height to be read in rather
-   * than a popup's worth.
-   *
-   * The content is written into the panel rather than passed as `message`:
-   * the slideout's layout step keeps only `.slideout-form-line` children, so
-   * anything else handed to it is dropped. Nothing here is a form field.
-   */
-  async showProgressDetail(studentId, courseId, studentName, courseName) {
-    slideout.show({
-      title: `${studentName || 'Student'} — ${courseName || 'Course'}`,
-      message: '',
-      cancelText: 'Close',
-    });
-
-    const panel = document.querySelector('.slideout-bg:last-of-type');
-    if (!panel) return;
-
-    // Read-only: there is nothing to submit, so Close is the only action.
-    panel.querySelector("button[data-panel-action='confirm']")?.remove();
-
-    const msgEl = panel.querySelector('[data-panel-message]');
-    if (!msgEl) return;
-    msgEl.innerHTML = '<div class="flms-progress-loading"><div class="ui active inline loader"></div> Loading...</div>';
-
-    try {
-      const data = await JSUtils.fetch(ajaxurl, {
-        action: 'get_student_progress_detail',
-        student_id: studentId,
-        course_id: courseId,
-      });
-
-      // The drawer can be closed while the request is still out.
-      if (!msgEl.isConnected) return;
-
-      if (!data || !data.success) {
-        const msg = (data && data.data && data.data.message) || 'Failed to load progress.';
-        msgEl.innerHTML = `<p style="color:#b91c1c">${msg}</p>`;
-        return;
-      }
-
-      const { student, course, progress, modules } = data.data;
-
-      let html = '';
-
-      // Progress summary bar
-      const pct = progress.percent;
-      const barColor = pct >= 80 ? '#16a34a' : pct >= 40 ? '#d97706' : '#2563eb';
-      html += `<div class="flms-pd-summary">
-        <div class="flms-pd-bar-wrap">
-          <div class="flms-pd-bar" style="width:${pct}%;background:${barColor}"></div>
-        </div>
-        <span class="flms-pd-stats">${progress.completed} / ${progress.total} lessons (${pct}%)</span>
-      </div>`;
-
-      // Module → lesson tree
-      let moduleIndex = 0;
-      for (const mod of modules) {
-        const modCompleted = mod.lessons.filter(l => l.completed).length;
-        const modTotal = mod.lessons.length;
-        const modLabel = mod.intro ? 'מבוא' : `מודול ${mod.order}`;
-        const allDone = modCompleted === modTotal;
-
-        html += `<div class="flms-pd-module ${allDone ? 'is-complete' : ''}">
-          <div class="flms-pd-module-header">
-            <span class="flms-pd-module-icon">${allDone ? '✅' : '📂'}</span>
-            <span class="flms-pd-module-name">${modLabel}: ${this._esc(mod.name)}</span>
-            <span class="flms-pd-module-count">${modCompleted}/${modTotal}</span>
-          </div>
-          <div class="flms-pd-lessons">`;
-
-        for (const les of mod.lessons) {
-          const icon = les.completed ? '✅' : '⬜';
-          const dur = les.completed && les.seconds > 0 ? this._fmtDuration(les.seconds) : '';
-          html += `<div class="flms-pd-lesson ${les.completed ? 'is-done' : ''}">
-            <span class="flms-pd-lesson-icon">${icon}</span>
-            <span class="flms-pd-lesson-name">שיעור ${les.number}: ${this._esc(les.name)}</span>
-            ${dur ? `<span class="flms-pd-lesson-dur">${dur}</span>` : ''}
-          </div>`;
-        }
-
-        html += `</div></div>`;
-        moduleIndex++;
-      }
-
-      msgEl.innerHTML = html;
-    } catch (ex) {
-      if (msgEl.isConnected) {
-        msgEl.innerHTML = `<p style="color:#b91c1c">Error: ${ex.message || 'Unknown error'}</p>`;
-      }
     }
-  }
+    userData.class_id = this.classSelect.value();
+    userData.comment = this.modal.querySelector('#comment').value;
+    // This form enrolls a student without a sale - there is no payment step.
+    // Pass the payment fields explicitly: every value goes through
+    // encodeURIComponent, so an omitted one would reach the server as the
+    // string "undefined" and end up in the payment record and in Customer.io.
+    userData.method = 'manual';
 
-  _esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-
-  _fmtDuration(secs) {
-    if (secs < 60) return `${secs}s`;
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    if (m < 60) return `${m}:${String(s).padStart(2, '0')}`;
-    const h = Math.floor(m / 60);
-    return `${h}:${String(m % 60).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-
-  fetchStudents() {
-    const tab = COMMON.getTab(COMMON.TABS.STUDENTS);
-
-    let dt = jQuery('#registration_month').calendar('get date');
-    let month = '',
-      year = '';
-
-    if (dt) {
-      month = dt.getMonth() + 1;
-      year = dt.getFullYear();
-    }
-
-    JSUtils.fetch(__futurelms.ajax_url, {
-      action: 'get_students',
-      course_id: tab.querySelector('.dropdown.courses').getAttribute('data-id'),
-      class_id: tab.querySelector('.dropdown.classes').getAttribute('data-id'),
-      search: tab.querySelector(`[name='name_or_email']`).value,
-      month: month,
-      year: year
-    }).then(data => {
-      this.state.set('students', data);
-    });
+    this.modal.querySelector('.next').disabled = true;
+    this.addStudentToClass(this.courseSelect.value(), userData, 0);
   }
 
   addStudentToClass(courseId, userData, sum) {
@@ -487,12 +163,163 @@ class StudentsTab {
       sum: sum,
       comment: userData.comment
     }).then(() => {
-      jQuery('#add-student-modal').modal('hide');
+      this.modal.close();
+      notifications.show('Student added', 'success');
       this.fetchStudents();
     });
   }
 
-  // the course id is required to ensure the student is not related to another class of this course.
+  fetchStudents = async () => {
+    const month = this.tab.querySelector('.reg-month').value;
+    const year = month ? this.tab.querySelector('.reg-year').value : '';
+    const button = this.tab.querySelector('.search-students');
+
+    button.disabled = true;
+    this.tab.querySelector('table.students tbody').innerHTML = `<tr><td colspan="9"><div class="flms-empty"><span class="flms-spinner"></span>Searching…</div></td></tr>`;
+
+    try {
+      const data = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'get_students',
+        course_id: this.courseSelect.value(),
+        class_id: this.classSelect.value(),
+        search: this.tab.querySelector("[name='name_or_email']").value,
+        month,
+        year
+      });
+      this.state.set('students', data || []);
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  render = () => {
+    const body = this.tab.querySelector('table.students tbody');
+    const students = Object.values(this.state.get('students') || {});
+    const esc = COMMON.esc;
+
+    this.tab.querySelector('.result-count').textContent = `${students.length} ${students.length === 1 ? 'student' : 'students'}`;
+
+    if (students.length === 0) {
+      body.innerHTML = `<tr><td colspan="9"><div class="flms-empty">${COMMON.icon('search-x')}<strong>No students found</strong><span>Try another course, class or name.</span></div></td></tr>`;
+      return;
+    }
+
+    const blank = v => [false, null, undefined, '', 'undefined'].includes(v);
+    body.innerHTML = students
+      .map(s => {
+        const progress =
+          s.progress != null
+            ? `<button type="button" class="flms-btn flms-btn-sm progress-link" data-tip="Lesson by lesson">
+                 <span class="tabular-nums">${esc(s.progress)}%</span>${COMMON.icon('panel-right-open')}
+               </button>`
+            : '<span class="text-slate-400">—</span>';
+        return `<tr data-id="${esc(s.id)}" data-class-id="${esc(s.class_id)}" data-course-id="${esc(s.course_id)}">
+          <td data-label="ID" class="flms-id">${esc(s.id)}</td>
+          <td data-label="Name" class="font-medium flms-bidi">${blank(s.display_name) ? '' : esc(s.display_name)}</td>
+          <td data-label="Email" class="md:whitespace-nowrap break-all md:break-normal">${esc(s.user_email)}</td>
+          <td data-label="Phone" class="tabular-nums whitespace-nowrap">${blank(s.phone) ? '' : esc(s.phone)}</td>
+          <td data-label="Course" class="flms-bidi">${esc(s.course_name)}</td>
+          <td data-label="Class" class="flms-bidi">${esc(s.class_name)}</td>
+          <td data-label="Joined" class="tabular-nums whitespace-nowrap">${esc(String(s.registration_date || '').substring(0, 10))}</td>
+          <td data-label="Progress">${progress}</td>
+          <td class="text-right"><button type="button" class="flms-iconbtn is-danger remove-class" data-tip="Remove from class" aria-label="Remove from class">${COMMON.icon('user-minus')}</button></td>
+        </tr>`;
+      })
+      .join('');
+
+    body.querySelectorAll('tr[data-id]').forEach(row => {
+      const student = students.find(s => String(s.id) === row.dataset.id && String(s.class_id) === row.dataset.classId);
+      row.querySelector('.remove-class').addEventListener('click', e => {
+        remodaler.show({
+          title: `Remove ${student.display_name || 'student'}`,
+          type: remodaler.types.CONFIRM,
+          message: `${student.display_name || 'The student'} loses access to ${student.course_name}.`,
+          confirmText: 'Remove',
+          confirm: () => {
+            e.target.closest('button').classList.add('is-busy');
+            this.removeStudentFromClass(student.id, row.dataset.classId, row.dataset.courseId);
+          }
+        });
+      });
+      row.querySelector('.progress-link')?.addEventListener('click', () =>
+        this.showProgressDetail(student.id, row.dataset.courseId, student.display_name, student.course_name)
+      );
+    });
+  };
+
+  /**
+   * The module/lesson tree with each lesson's completion, in the same slide-out
+   * the course editors use. The content is written into the panel rather than
+   * passed as `message`: the slide-out keeps only `.slideout-form-line`
+   * children of a message, and nothing here is a form field.
+   */
+  async showProgressDetail(studentId, courseId, studentName, courseName) {
+    slideout.show({ title: `${studentName || 'Student'} · ${courseName || 'Course'}`, message: '', cancelText: 'Close' });
+
+    const panel = document.querySelector('.slideout-bg:last-of-type');
+    if (!panel) return;
+    panel.querySelector("button[data-panel-action='confirm']")?.remove(); // read-only
+    const msgEl = panel.querySelector('[data-panel-message]');
+    if (!msgEl) return;
+    msgEl.innerHTML = '<div class="flms-pd-summary"><span class="flms-spinner"></span> Loading…</div>';
+
+    const esc = COMMON.esc;
+    try {
+      const data = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'get_student_progress_detail',
+        student_id: studentId,
+        course_id: courseId
+      });
+      if (!msgEl.isConnected) return; // closed meanwhile
+
+      if (!data || !data.success) {
+        msgEl.innerHTML = `<p style="color:#b91c1c">${esc(data?.data?.message || 'Could not load the progress.')}</p>`;
+        return;
+      }
+
+      const { progress, modules } = data.data;
+      const pct = progress.percent;
+      const color = pct >= 80 ? '#059669' : pct >= 40 ? '#d97706' : '#3646a8';
+      let html = `<div class="flms-pd-summary">
+        <div class="flms-pd-bar-wrap"><div class="flms-pd-bar" style="width:${pct}%;background:${color}"></div></div>
+        <span class="flms-pd-stats">${progress.completed} / ${progress.total} lessons · ${pct}%</span>
+      </div>`;
+
+      for (const mod of modules) {
+        const done = mod.lessons.filter(l => l.completed).length;
+        const all = done === mod.lessons.length;
+        html += `<div class="flms-pd-module ${all ? 'is-complete' : ''}">
+          <div class="flms-pd-module-header">
+            ${COMMON.icon(all ? 'circle-check' : 'folder-open')}
+            <span class="flms-pd-module-name">${mod.intro ? 'מבוא' : `מודול ${mod.order}`}: ${esc(mod.name)}</span>
+            <span class="flms-pd-module-count">${done}/${mod.lessons.length}</span>
+          </div>
+          ${mod.lessons
+            .map(
+              les => `<div class="flms-pd-lesson ${les.completed ? 'is-done' : ''}">
+                ${COMMON.icon(les.completed ? 'circle-check' : 'circle')}
+                <span class="flms-pd-lesson-name">שיעור ${esc(les.number)}: ${esc(les.name)}</span>
+                ${les.completed && les.seconds > 0 ? `<span class="flms-pd-lesson-dur">${this.fmtDuration(les.seconds)}</span>` : ''}
+              </div>`
+            )
+            .join('')}
+        </div>`;
+      }
+      msgEl.innerHTML = html;
+    } catch (ex) {
+      if (msgEl.isConnected) msgEl.innerHTML = `<p style="color:#b91c1c">${esc(ex.message || 'Unknown error')}</p>`;
+    }
+  }
+
+  fmtDuration(secs) {
+    if (secs < 60) return `${secs}s`;
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    if (m < 60) return `${m}:${String(s).padStart(2, '0')}`;
+    return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  // The course id makes sure the student isn't tied to another class of this course.
   removeStudentFromClass(studentId, classId, courseId) {
     JSUtils.fetch(__futurelms.ajax_url, {
       action: 'remove_class',
@@ -500,6 +327,7 @@ class StudentsTab {
       course_id: courseId,
       class_id: classId
     }).then(() => {
+      notifications.show('Student removed from the class', 'success');
       this.fetchStudents();
     });
   }

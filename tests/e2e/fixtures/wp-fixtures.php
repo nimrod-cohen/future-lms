@@ -85,6 +85,7 @@ $lesson = function ($module, $n, $title) {
   return flms_e2e_post('lesson', $title, ['module' => $module, 'lesson_number' => $n, 'video_list' => '[]', 'lesson_duration' => 60]);
 };
 $a1 = $lesson($moduleA, 1, 'E2E Lesson A1');
+update_post_meta($a1, 'video_list', wp_slash(json_encode([['order' => '1', 'caption' => '', 'video_id' => '424242']])));
 $a2 = $lesson($moduleA, 2, 'E2E Lesson A2');
 $a3 = $lesson($moduleA, 3, 'E2E Lesson A3');
 $b1 = $lesson($moduleB, 1, 'E2E Lesson B1');
@@ -110,5 +111,6 @@ echo json_encode([
   'modules' => ['A' => $moduleA, 'B' => $moduleB],
   'lessons' => compact('a1', 'a2', 'a3', 'b1', 'b2'),
   'future' => $future,
+  'video' => '424242',
   'cookies' => ['admin' => flms_e2e_cookies($admin), 'student' => flms_e2e_cookies($student)],
 ]);
