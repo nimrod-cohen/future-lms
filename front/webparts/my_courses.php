@@ -14,18 +14,10 @@ foreach ($attending_courses as $course) {
 
   $class = $student->get_class($course->raw("ID"));
 
-  $lessons = $student->get_class_lessons_by_course_id($course->raw("ID"));
-  $nextLessson = null;
-  if (is_array($lessons) && count($lessons) > 0) {
-    $nextLessson = $lessons[0]["id"];
-  }
-  // For non-live (no-drip) classes the array above is empty/null, so without
-  // this fallback every "Enter course" landed on lesson 1 — wiping any
-  // returning student's actual position. Resume on the first not-yet-100%
-  // counted lesson (or the last one if they're done).
-  if (empty($nextLessson)) {
-    $nextLessson = \FutureLMS\classes\ProgressManager::findResumeLesson($student->get_id(), (int) $course->raw("ID"));
-  }
+  // Resume on the first not-yet-100% counted lesson (or the last one if
+  // they're done). A lesson that hasn't opened yet bounces to an open one
+  // on the course page.
+  $nextLessson = \FutureLMS\classes\ProgressManager::findResumeLesson($student->get_id(), (int) $course->raw("ID"));
   ?>
     <div class="course-card" data-course-id='<?php echo $course->raw("ID"); ?>'>
           <img class='course-image' src='<?php echo $image ?>'></img>

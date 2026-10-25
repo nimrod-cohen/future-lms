@@ -42,7 +42,7 @@ class AdminManager {
     JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
       const coursesNameValue = Object.keys(data.courses).map(cid => {
         let course = data.courses[cid];
-        return { name: course.name, value: course.id };
+        return { name: course.name, value: cid };
       });
 
       COMMON.wireDropdown(
@@ -130,7 +130,7 @@ class AdminManager {
     JSUtils.fetch(__futurelms.ajax_url, { action: 'get_all_courses' }).then(data => {
       const coursesNameValue = Object.keys(data.courses).map(cid => {
         let course = data.courses[cid];
-        return { name: course.name, value: course.id };
+        return { name: course.name, value: cid };
       });
 
       COMMON.wireDropdown(
@@ -165,39 +165,70 @@ class AdminManager {
       }
     );
 
-    jQuery(document).on('click', `${COMMON.getTabSelector(COMMON.TABS.CLASSES)} .item.lesson`, e => {
-      const lessonId = e.currentTarget.getAttribute('data-id');
-      let classId = COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.search.classes').getAttribute('data-id');
-
-      e.currentTarget.removeChild(e.currentTarget.querySelector('i'));
-      e.currentTarget.insertAdjacentHTML('afterbegin', "<span class='ui active tiny inline loader'></span>");
-
-      JSUtils.fetch(__futurelms.ajax_url, {
-        action: 'set_lesson',
-        lesson_id: lessonId,
-        class_id: classId
-      }).then(() => {
-        JSUtils.fetch(__futurelms.ajax_url, { action: 'get_lessons', class_id: classId }).then(data => {
-          this.renderLessons(data);
-        });
-      });
+    // Each lesson's open date & hour. Saving (or clearing) re-renders the list.
+    jQuery(document).on('change', `${COMMON.getTabSelector(COMMON.TABS.CLASSES)} .lesson input.open-at`, e => {
+      this.saveOpenAt(e.currentTarget.closest('.item.lesson').getAttribute('data-id'), e.currentTarget.value);
     });
+    jQuery(document).on('click', `${COMMON.getTabSelector(COMMON.TABS.CLASSES)} .lesson .clear-open-at`, e => {
+      this.saveOpenAt(e.currentTarget.closest('.item.lesson').getAttribute('data-id'), '');
+    });
+  }
+
+  async saveOpenAt(lessonId, openAt) {
+    const classId = COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.search.classes').getAttribute('data-id');
+    if (!classId) return;
+
+    const row = COMMON.getTab(COMMON.TABS.CLASSES).querySelector(`.item.lesson[data-id='${lessonId}']`);
+    row?.classList.add('saving');
+
+    const res = await JSUtils.fetch(__futurelms.ajax_url, {
+      action: 'set_lesson_open_at',
+      class_id: classId,
+      lesson_id: lessonId,
+      open_at: openAt
+    });
+    if (!res?.success) notifications.show(res?.data?.message || 'Failed to save the date', 'error');
+
+    const data = await JSUtils.fetch(__futurelms.ajax_url, { action: 'get_lessons', class_id: classId });
+    this.renderLessons(data);
   }
 
   renderLessons(data) {
     let lessons = COMMON.getTab(COMMON.TABS.CLASSES).querySelector('.ui.list.lessons');
     lessons.innerHTML = '';
-    let items = Object.values(data);
+    let items = Array.isArray(data) ? data : [];
     if (items.length === 0) {
       lessons.insertAdjacentHTML('beforeend', '<p>No results</p>');
+      return;
     }
 
+    lessons.insertAdjacentHTML(
+      'beforeend',
+      `<p class='open-at-help'>Set the date & hour each lesson opens (site time). A lesson without a date stays as it is.</p>`
+    );
+
+    let moduleId = null;
     items.forEach(item => {
+      if (item.module_id !== moduleId) {
+        moduleId = item.module_id;
+        lessons.insertAdjacentHTML('beforeend', `<h5 class='ui header module-title'>${item.module_title}</h5>`);
+      }
+
+      // released = the class's schedule only (not the admin's own progress gates).
+      const icon = item.released ? 'green check circle' : item.open_at ? 'orange clock outline' : 'grey lock';
+      const status = item.released ? 'Open' : item.open_at ? 'Scheduled' : 'Closed';
+      const value = item.open_at ? item.open_at.replace(' ', 'T') : '';
+
       lessons.insertAdjacentHTML(
         'beforeend',
-        `<div class='item lesson clickable' data-id=${item.id}><i class='${
-          item.open ? 'check ' : ' '
-        }circle outline icon'></i><div class='middle aligned content'><div><b>${item.title}</b></div></div></div>`
+        `<div class='item lesson' data-id='${item.id}'>
+          <i class='${icon} icon' title='${status}'></i>
+          <div class='content lesson-title'>${item.title}</div>
+          <div class='open-at-field'>
+            <input type='datetime-local' class='open-at' value='${value}' />
+            ${value ? `<i class='clear-open-at close link icon' title='Clear date'></i>` : ''}
+          </div>
+        </div>`
       );
     });
   }

@@ -138,15 +138,37 @@ div.error {
           }
 
           &[data-tab='classes'] .ui.list.lessons {
+            .open-at-help {
+              color: #767676;
+            }
+
+            .module-title {
+              margin: 1.2em 0 0.4em;
+            }
+
             .item.lesson {
               display: flex;
               align-items: center;
+              gap: 0.5em;
+              padding: 0.3em 0;
 
-              .loader {
-                padding-right: 19px;
+              &.saving {
+                opacity: 0.5;
+                pointer-events: none;
+              }
 
-                & + .content {
-                  padding-left: 0.5em;
+              .lesson-title {
+                flex: 1;
+              }
+
+              .open-at-field {
+                display: flex;
+                align-items: center;
+                gap: 0.25em;
+                min-width: 15em;
+
+                .clear-open-at {
+                  margin: 0;
                 }
               }
             }

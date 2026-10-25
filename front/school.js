@@ -925,6 +925,8 @@ class Classroom {
         ? `<button type="button" class="skip-lesson skip-lesson-sidebar">דלג</button>`
         : '';
 
+      const labelHtml = `${lesson.title}${this.opensAtHtml(lesson)}`;
+
       var lessonDiv = currModule.querySelector(`[lesson-id='${lesson.id}']`);
       if (!lessonDiv) {
         //check if currModule contains lessons and add in the right order
@@ -944,7 +946,7 @@ class Classroom {
             module-id="${lesson.module_id}"
             order="${lesson.lesson_number}"
             lesson-id="${lesson.id}">
-            <label>${lesson.title}</label>
+            <label>${labelHtml}</label>
             ${skipBtnHtml}
             <img class='play-icon' src="${this.iconUrl(showPlay ? 'play' : 'text')}" style='background:${background}' />
           </div>`
@@ -957,7 +959,7 @@ class Classroom {
             module-id="${lesson.module_id}"
             order="${lesson.lesson_number}"
             lesson-id="${lesson.id}">
-            <label>${lesson.title}</label>
+            <label>${labelHtml}</label>
             ${skipBtnHtml}
             <img class='play-icon' src="${this.iconUrl(showPlay ? 'play' : 'text')}" style='background:${background}' />
           </div>`
@@ -972,6 +974,7 @@ class Classroom {
         // Keep the lock visual in sync with the latest server-side `open` flag,
         // so completing a sequential lesson unlocks the next one without a reload.
         lessonDiv.classList.toggle('locked', !lesson.open);
+        lessonDiv.querySelector('label').innerHTML = labelHtml;
       }
     });
 
@@ -1290,6 +1293,16 @@ class Classroom {
         this.showSidebar();
       }
     });
+  };
+
+  // "Opens on …" line for a lesson the class has scheduled for later.
+  // open_at is site time, "Y-m-d H:i".
+  opensAtHtml = lesson => {
+    if (lesson.released !== false || !lesson.open_at) return '';
+    const [date, time] = lesson.open_at.split(' ');
+    const [y, m, d] = date.split('-').map(Number);
+    const day = y === new Date().getFullYear() ? `${d}.${m}` : `${d}.${m}.${y}`;
+    return `<small class="opens-at">ייפתח ב־${day} בשעה ${time}</small>`;
   };
 
   changeLesson = e => {

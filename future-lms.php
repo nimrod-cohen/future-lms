@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.10.0
+ * Version: 2.11.1
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -219,7 +219,7 @@ class FutureLMS {
     add_action("wp_ajax_get_students", [$this, "get_students"]);
     add_action("wp_ajax_get_student_progress_detail", [$this, "get_student_progress_detail"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
-    add_action("wp_ajax_set_lesson", [$this, "setLesson"]);
+    add_action("wp_ajax_set_lesson_open_at", [$this, "set_lesson_open_at"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
     add_action("wp_ajax_future_lms_get_settings", [$this, "get_settings"]);
     add_action("wp_ajax_future_lms_set_settings", [$this, "set_settings"]);
@@ -819,13 +819,8 @@ class FutureLMS {
 
       $is_live = $class->raw("is_live_class") == "1";
 
-      if (!$is_live) {
-        $class_lessons = [];
-      } else {
-        $class_lessons = $class->raw("lessons") ?? '[]';
-        $class_lessons = json_decode($class_lessons, true);
-        $class_lessons = is_array($class_lessons) ? $class_lessons : [];
-      }
+      $class_lessons = json_decode($class->raw("lessons") ?: '[]', true);
+      $class_lessons = is_array($class_lessons) ? $class_lessons : [];
 
       $course_id = $class->raw("course");
       $sequential = get_post_meta($course_id, 'sequential_progress', true) == '1';
@@ -848,14 +843,11 @@ class FutureLMS {
         $lessons = BaseObject::factory("lesson", ["where" => "module.id = " . $module_id, "orderby" => "cast(lesson_number.meta_value as unsigned int) ASC", "limit" => -1]);
 
         while ($lesson = $lessons->fetch()) {
-          $open = !$is_live; //if live class, all lessons are closed by default
           $lesson_id = $lesson->raw("ID");
-          if ($is_live) {
-            $pos = array_search($lesson_id, array_column($class_lessons, 'id'));
-            if (false !== $pos) {
-              $open = $class_lessons[$pos]["open"] ?? false;
-            }
-          }
+          // The class's schedule (open date/hour per lesson).
+          $released = SchoolClass::is_lesson_released($class_lessons, $lesson_id, $is_live);
+          $entry = SchoolClass::find_lesson_entry($class_lessons, $lesson_id);
+          $open = $released;
           // Sequential gate: only narrows `open`, never opens what drip closed.
           if ($sequential && array_key_exists((int) $lesson_id, $sequentialLockMap)) {
             $open = $open && $sequentialLockMap[(int) $lesson_id];
@@ -874,6 +866,8 @@ class FutureLMS {
             "id" => $lesson_id,
             "title" => stripslashes($lesson->raw("title", true)),
             "open" => $open,
+            "released" => $released,
+            "open_at" => $entry['open_at'] ?? null,
             "count_progress" => $module_count_progress,
             "sequential" => $sequential
           ];
@@ -1011,44 +1005,35 @@ class FutureLMS {
     wp_send_json([]);
   }
 
-  public function setLesson() {
+  // Sets (or clears) the date & hour a lesson opens for a class.
+  // open_at arrives as "Y-m-dTH:i" from a datetime-local input, in site time.
+  public function set_lesson_open_at() {
     $this->guard_admin();
 
-    $classId = $_REQUEST["class_id"];
-    $lessonId = $_REQUEST["lesson_id"];
+    $classId = intval($_REQUEST["class_id"] ?? 0);
+    $lessonId = intval($_REQUEST["lesson_id"] ?? 0);
+    $openAt = trim(str_replace('T', ' ', sanitize_text_field($_REQUEST["open_at"] ?? '')));
 
-    $class = BaseObject::factory("class", $classId);
-
-    if (!$class) {
-      wp_send_json(["error" => "Class not found"]);
+    if (get_post_type($classId) !== 'class' || get_post_type($lessonId) !== 'lesson') {
+      wp_send_json_error(["message" => "Class or lesson not found"], 404);
+    }
+    if ($openAt !== '' && !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $openAt)) {
+      wp_send_json_error(["message" => "Bad date"], 400);
     }
 
-    $lessons = $class->raw("lessons");
+    $lessons = json_decode(get_post_meta($classId, 'lessons', true) ?: '[]', true);
+    $lessons = is_array($lessons) ? $lessons : [];
 
-    if ($lessons) {
-      $lessons = json_decode($lessons, true);
-    } else {
-      $lessons = [];
+    // Drop the lesson's old entry; a date replaces any manual open flag.
+    $lessons = array_values(array_filter($lessons, function ($l) use ($lessonId) {
+      return (int) ($l['id'] ?? 0) !== $lessonId;
+    }));
+    if ($openAt !== '') {
+      $lessons[] = ["id" => $lessonId, "open_at" => $openAt];
     }
 
-    $found = false;
-    foreach ($lessons as &$lesson) {
-      if ($lesson["id"] == $lessonId) {
-        $lesson["open"] = !$lesson["open"];
-        $found = true;
-        break;
-      }
-    }
-    if (!$found) {
-      $lessons[] = [
-        "id" => $lessonId,
-        "open" => true
-      ];
-    }
-
-    $lessons = json_encode($lessons);
-    $class->save('lessons', $lessons);
-    wp_send_json([]);
+    update_post_meta($classId, 'lessons', wp_slash(json_encode($lessons)));
+    wp_send_json_success();
   }
 
   public function get_all_Courses() {

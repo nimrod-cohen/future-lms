@@ -193,15 +193,12 @@ class Student
 
     public function is_lesson_open($courseId, $lessonId)
     {
-        // Live-class drip rule (existing)
-        $lessons = $this->get_class_lessons_by_course_id($courseId);
-        if ($lessons) {
-            $lesson = array_reduce($lessons, function ($result, $item) use ($lessonId) {
-                return intval($item["id"]) === intval($lessonId) ? $item : $result;
-            });
-            // If the lesson is listed and explicitly closed by drip, it's closed.
-            // (Missing-from-list → fall through; drip doesn't manage it.)
-            if (!empty($lesson) && (empty($lesson["open"]) || $lesson["open"] != true)) {
+        // The class's schedule: per-lesson open date/hour (or an older manual flag).
+        $class = $this->get_class($courseId);
+        if ($class) {
+            $classLessons = json_decode($class["lessons"] ?: '[]', true);
+            $isLive = get_post_meta($class["id"], 'is_live_class', true) == "1";
+            if (!SchoolClass::is_lesson_released($classLessons, $lessonId, $isLive)) {
                 return false;
             }
         }

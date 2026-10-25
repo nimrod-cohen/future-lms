@@ -173,6 +173,11 @@ body.school {
              the icon (or anything else) on the wrong line if an optional
              slot is missing. */
           > label             { grid-column: 2; }
+
+          .opens-at {
+            display: block;
+            font-size: 0.8em;
+          }
           > .skip-lesson-sidebar { grid-column: 3; }
           > img.play-icon {
             width: 20px;
@@ -188,6 +193,10 @@ body.school {
               cursor: not-allowed;
             }
             pointer-events: none;
+
+            .opens-at {
+              color: #8a8a8a;
+            }
 
             &::before {
               content: '';

@@ -50,4 +50,37 @@ use FutureLMS\classes\BaseObject;
 
         return $wpdb->get_results($sql, ARRAY_A);
     }
+  
+    /**
+     * Whether a class's schedule lets a lesson open.
+     *
+     * $classLessons is the class's `lessons` meta, decoded: [{id, open?, open_at?}].
+     * open_at is site time, "Y-m-d H:i" - the lesson opens at that moment.
+     * Without a date, an older manual `open` flag decides; a lesson the class
+     * doesn't list is open unless the class is live.
+     */
+    public static function is_lesson_released($classLessons, $lessonId, $isLive = false) {
+        foreach ((array) $classLessons as $entry) {
+            if ((int) ($entry['id'] ?? 0) !== (int) $lessonId) {
+                continue;
+            }
+            if (!empty($entry['open_at'])) {
+                return current_time('Y-m-d H:i') >= $entry['open_at'];
+            }
+            if (array_key_exists('open', $entry)) {
+                return $entry['open'] == true;
+            }
+            break;
+        }
+        return !$isLive;
+    }
+
+    public static function find_lesson_entry($classLessons, $lessonId) {
+        foreach ((array) $classLessons as $entry) {
+            if ((int) ($entry['id'] ?? 0) === (int) $lessonId) {
+                return $entry;
+            }
+        }
+        return null;
+    }
   }
