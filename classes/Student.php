@@ -193,12 +193,11 @@ class Student
 
     public function is_lesson_open($courseId, $lessonId)
     {
-        // The class's schedule: per-lesson open date/hour (or an older manual flag).
+        // A paced class opens each lesson on its own date & hour.
         $class = $this->get_class($courseId);
         if ($class) {
             $classLessons = json_decode($class["lessons"] ?: '[]', true);
-            $isLive = get_post_meta($class["id"], 'is_live_class', true) == "1";
-            if (!SchoolClass::is_lesson_released($classLessons, $lessonId, $isLive)) {
+            if (!SchoolClass::is_lesson_released($classLessons, $lessonId, SchoolClass::is_paced($class["id"]))) {
                 return false;
             }
         }

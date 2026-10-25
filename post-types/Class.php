@@ -63,12 +63,16 @@ function render_class_meta_box($post) {
                        value="<?= esc_attr($meta['start_date'][0] ?? '') ?>">
             </label>
         </p>
-        <!-- Lessons -->
+        <!-- Pacing -->
         <p>
-            <label><strong>Lessons (one per line):</strong><br>
-                <textarea name="lessons"
-                          style="width:100%; height:120px;"><?= esc_textarea($meta['lessons'][0] ?? '') ?></textarea>
+            <label><strong>Pacing:</strong><br>
+                <?php $paced = ($meta['paced'][0] ?? '') == '1'; ?>
+                <select name="paced" style="width:100%">
+                    <option value="0" <?= selected(!$paced) ?>>Self-paced - every lesson open</option>
+                    <option value="1" <?= selected($paced) ?>>Paced - lessons open on set dates</option>
+                </select>
             </label>
+            <span class="description">Lesson dates are set in Future LMS → Classes.</span>
         </p>
     </div>
     <?php
@@ -88,8 +92,8 @@ add_action('save_post_class', function($post_id) {
         update_post_meta($post_id, 'start_date', sanitize_text_field($_POST['start_date']));
     }
 
-    // Save lessons
-    if (isset($_POST['lessons'])) {
-        update_post_meta($post_id, 'lessons', sanitize_textarea_field($_POST['lessons']));
+    // Save pacing (lesson dates are set in Future LMS → Classes)
+    if (isset($_POST['paced'])) {
+        update_post_meta($post_id, 'paced', $_POST['paced'] == '1' ? '1' : '0');
     }
 });

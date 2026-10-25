@@ -1,0 +1,15 @@
+{
+  "name": "future-lms/tests",
+  "description": "PHPUnit suite for future-lms. Kept apart from the plugin's own vendor/, which ships to production.",
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "yoast/phpunit-polyfills": "^4.0",
+    "wp-phpunit/wp-phpunit": "7.1.1"
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

@@ -1495,8 +1495,11 @@ class CoursesTab {
                    step="300" min="${new Date().toISOString().slice(0, 16)}">
         </div>
         <div class='slideout-form-line'>
-            <label class='slideout-form-line-title'>Lessons</label>
-            <input type='text' name='class_lessons' value='${selectedClass?.lessons || ''}' />
+            <label class='slideout-form-line-title' title='Paced: each lesson opens on a date you set in the Classes tab.'>Pacing</label>
+            <select name="class_paced" class="slideout-form-select">
+                <option value="0" ${selectedClass?.paced ? '' : 'selected'}>Self-paced - every lesson open</option>
+                <option value="1" ${selectedClass?.paced ? 'selected' : ''}>Paced - lessons open on set dates</option>
+            </select>
         </div>`,
       type: slideout.types.FORM,
       confirmText: classId ? 'Update' : 'Create',
@@ -1507,7 +1510,7 @@ class CoursesTab {
           course_id: vals.class_course_id,
           name: vals.class_name,
           start_date: vals.class_start_date,
-          lessons: vals.class_lessons
+          paced: vals.class_paced
         };
 
         let result = await JSUtils.fetch(__futurelms.ajax_url, data);

@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 2.11.1
+ * Version: 2.14.0
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -206,6 +206,7 @@ class FutureLMS {
 
   public function init_hooks() {
     add_action('admin_menu', [$this, 'add_admin_menu']);
+    add_action('load-toplevel_page_future-lms-settings', [$this, 'make_admin_page_fullscreen']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     add_action("wp_enqueue_scripts", [$this, 'enqueueSchoolScripts']);
     add_action("wp_ajax_search_students", [$this, "search_students"]);
@@ -220,6 +221,7 @@ class FutureLMS {
     add_action("wp_ajax_get_student_progress_detail", [$this, "get_student_progress_detail"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
     add_action("wp_ajax_set_lesson_open_at", [$this, "set_lesson_open_at"]);
+    add_action("wp_ajax_set_class_pacing", [$this, "set_class_pacing"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
     add_action("wp_ajax_future_lms_get_settings", [$this, "get_settings"]);
     add_action("wp_ajax_future_lms_set_settings", [$this, "set_settings"]);
@@ -541,7 +543,8 @@ class FutureLMS {
 
     wp_localize_script('future-lms-admin-js', '__futurelms', [
       'ajax_url' => admin_url('admin-ajax.php'),
-      'store_currency' => Settings::get("store_currency")
+      'store_currency' => Settings::get("store_currency"),
+      'timezone' => wp_timezone_string()
     ]);
 
     wp_enqueue_script('trumbowyg-js', plugin_dir_url(__FILE__) . 'assets/trumbowyg/trumbowyg.min.js');
@@ -552,6 +555,20 @@ class FutureLMS {
 
   public function add_admin_menu() {
     add_menu_page('Future LMS', 'Future LMS', 'manage_options', 'future-lms-settings', [$this, 'show_admin_page'], 'dashicons-schedule', 30);
+  }
+
+  // The Future LMS screen is a full-window app: no WP admin bar, menu,
+  // footer, Screen Options or other plugins' notices (admin.css hides the
+  // chrome; it only loads on this page). The app bar links back to WP.
+  public function make_admin_page_fullscreen() {
+    add_filter('admin_body_class', function ($classes) {
+      return $classes . ' flms-fullscreen';
+    });
+    add_filter('screen_options_show_screen', '__return_false');
+    add_action('in_admin_header', function () {
+      remove_all_actions('admin_notices');
+      remove_all_actions('all_admin_notices');
+    }, 1000);
   }
 
   public function show_admin_page() {
@@ -817,7 +834,7 @@ class FutureLMS {
         throw new Exception('cannot find class by id');
       }
 
-      $is_live = $class->raw("is_live_class") == "1";
+      $paced = SchoolClass::is_paced($class_id);
 
       $class_lessons = json_decode($class->raw("lessons") ?: '[]', true);
       $class_lessons = is_array($class_lessons) ? $class_lessons : [];
@@ -845,7 +862,7 @@ class FutureLMS {
         while ($lesson = $lessons->fetch()) {
           $lesson_id = $lesson->raw("ID");
           // The class's schedule (open date/hour per lesson).
-          $released = SchoolClass::is_lesson_released($class_lessons, $lesson_id, $is_live);
+          $released = SchoolClass::is_lesson_released($class_lessons, $lesson_id, $paced);
           $entry = SchoolClass::find_lesson_entry($class_lessons, $lesson_id);
           $open = $released;
           // Sequential gate: only narrows `open`, never opens what drip closed.
@@ -1005,17 +1022,26 @@ class FutureLMS {
     wp_send_json([]);
   }
 
-  // Sets (or clears) the date & hour a lesson opens for a class.
+  // Sets (or clears) the date & hour lessons open for a paced class.
+  // lesson_ids is a comma list (one lesson, or a whole module at once);
   // open_at arrives as "Y-m-dTH:i" from a datetime-local input, in site time.
   public function set_lesson_open_at() {
     $this->guard_admin();
 
     $classId = intval($_REQUEST["class_id"] ?? 0);
-    $lessonId = intval($_REQUEST["lesson_id"] ?? 0);
+    $lessonIds = array_filter(array_map('intval', explode(',', $_REQUEST["lesson_ids"] ?? '')));
     $openAt = trim(str_replace('T', ' ', sanitize_text_field($_REQUEST["open_at"] ?? '')));
+    if ($openAt === 'now') {
+      $openAt = current_time('Y-m-d H:i');
+    }
 
-    if (get_post_type($classId) !== 'class' || get_post_type($lessonId) !== 'lesson') {
-      wp_send_json_error(["message" => "Class or lesson not found"], 404);
+    if (get_post_type($classId) !== 'class' || empty($lessonIds)) {
+      wp_send_json_error(["message" => "Class or lessons not found"], 404);
+    }
+    foreach ($lessonIds as $lessonId) {
+      if (get_post_type($lessonId) !== 'lesson') {
+        wp_send_json_error(["message" => "Lesson not found"], 404);
+      }
     }
     if ($openAt !== '' && !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $openAt)) {
       wp_send_json_error(["message" => "Bad date"], 400);
@@ -1024,15 +1050,47 @@ class FutureLMS {
     $lessons = json_decode(get_post_meta($classId, 'lessons', true) ?: '[]', true);
     $lessons = is_array($lessons) ? $lessons : [];
 
-    // Drop the lesson's old entry; a date replaces any manual open flag.
-    $lessons = array_values(array_filter($lessons, function ($l) use ($lessonId) {
-      return (int) ($l['id'] ?? 0) !== $lessonId;
+    // Drop the lessons' old entries; a date replaces any manual open flag.
+    $lessons = array_values(array_filter($lessons, function ($l) use ($lessonIds) {
+      return !in_array((int) ($l['id'] ?? 0), $lessonIds, true);
     }));
     if ($openAt !== '') {
-      $lessons[] = ["id" => $lessonId, "open_at" => $openAt];
+      foreach ($lessonIds as $lessonId) {
+        $lessons[] = ["id" => $lessonId, "open_at" => $openAt];
+      }
     }
 
     update_post_meta($classId, 'lessons', wp_slash(json_encode($lessons)));
+    wp_send_json_success();
+  }
+
+  public function set_class_pacing() {
+    $this->guard_admin();
+
+    $classId = intval($_REQUEST["class_id"] ?? 0);
+    if (get_post_type($classId) !== 'class') {
+      wp_send_json_error(["message" => "Class not found"], 404);
+    }
+    $paced = ($_REQUEST["paced"] ?? '') == '1';
+
+    // Going paced: older manual open flags become an opening date of "now",
+    // so a lesson that is open stays open and shows why. Closed flags go;
+    // an undated lesson in a paced class is closed anyway.
+    if ($paced) {
+      $lessons = json_decode(get_post_meta($classId, 'lessons', true) ?: '[]', true);
+      $now = current_time('Y-m-d H:i');
+      $converted = [];
+      foreach (is_array($lessons) ? $lessons : [] as $entry) {
+        if (!empty($entry['open_at'])) {
+          $converted[] = ["id" => (int) $entry['id'], "open_at" => $entry['open_at']];
+        } elseif (!empty($entry['open'])) {
+          $converted[] = ["id" => (int) $entry['id'], "open_at" => $now];
+        }
+      }
+      update_post_meta($classId, 'lessons', wp_slash(json_encode($converted)));
+    }
+
+    update_post_meta($classId, 'paced', $paced ? '1' : '0');
     wp_send_json_success();
   }
 
@@ -1060,7 +1118,10 @@ class FutureLMS {
           'id' => $item["id"],
           'title' => $item["title"],
           'value' => $item["id"],
-          'name' => $item["title"]
+          'name' => $item["title"],
+          'paced' => SchoolClass::is_paced($item["id"]),
+          'start_date' => get_post_meta($item["id"], 'start_date', true),
+          'students' => SchoolClass::student_count($item["id"])
         ];
       }, $result);
 

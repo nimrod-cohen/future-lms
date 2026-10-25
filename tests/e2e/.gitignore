@@ -1,0 +1,8 @@
+node_modules/
+.auth/
+test-results/
+playwright-report/
+
+# The plugin's own .gitignore drops every package.json; this suite needs its own.
+!package.json
+!package-lock.json

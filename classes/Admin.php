@@ -163,7 +163,7 @@ class Admin {
       $name = $_POST["name"];
       $courseId = isset($_POST["course_id"]) ? $_POST["course_id"] : false;
       $startDate = isset($_POST['start_date']) ? $_POST['start_date'] : null;
-      $lessons = isset($_POST['lessons']) ? $_POST['lessons'] : "[]";
+      $paced = ($_POST['paced'] ?? '') == '1' ? '1' : '0';
 
       if (empty($classId)) {
         //create new course, a course is a wp_post with post_type = course
@@ -181,7 +181,8 @@ class Admin {
 
       update_post_meta($classId, 'course', $courseId);
       update_post_meta($classId, 'start_date', $startDate);
-      update_post_meta($classId, 'lessons', stripslashes($lessons));
+      // Lesson dates are set in the Classes tab, never here.
+      update_post_meta($classId, 'paced', $paced);
 
       wp_send_json(['error' => false]);
     } catch (Exception $e) {

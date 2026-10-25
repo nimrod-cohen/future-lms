@@ -52,27 +52,38 @@ use FutureLMS\classes\BaseObject;
     }
   
     /**
+     * A class is either self-paced (every lesson open) or paced (each lesson
+     * opens on its own date & hour).
+     */
+    public static function is_paced($classId) {
+        return get_post_meta($classId, 'paced', true) == '1';
+    }
+
+    /**
      * Whether a class's schedule lets a lesson open.
      *
-     * $classLessons is the class's `lessons` meta, decoded: [{id, open?, open_at?}].
-     * open_at is site time, "Y-m-d H:i" - the lesson opens at that moment.
-     * Without a date, an older manual `open` flag decides; a lesson the class
-     * doesn't list is open unless the class is live.
+     * Self-paced: always. Paced: $classLessons is the class's `lessons` meta,
+     * decoded - [{id, open_at}] with open_at in site time, "Y-m-d H:i"; the
+     * lesson opens at that moment. An older manual `open` flag still counts.
+     * A lesson with no date stays closed.
      */
-    public static function is_lesson_released($classLessons, $lessonId, $isLive = false) {
-        foreach ((array) $classLessons as $entry) {
-            if ((int) ($entry['id'] ?? 0) !== (int) $lessonId) {
-                continue;
-            }
-            if (!empty($entry['open_at'])) {
-                return current_time('Y-m-d H:i') >= $entry['open_at'];
-            }
-            if (array_key_exists('open', $entry)) {
-                return $entry['open'] == true;
-            }
-            break;
+    public static function is_lesson_released($classLessons, $lessonId, $paced) {
+        if (!$paced) {
+            return true;
         }
-        return !$isLive;
+        $entry = self::find_lesson_entry($classLessons, $lessonId);
+        if (!empty($entry['open_at'])) {
+            return current_time('Y-m-d H:i') >= $entry['open_at'];
+        }
+        return !empty($entry['open']);
+    }
+
+    public static function student_count($classId) {
+        global $wpdb;
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(DISTINCT student_id) FROM " . FutureLMS::TABLE_PREFIX() . "class_to_students WHERE class_id = %d",
+            $classId
+        ));
     }
 
     public static function find_lesson_entry($classLessons, $lessonId) {

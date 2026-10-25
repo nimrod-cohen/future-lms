@@ -1,25 +1,39 @@
-<div class="ui padded height grid divided stackable">
-  <div class="four wide column">
-    <div class="ui form">
-      <div class="field">
-        <div class="ui search selection dropdown courses">
-          <div class="text">Select a course</div>
-        </div>
+<div class="classes-screen">
+  <div class="ui form classes-filters">
+    <div class="field">
+      <label>Course</label>
+      <div class="ui search selection dropdown courses">
+        <div class="text"></div>
       </div>
-      <div class="field">
-        <div class="ui search classes">
-          <div class="ui fluid icon input">
-            <input class="prompt" type="text" />
-            <i class="search icon"></i>
-          </div>
-          <div class="results"></div>
-        </div> 
+    </div>
+    <div class="field">
+      <label>Class</label>
+      <div class="ui selection dropdown classes disabled">
+        <div class="text"></div>
       </div>
     </div>
   </div>
-  <div class="twelve wide column">
-    <div class="ui very relaxed large list lessons">
-      <p>No results</p>
+
+  <div class="classes-empty">
+    <i class="calendar alternate outline icon"></i>
+    <p>Choose a course and a class to set how its lessons open.</p>
+  </div>
+
+  <div class="class-panel hidden">
+    <div class="class-header">
+      <div class="class-identity">
+        <h3 class="class-name"></h3>
+        <div class="class-meta"></div>
+      </div>
+      <div class="class-pacing">
+        <div class="ui buttons pacing">
+          <button type="button" class="ui button" data-paced="0">Self-paced</button>
+          <button type="button" class="ui button" data-paced="1">Paced</button>
+        </div>
+        <p class="pacing-note"></p>
+      </div>
     </div>
+
+    <div class="class-body"></div>
   </div>
 </div>

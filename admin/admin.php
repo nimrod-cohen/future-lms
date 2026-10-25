@@ -2,6 +2,16 @@
 use FutureLMS\classes\VersionManager;
 ?>
 
+<header class="flms-appbar">
+    <div class="flms-brand">
+        <span class="flms-name">Future LMS</span>
+        <span class="version"><?php echo esc_html(get_option(VersionManager::SCHOOL_VERSION, 0)); ?></span>
+        <span class="flms-site"><?php echo esc_html(get_bloginfo('name')); ?></span>
+    </div>
+    <a class="ui small basic button flms-back" href="<?php echo esc_url(admin_url()); ?>">
+        <span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span>Back to WordPress
+    </a>
+</header>
 <div class="ui top attached tabular menu">
     <a class="item active" data-tab="students">Students</a>
     <a class="item" data-tab="courses">
@@ -22,9 +32,6 @@ use FutureLMS\classes\VersionManager;
     </a>
     <a class="item" data-tab="mailer">Email</a>
     <a class="item" data-tab="settings">Settings</a>
-    <div>Future LMS
-        <span class="version"><?php echo get_option(VersionManager::SCHOOL_VERSION, 0); ?></span>
-    </div>
 </div>
 <div class="ui bottom attached tab segment active" data-tab="students">
     <div class='tab-header'>
@@ -37,8 +44,8 @@ use FutureLMS\classes\VersionManager;
 </div>
 <div class="ui bottom attached tab segment" data-tab="classes">
     <div class='tab-header'>
-        <h4 class="ui header">Classes management</h4>
-        <p class="description">Open classes by course progress</p>
+        <h4 class="ui header">Classes</h4>
+        <p class="description">Choose whether a class is self-paced or opens its lessons on set dates</p>
     </div>
     <?php include_once 'classes.php'?>
 </div>

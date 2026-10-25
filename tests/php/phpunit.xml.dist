@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<phpunit
+  bootstrap="bootstrap.php"
+  colors="true"
+  beStrictAboutOutputDuringTests="false"
+  convertDeprecationsToExceptions="false"
+>
+  <testsuites>
+    <testsuite name="future-lms">
+      <directory suffix="Test.php">tests</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

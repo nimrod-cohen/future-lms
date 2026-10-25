@@ -35,6 +35,92 @@ div.error {
   display: none !important;
 }
 
+/* Full-window app: this stylesheet only loads on the Future LMS screen,
+   which has no WP admin bar, menu or footer. */
+html.wp-toolbar {
+  padding-top: 0 !important;
+}
+
+body.flms-fullscreen {
+  background: #fff;
+
+  #wpadminbar,
+  #adminmenumain,
+  #wpfooter,
+  #screen-meta,
+  #screen-meta-links {
+    display: none !important;
+  }
+
+  #wpcontent,
+  #wpfooter {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  #wpwrap #wpcontent {
+    padding: 0 24px;
+  }
+
+  #wpbody {
+    padding-top: 0 !important;
+  }
+
+  #wpbody-content {
+    padding-bottom: 16px !important;
+  }
+}
+
+.flms-appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+
+  .flms-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .flms-name {
+    font-size: 1.25em;
+    font-weight: 700;
+    color: #1b1c1d;
+  }
+  .version {
+    font-size: 0.85em;
+    color: var(--disabled-color);
+    font-variant-numeric: tabular-nums;
+  }
+  .flms-site {
+    margin-left: 8px;
+    padding-left: 12px;
+    border-left: 1px solid #dcdee1;
+    color: #6b7178;
+    unicode-bidi: plaintext;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ui.button.flms-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin: 0;
+
+    .dashicons {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      color: inherit;
+    }
+  }
+}
+
 #wpwrap {
   height: 100%;
   #wpcontent {
@@ -67,21 +153,6 @@ div.error {
               }
             }
 
-            &:last-child {
-              align-self: center;
-              justify-content: right;
-              flex-grow: 1;
-              text-align: right;
-              background: #f1f1f1;
-              padding-right: 10px;
-              padding: 2px 10px 2px 4px;
-              border-radius: 3px;
-
-              .version {
-                font-size: 0.8em;
-                color: var(--disabled-color);
-              }
-            }
           }
         }
 
@@ -137,39 +208,275 @@ div.error {
             }
           }
 
-          &[data-tab='classes'] .ui.list.lessons {
-            .open-at-help {
-              color: #767676;
+          &[data-tab='classes'] .classes-screen {
+            --cls-border: #e3e5e8;
+            --cls-muted: #6b7178;
+            --cls-soft: #f6f7f8;
+            --cls-open: #1a7f37;
+            --cls-scheduled: #a85a07;
+            --cls-closed: #6b7178;
+
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-top: 4px;
+            max-width: 1100px;
+
+            .classes-filters {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 320px));
+              gap: 16px;
+
+              .field {
+                margin: 0;
+              }
+              label {
+                font-weight: 600;
+                margin-bottom: 6px;
+              }
+              .ui.dropdown {
+                width: 100%;
+              }
             }
 
-            .module-title {
-              margin: 1.2em 0 0.4em;
-            }
-
-            .item.lesson {
+            .classes-empty {
               display: flex;
               align-items: center;
-              gap: 0.5em;
-              padding: 0.3em 0;
+              gap: 12px;
+              padding: 28px 24px;
+              border: 1px dashed var(--cls-border);
+              border-radius: 8px;
+              color: var(--cls-muted);
 
-              &.saving {
-                opacity: 0.5;
+              .icon {
+                font-size: 1.6em;
+                margin: 0;
+              }
+              p {
+                margin: 0;
+                font-size: 1.05em;
+              }
+            }
+
+            .class-panel {
+              border: 1px solid var(--cls-border);
+              border-radius: 8px;
+              background: #fff;
+              transition: opacity 150ms ease-out;
+
+              &.is-busy {
+                opacity: 0.55;
                 pointer-events: none;
               }
+            }
 
-              .lesson-title {
-                flex: 1;
+            .class-header {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: flex-start;
+              justify-content: space-between;
+              gap: 16px 32px;
+              padding: 20px 24px;
+              border-bottom: 1px solid var(--cls-border);
+
+              .class-name {
+                margin: 0 0 4px;
+                font-size: 1.35em;
+                unicode-bidi: plaintext;
+                text-align: left;
+              }
+              .class-meta {
+                color: var(--cls-muted);
+              }
+            }
+
+            .class-pacing {
+              display: flex;
+              flex-direction: column;
+              align-items: flex-end;
+              gap: 8px;
+              max-width: 480px;
+
+              .ui.buttons .button.active {
+                background: #2185d0;
+                color: #fff;
+              }
+              .pacing-note {
+                margin: 0;
+                color: var(--cls-muted);
+                text-align: right;
+                font-size: 0.93em;
+              }
+            }
+
+            .class-body {
+              padding: 0 24px 16px;
+            }
+
+            .class-message {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+              padding: 24px 0 10px;
+
+              > .icon {
+                font-size: 1.5em;
+                margin: 0;
+              }
+              strong {
+                font-size: 1.1em;
+              }
+              p {
+                margin: 4px 0 0;
+                color: var(--cls-muted);
+              }
+            }
+
+            .schedule-summary {
+              display: flex;
+              gap: 24px;
+              padding: 16px 0 4px;
+              color: var(--cls-muted);
+
+              b {
+                color: #1b1c1d;
+                font-variant-numeric: tabular-nums;
+              }
+              .has-undated b {
+                color: var(--cls-scheduled);
+              }
+            }
+
+            .ui.table.schedule {
+              margin-top: 8px;
+
+              thead th {
+                position: sticky;
+                /* Sticky stops at the tab's 14px top padding, leaving a strip
+                   that rows scroll through; pull the header up into it. */
+                top: -14px;
+                z-index: 2;
+                background: #fff;
+                box-shadow: inset 0 -1px 0 var(--cls-border);
+                color: var(--cls-muted);
+                font-weight: 600;
+                font-size: 0.9em;
+                padding-top: 10px;
+                padding-bottom: 10px;
+              }
+              .col-status {
+                width: 130px;
+              }
+              .col-date {
+                width: 300px;
+              }
+              .col-action {
+                width: 120px;
+                text-align: right;
+
+                .ui.button.open-now {
+                  margin: 0;
+                  white-space: nowrap;
+                }
               }
 
-              .open-at-field {
-                display: flex;
-                align-items: center;
-                gap: 0.25em;
-                min-width: 15em;
+              .module-row td {
+                background: var(--cls-soft);
+                padding-top: 12px;
+                padding-bottom: 12px;
+                border-top: 1px solid var(--cls-border);
+              }
+              .module-name {
+                font-weight: 600;
+                unicode-bidi: plaintext;
+              }
+              .set-all-label {
+                display: block;
+                margin-bottom: 4px;
+                color: var(--cls-muted);
+                font-size: 0.85em;
+                font-weight: 600;
+              }
 
-                .clear-open-at {
+              .lesson-row td {
+                padding-top: 6px;
+                padding-bottom: 6px;
+              }
+              .lesson-title {
+                padding-left: 16px;
+                unicode-bidi: plaintext;
+                text-align: left;
+              }
+            }
+
+            .lesson-status {
+              display: inline-flex;
+              align-items: center;
+              gap: 2px;
+              font-size: 0.93em;
+              white-space: nowrap;
+
+              &.is-open { color: var(--cls-open); }
+              &.is-scheduled { color: var(--cls-scheduled); }
+              &.is-closed { color: var(--cls-closed); }
+            }
+
+            .open-at-field {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+
+              .ui.input input {
+                padding: 6px 8px;
+                font-variant-numeric: tabular-nums;
+              }
+              .clear-open-at {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 26px;
+                height: 26px;
+                padding: 0;
+                border: 0;
+                border-radius: 4px;
+                background: transparent;
+                color: var(--cls-muted);
+                cursor: pointer;
+
+                .icon {
                   margin: 0;
                 }
+                &:hover {
+                  background: var(--cls-soft);
+                  color: #1b1c1d;
+                }
+                &:focus-visible {
+                  outline: 2px solid #2185d0;
+                  outline-offset: 1px;
+                }
+              }
+            }
+
+            @media (max-width: 782px) {
+              .classes-filters {
+                grid-template-columns: 1fr;
+              }
+              .class-pacing {
+                align-items: flex-start;
+                .pacing-note { text-align: left; }
+              }
+              .class-header,
+              .class-body {
+                padding-left: 14px;
+                padding-right: 14px;
+              }
+              .ui.table.schedule {
+                thead { display: none !important; }
+                .col-status { width: auto; }
+                .col-date { width: auto; }
+                .lesson-row td { padding: 2px 0 !important; }
+                .lesson-row td:last-child { padding-bottom: 12px !important; }
+                .lesson-title { padding-left: 0; padding-top: 12px !important; font-weight: 600; }
               }
             }
           }
