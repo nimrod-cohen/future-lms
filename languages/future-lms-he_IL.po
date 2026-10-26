@@ -105,3 +105,15 @@ msgstr "בחר תמונה"
 
 msgid "Remove"
 msgstr "הסר"
+
+msgid "Screen layout"
+msgstr "תצוגת מסך"
+
+msgid "Video only"
+msgstr "וידאו בלבד"
+
+msgid "Video and text"
+msgstr "וידאו וטקסט"
+
+msgid "Text only"
+msgstr "טקסט בלבד"

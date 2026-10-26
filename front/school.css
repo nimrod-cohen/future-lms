@@ -546,6 +546,17 @@ body.school {
                   color: #1a1a1a;
                 }
               }
+
+              /* Phone-only dropdown parts. On a desktop the wrapper adds no
+                 box, so the options stay direct flex items of the switch. */
+              .layout-current,
+              .layout-label {
+                display: none;
+              }
+
+              .layout-options {
+                display: contents;
+              }
             }
 
           }
@@ -1325,49 +1336,99 @@ body.school {
           .lesson-materials .lesson-materials-nav {
             gap: 0.2rem;
             font-size: 0.8rem;
-            /* The row is as tall as the stacked switch here, so it needs room
-               under the tabs as well as over them for the switch to look
-               centred in it rather than sitting low. */
-            padding-bottom: 0.8rem;
 
             /* Labels sit on the bottom edge by the active-tab underline. The
-               items still stretch, so the underline stays on the row's edge —
-               only the text moves down. Scoped to the tabs so the switch keeps
-               its own centring. */
+               items stretch to the row's bottom border, so the underline lands
+               on it. Scoped to the tabs so the switch keeps its own centring. */
             li[tab-id] {
               align-items: end;
+              padding-inline: 0.4rem;
             }
 
-            /* Stacked on a phone: the four tab labels need the width more than
-               the switch does. The thumb follows without any change — it is
-               placed from the segment's box, which is now above or below its
-               neighbours rather than beside them. */
-            .layout-toggle {
-              flex-direction: column;
-              gap: 1px;
+            /* A dropdown on a phone: one button showing the current layout,
+               opening a menu of the three. The menu is position:fixed (placed
+               by JS) so the scrolling materials pane can't clip it — in video
+               mode that pane is only the tabs row. */
+            li.layout-toggle {
+              margin-inline-end: 0.4rem;
+              padding: 0;
+              background: #fff;
 
-              .layout-option {
-                padding: 2px 4px;
+              .layout-thumb {
+                display: none;
+              }
+
+              .layout-current {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 6px;
+                border: 0;
+                background: transparent;
+                color: #1a1a1a;
+                cursor: pointer;
+
+                .layout-current-icon {
+                  display: flex;
+                }
 
                 svg {
                   width: 16px;
                   height: 16px;
                 }
+
+                .layout-chevron {
+                  width: 10px;
+                  height: 10px;
+                  color: #6b7075;
+                  transition: transform 0.15s ease;
+                }
+              }
+
+              &.open .layout-chevron {
+                transform: rotate(180deg);
+              }
+
+              .layout-options {
+                display: none;
+                position: fixed;
+                top: var(--menu-top, 0);
+                left: var(--menu-left, 0);
+                z-index: 20;
+                flex-direction: column;
+                gap: 2px;
+                min-width: max-content;
+                padding: 4px;
+                background: #fff;
+                border: 1px solid #e6e8ea;
+                border-radius: 8px;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+              }
+
+              &.open .layout-options {
+                display: flex;
+              }
+
+              .layout-option {
+                justify-content: flex-start;
+                gap: 8px;
+                padding: 8px 10px;
+                border-radius: 5px;
+                font-size: 0.9rem;
+                font-family: inherit;
+                color: #4a4f54;
+
+                &.selected {
+                  background: rgba(0, 0, 0, 0.06);
+                  color: #1a1a1a;
+                  font-weight: bold;
+                }
+              }
+
+              .layout-label {
+                display: inline;
               }
             }
-          }
-
-          /* A stacked switch is taller than the 58px the row has on a desktop,
-             so the row takes its height from its content here — and the
-             maximised video state has to leave that much behind. */
-          --tabs-height: 104px;
-
-          .lesson-materials {
-            grid-template-rows: auto auto 1fr;
-          }
-
-          &.no-materials .lesson-materials {
-            grid-template-rows: auto;
           }
 
           textarea.student-notes {
@@ -1518,14 +1579,14 @@ body.school .lesson-materials .skip-lesson-floating {
   display: none;
 }
 @media screen and (max-width: 900px) {
-  /* `block` + `width: fit-content` + `margin: 14px auto 8px` is the most
+  /* `block` + `width: fit-content` + `margin: 14px auto 12px` is the most
      reliable centering — it doesn't rely on justify-self (which the grid
      parent can flake on for inline-block items) or on the parent being a
      flex/grid with the right alignment. */
   body.school .lesson-materials .skip-lesson-floating:not(.hidden) {
     display: block;
     width: fit-content;
-    margin: 14px auto 0;
+    margin: 14px auto 12px;
     padding: 4px 14px;
     background: #fff;
     color: #1a1a1a;

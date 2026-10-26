@@ -167,8 +167,20 @@ class Classroom {
     JSUtils.addGlobalEventListener(coursePage, '.skip-lesson', 'click', () => this.skipLesson());
 
     coursePage.querySelectorAll('.layout-option').forEach(option =>
-      option.addEventListener('click', () => this.setLayout(option.dataset.layout))
+      option.addEventListener('click', () => {
+        this.setLayout(option.dataset.layout);
+        this.toggleLayoutMenu(false);
+      })
     );
+    coursePage.querySelector('.layout-current')?.addEventListener('click', e => {
+      e.stopPropagation();
+      this.toggleLayoutMenu();
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.layout-toggle')) this.toggleLayoutMenu(false);
+    });
+    document.addEventListener('keydown', e => e.key === 'Escape' && this.toggleLayoutMenu(false));
+    window.addEventListener('resize', () => this.toggleLayoutMenu(false));
     this.watchLayoutSwitch();
     document.querySelectorAll('.nav-lessons').forEach(nav =>
       nav.addEventListener('click', () => {
@@ -301,6 +313,35 @@ class Classroom {
     });
 
     this.moveLayoutThumb(selected);
+
+    const currentIcon = coursePage.querySelector('.layout-current-icon');
+    const icon = selected?.querySelector('svg');
+    if (currentIcon && icon) currentIcon.replaceChildren(icon.cloneNode(true));
+  };
+
+  /**
+   * The phone dropdown for the layout switch. Its menu is position:fixed so the
+   * scrolling materials pane can't clip it, which means placing it here: under
+   * the button, or above it when there's no room below (video-only mode puts
+   * the button at the bottom of the screen).
+   */
+  toggleLayoutMenu = force => {
+    const toggle = this.state.get('coursePage')?.querySelector('.layout-toggle');
+    const button = toggle?.querySelector('.layout-current');
+    const menu = toggle?.querySelector('.layout-options');
+    if (!menu) return;
+
+    const open = toggle.classList.toggle('open', force ?? !toggle.classList.contains('open'));
+    button.setAttribute('aria-expanded', open);
+    if (!open) return;
+
+    const box = button.getBoundingClientRect();
+    const height = menu.offsetHeight;
+    const below = box.bottom + 4;
+    const top = below + height > window.innerHeight ? box.top - height - 4 : below;
+    const left = Math.min(box.left, window.innerWidth - menu.offsetWidth - 8);
+    menu.style.setProperty('--menu-top', `${Math.max(top, 8)}px`);
+    menu.style.setProperty('--menu-left', `${Math.max(left, 8)}px`);
   };
 
   /**
@@ -474,26 +515,59 @@ class Classroom {
 
     this.state.set('tab', 'content');
 
-    // Skip-to-next-lesson is only meaningful when the course locks progression
-    // AND the current lesson is one that the lock applies to (count_progress).
-    // Only the floating (mobile) button is toggled here — the inline sidebar
-    // buttons render unconditionally for count_progress sequential lessons,
-    // and CSS shows them only on the currently-selected lesson.
-    const showSkip = !!(lesson.sequential && lesson.count_progress);
-    coursePage.querySelectorAll('.skip-lesson-floating').forEach(btn => btn.classList.toggle('hidden', !showSkip));
+    // The floating (mobile) button shows on every lesson the sequential lock
+    // applies to. Once the lesson is seen there's nothing to skip, so it just
+    // reads "next lesson" (skipLesson then only navigates). The sidebar rows
+    // carry their own skip button, which canSkip leaves off seen lessons.
+    const lockedCourse = !!(lesson.sequential && lesson.count_progress);
+    const seen = lockedCourse && !this.canSkip(lesson);
+    coursePage.querySelectorAll('.skip-lesson-floating').forEach(btn => {
+      btn.classList.toggle('hidden', !lockedCourse);
+      btn.textContent = seen ? 'לשיעור הבא' : 'דלג לשיעור הבא';
+    });
 
     this.persistCurrentLesson(lesson.id);
   };
+
+  /**
+   * How much of a lesson the student has watched, 0-100, from the loaded
+   * progress (summed over its videos). 0 when there's no progress yet.
+   */
+  lessonPercent = lesson => {
+    try {
+      const progress = this.state.get('student-progress');
+      const treeLesson =
+        progress.course_tree[this.state.get('courseId')].modules[lesson.module_id].lessons[lesson.id];
+      const lessonProgress = progress.course_progress?.[lesson.id];
+      if (!lessonProgress) return 0;
+
+      const passed = Object.values(lessonProgress).reduce((sum, video) => sum + video.percent, 0);
+      return parseInt((passed / (treeLesson.videos.length * 100)) * 100) || 0;
+    } catch (ex) {
+      return 0;
+    }
+  };
+
+  /**
+   * Skipping only matters on a lesson the sequential lock applies to and that
+   * isn't seen yet. Seen = past the server's SEQUENTIAL_GATE_THRESHOLD (80%),
+   * the point where the next lesson already opens, so a skip would do nothing.
+   */
+  canSkip = lesson => !!(lesson.sequential && lesson.count_progress) && this.lessonPercent(lesson) < 80;
 
   skipLesson = async () => {
     const lesson = this.state.get('lesson');
     if (!lesson?.id) return;
 
-    const result = await callServer({
-      action: 'skip_lesson',
-      lesson_id: lesson.id
-    });
-    if (!result) return;
+    // A seen lesson already opens the next one — just move on, without
+    // recording a skip (it would also reach the CRM as `skipped`).
+    if (this.canSkip(lesson)) {
+      const result = await callServer({
+        action: 'skip_lesson',
+        lesson_id: lesson.id
+      });
+      if (!result) return;
+    }
 
     // Re-fetch lessons (so `open` flags reflect the unlocked next lesson),
     // quizzes (skipping the last lesson of a module unlocks its quiz, and the
@@ -818,8 +892,18 @@ class Classroom {
     </svg>`;
 
   toggleMobileSidebar = show => {
-    if (show) this.state.get('sidebar').classList.add('show');
-    else this.state.get('sidebar').classList.remove('show');
+    const sidebar = this.state.get('sidebar');
+    sidebar.classList.toggle('show', !!show);
+    if (!show) return;
+
+    // Land on where the student is. Centred by hand rather than with
+    // scrollIntoView, which would also scroll the page behind the overlay.
+    const selected = sidebar.querySelector('.sidebar-lesson.selected');
+    if (!selected) return;
+    // Rows of a collapsed module are display:none and have no position.
+    selected.closest('.sidebar-module')?.classList.add('open');
+    const offset = selected.getBoundingClientRect().top - sidebar.getBoundingClientRect().top;
+    sidebar.scrollTop += offset - (sidebar.clientHeight - selected.offsetHeight) / 2;
   };
 
   showSidebar = () => {
@@ -901,27 +985,19 @@ class Classroom {
       try {
         const courseTreeLesson = progress.course_tree[course].modules[lesson.module_id].lessons[lesson.id];
         showPlay = courseTreeLesson.videos[0] !== 'text';
-
-        var lessonTotal = courseTreeLesson.videos.length * 100;
-
-        const lessonProgress = progress.course_progress?.[lesson.id];
-        if (lessonProgress) {
-          const passed = Object.values(lessonProgress).reduce((prev, curr) => {
-            prev += curr.percent;
-            return prev;
-          }, 0);
-
-          const pct = parseInt((passed / lessonTotal) * 100);
-          background = `linear-gradient(to top, #46da9c 0, #46da9c ${pct}%, white ${pct}%, white 100%)`;
-        }
       } catch (ex) {}
+      const pct = this.lessonPercent(lesson);
+      if (pct > 0) {
+        background = `linear-gradient(to top, #46da9c 0, #46da9c ${pct}%, white ${pct}%, white 100%)`;
+      }
 
       // Inline "דלג" button is rendered once per row for count_progress
-      // sequential lessons and shown by CSS only on `.sidebar-lesson.selected`.
+      // sequential lessons not yet seen (see canSkip), and shown by CSS only
+      // on `.sidebar-lesson.selected`.
       // Always built into the row so we don't have to re-render the sidebar
       // when the currently-selected lesson changes — selection just moves
       // the .selected class.
-      const skipBtnHtml = (lesson.sequential && lesson.count_progress)
+      const skipBtnHtml = this.canSkip(lesson)
         ? `<button type="button" class="skip-lesson skip-lesson-sidebar">דלג</button>`
         : '';
 
@@ -975,6 +1051,8 @@ class Classroom {
         // so completing a sequential lesson unlocks the next one without a reload.
         lessonDiv.classList.toggle('locked', !lesson.open);
         lessonDiv.querySelector('label').innerHTML = labelHtml;
+        // Watching past the threshold makes the skip pointless — drop it.
+        if (!skipBtnHtml) lessonDiv.querySelector('.skip-lesson-sidebar')?.remove();
       }
     });
 
@@ -1254,6 +1332,10 @@ class Classroom {
     await this.loadLessons();
     await this.loadQuizzes();
     this.showSidebar();
+    // Again, now that the lessons know they're unlocked: the first render ran
+    // against the old gates, so on a blocking quiz the next lesson still read
+    // as locked and the "continue" button was left out.
+    this.renderQuiz();
 
     // The score now sits below the reviewed answers, so on anything longer
     // than a couple of questions it lands off-screen — bring it into view or

@@ -90,13 +90,17 @@ if ($hours > 0) {
         <li tab-id="homework">משימות</li>
         <li tab-id="student-notes">הערות תלמיד</li>
         <li class="layout-toggle">
+          <button type="button" class="layout-current" aria-haspopup="true" aria-expanded="false"
+                  aria-label="<?php esc_attr_e("Screen layout", "future-lms"); ?>"><span class="layout-current-icon"></span><svg class="layout-chevron" viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <span class="layout-thumb" aria-hidden="true"></span>
-          <button type="button" class="layout-option" data-layout="video"
-                  aria-label="<?php esc_attr_e("Video only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 13.5 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="9" fill="currentColor" opacity=".35"/></svg></button>
-          <button type="button" class="layout-option" data-layout="split"
-                  aria-label="<?php esc_attr_e("Video and text", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 10 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="5.5" fill="currentColor" opacity=".35"/></svg></button>
-          <button type="button" class="layout-option" data-layout="text"
-                  aria-label="<?php esc_attr_e("Text only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 7 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="2.5" fill="currentColor" opacity=".35"/></svg></button>
+          <span class="layout-options">
+            <button type="button" class="layout-option" data-layout="video"
+                    aria-label="<?php esc_attr_e("Video only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 13.5 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="9" fill="currentColor" opacity=".35"/></svg><span class="layout-label"><?php esc_html_e("Video only", "future-lms"); ?></span></button>
+            <button type="button" class="layout-option" data-layout="split"
+                    aria-label="<?php esc_attr_e("Video and text", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 10 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="5.5" fill="currentColor" opacity=".35"/></svg><span class="layout-label"><?php esc_html_e("Video and text", "future-lms"); ?></span></button>
+            <button type="button" class="layout-option" data-layout="text"
+                    aria-label="<?php esc_attr_e("Text only", "future-lms"); ?>"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 7 h13" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="4.5" width="13" height="2.5" fill="currentColor" opacity=".35"/></svg><span class="layout-label"><?php esc_html_e("Text only", "future-lms"); ?></span></button>
+          </span>
         </li>
       </ul>
       <button type="button" class="skip-lesson skip-lesson-floating hidden"><?php _e('דלג לשיעור הבא', 'future-lms'); ?></button>
