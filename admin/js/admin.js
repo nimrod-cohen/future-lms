@@ -4,6 +4,7 @@ class AdminManager {
   constructor() {
     COMMON.watchIcons();
     COMMON.watchDropdowns();
+    COMMON.watchTooltips();
     COMMON.initTabs();
 
     this.studentsTab = new StudentsTab();

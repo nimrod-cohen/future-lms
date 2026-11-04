@@ -439,6 +439,42 @@ const COMMON = {
     return api;
   },
 
+  /**
+   * Hover tooltips for [data-tip]. One element on <body>, fixed-positioned and
+   * kept inside the viewport, so cards with overflow:hidden can't clip it.
+   */
+  watchTooltips() {
+    if (!window.matchMedia('(hover: hover)').matches) return; // touch gets the aria-label
+    const tip = document.createElement('div');
+    tip.className = 'flms-tip';
+    tip.hidden = true;
+    document.body.appendChild(tip);
+    let current = null;
+
+    const hide = () => { tip.hidden = true; current = null; };
+    const show = el => {
+      current = el;
+      tip.textContent = el.dataset.tip;
+      tip.hidden = false;
+      const r = el.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const pad = 8;
+      const left = Math.min(Math.max(r.left + r.width / 2 - t.width / 2, pad), window.innerWidth - t.width - pad);
+      let top = r.top - t.height - 6;
+      if (top < pad) top = r.bottom + 6; // no room above: flip below
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    };
+
+    document.addEventListener('mouseover', e => {
+      const el = e.target.closest?.('[data-tip]');
+      if (el === current) return;
+      if (el && el.dataset.tip) show(el); else hide();
+    });
+    document.addEventListener('scroll', hide, true);
+    document.addEventListener('click', hide, true);
+  },
+
   /** Upgrades every select in the app and in slide-out editors, now and later. */
   watchDropdowns() {
     const upgrade = root =>

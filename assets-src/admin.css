@@ -359,32 +359,21 @@ body.flms-fullscreen {
     }
   }
 
-  /* Tooltips: hover devices only; touch gets the aria-label. */
-  @media (hover: hover) {
-    [data-tip] {
-      position: relative;
-    }
-    [data-tip]:hover::after {
-      content: attr(data-tip);
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 40;
-      width: max-content;
-      max-width: 260px;
-      padding: 5px 8px;
-      border-radius: 6px;
-      background: var(--color-slate-900);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 500;
-      line-height: 1.35;
-      white-space: normal;
-      text-align: center;
-      pointer-events: none;
-      animation: flms-fade 120ms ease-out;
-    }
+  /* Tooltip for [data-tip], positioned by COMMON.watchTooltips(). */
+  .flms-tip {
+    position: fixed;
+    z-index: 100000;
+    max-width: 260px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: var(--color-slate-900);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: center;
+    pointer-events: none;
+    animation: flms-fade 120ms ease-out;
   }
 
   /* Form fields */
