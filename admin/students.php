@@ -136,3 +136,22 @@ $flms_months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
     <button type="button" class="flms-btn flms-btn-primary next">Next</button>
   </div>
 </dialog>
+
+<dialog id="move-class-modal" class="flms-dialog" aria-labelledby="move-class-title">
+  <div class="flms-dialog-head">
+    <h3 id="move-class-title" class="text-base font-semibold header">Move to another class</h3>
+    <button type="button" class="flms-iconbtn modal-close" aria-label="Close"><i data-lucide="x" aria-hidden="true"></i></button>
+  </div>
+  <div class="flms-dialog-body">
+    <p class="mb-4 text-sm text-slate-600 current-class"></p>
+    <label class="flms-label" for="move-class-to">New class</label>
+    <select id="move-class-to" class="flms-select move-to"></select>
+    <label class="flms-label mt-4" for="move-comment">Comment <span class="font-normal text-slate-500">(optional)</span></label>
+    <textarea id="move-comment" class="flms-textarea" rows="3" placeholder="Why the move"></textarea>
+    <p class="flms-hint">Their progress is kept. No payment is recorded.</p>
+  </div>
+  <div class="flms-dialog-foot">
+    <button type="button" class="flms-btn mr-auto modal-close">Cancel</button>
+    <button type="button" class="flms-btn flms-btn-primary move-confirm" disabled>Move student</button>
+  </div>
+</dialog>

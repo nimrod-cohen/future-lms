@@ -415,4 +415,27 @@ test.describe('adding a student who is in another class', () => {
     await tab.locator('.search-students').click();
     await expect(tab.locator('.result-count')).toHaveText('0 students');
   });
+
+  test('the swap button on a row moves them back', async ({ page }) => {
+    await page.goto(`${ADMIN}#students`);
+    const tab = page.locator(".flms-panel[data-tab='students']");
+    await pick(tab, 'select.courses', 'E2E Course');
+    await pick(tab, 'select.classes', 'E2E Recorded Class');
+    await tab.locator('.search-students').click();
+    await expect(tab.locator('.result-count')).toHaveText('1 student');
+
+    await tab.locator('tr[data-id] .move-class').click();
+    const modal = page.locator('#move-class-modal');
+    await expect(modal.locator('.current-class')).toHaveText('Now in E2E Recorded Class.');
+    await expect(modal.locator('.move-confirm')).toBeDisabled();
+    await pick(modal, 'select.move-to', 'E2E Paced Class');
+    await modal.locator('.move-confirm').click();
+    await expect(modal).toBeHidden();
+
+    // the list reloads for the filtered class, which is now empty
+    await expect(tab.locator('.result-count')).toHaveText('0 students');
+    await pick(tab, 'select.classes', 'E2E Paced Class');
+    await tab.locator('.search-students').click();
+    await expect(tab.locator('.result-count')).toHaveText('1 student');
+  });
 });

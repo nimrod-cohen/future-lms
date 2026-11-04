@@ -41,6 +41,14 @@ class StudentsTab {
     modal.querySelectorAll('.flms-segmented [data-mode]').forEach(button =>
       button.addEventListener('click', () => this.setMode(button.dataset.mode === 'existing'))
     );
+    // Move-to-another-class dialog
+    const moveModal = (this.moveModal = document.querySelector('#move-class-modal'));
+    this.moveTo = COMMON.select(moveModal.querySelector('select.move-to'), [], v => {
+      moveModal.querySelector('.move-confirm').disabled = !v;
+    }, 'Pick a class');
+    moveModal.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => moveModal.close()));
+    moveModal.querySelector('.move-confirm').addEventListener('click', this.confirmMoveClass);
+
     modal.querySelectorAll('.flms-input').forEach(input =>
       input.addEventListener('input', () => input.classList.remove('is-invalid'))
     );
@@ -196,6 +204,53 @@ class StudentsTab {
     this.alreadyInClass = !!same;
   }
 
+  showMoveClass = async student => {
+    const modal = this.moveModal;
+    this.moving = student;
+    const name = student.display_name || 'the student';
+    modal.querySelector('.header').textContent = `Move ${name} to another class`;
+    modal.querySelector('.current-class').textContent = `Now in ${student.class_name}.`;
+    modal.querySelector('#move-comment').value = '';
+    modal.querySelector('.move-confirm').disabled = true;
+    this.moveTo.setValues([]);
+    this.moveTo.disable(true);
+    modal.showModal();
+
+    const classes = await JSUtils.fetch(__futurelms.ajax_url, {
+      action: 'get_classes',
+      course_id: student.course_id,
+      student_id: student.id
+    });
+    if (this.moving !== student) return; // closed and reopened meanwhile
+    const others = (classes || []).filter(c => String(c.id) !== String(student.class_id));
+    this.moveTo.setValues(others.map(c => ({ name: c.title, value: String(c.id) })));
+    this.moveTo.disable(!others.length);
+    if (!others.length) modal.querySelector('select.move-to').innerHTML = '<option value="">This course has no other class</option>';
+  };
+
+  confirmMoveClass = async () => {
+    const modal = this.moveModal;
+    const student = this.moving;
+    const button = modal.querySelector('.move-confirm');
+    button.disabled = true;
+    try {
+      const res = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'move_student_class',
+        student_id: student.id,
+        course_id: student.course_id,
+        class_id: this.moveTo.value(),
+        comment: modal.querySelector('#move-comment').value
+      });
+      if (!res?.success) throw new Error(res?.data?.message || 'server error');
+      modal.close();
+      notifications.show('Student moved', 'success');
+      this.fetchStudents();
+    } catch (err) {
+      button.disabled = false;
+      notifications.show(`Could not move the student: ${err.message}`, 'error');
+    }
+  };
+
   async moveStudentClass(courseId, userData) {
     const next = this.modal.querySelector('.next');
     next.disabled = true;
@@ -290,7 +345,12 @@ class StudentsTab {
           <td data-label="Email" class="md:whitespace-nowrap break-all md:break-normal">${esc(s.user_email)}</td>
           <td data-label="Phone" class="tabular-nums whitespace-nowrap">${blank(s.phone) ? '' : esc(s.phone)}</td>
           <td data-label="Course" class="flms-bidi">${esc(s.course_name)}</td>
-          <td data-label="Class" class="flms-bidi">${esc(s.class_name)}</td>
+          <td data-label="Class">
+            <div class="flex items-center gap-1.5">
+              <span class="flms-bidi">${esc(s.class_name)}</span>
+              <button type="button" class="flms-iconbtn move-class" data-tip="Move to another class" aria-label="Move to another class">${COMMON.icon('arrow-left-right')}</button>
+            </div>
+          </td>
           <td data-label="Joined" class="tabular-nums whitespace-nowrap">${esc(String(s.registration_date || '').substring(0, 10))}</td>
           <td data-label="Progress">${progress}</td>
           <td class="text-right"><button type="button" class="flms-iconbtn is-danger remove-class" data-tip="Remove from class" aria-label="Remove from class">${COMMON.icon('user-minus')}</button></td>
@@ -312,6 +372,7 @@ class StudentsTab {
           }
         });
       });
+      row.querySelector('.move-class').addEventListener('click', () => this.showMoveClass(student));
       row.querySelector('.progress-link')?.addEventListener('click', () =>
         this.showProgressDetail(student.id, row.dataset.courseId, student.display_name, student.course_name)
       );
