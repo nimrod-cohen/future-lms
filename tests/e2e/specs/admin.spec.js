@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const fixtures = require('../fixtures');
+const runFixtures = require('../wp');
 
 const ADMIN = '/wp-admin/admin.php?page=future-lms-settings';
 
@@ -378,5 +379,40 @@ test.describe('on a phone', () => {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `${name} tab overflows`).toBeLessThanOrEqual(0);
     }
+  });
+});
+
+// Last: it moves the fixture student out of the class the other specs use.
+test.describe('adding a student who is in another class', () => {
+  test('offers to move them, and moving keeps them in the course', async ({ page }) => {
+    const f = fixtures();
+    runFixtures('second-class', f.course);
+
+    await page.goto(`${ADMIN}#students`);
+    const tab = page.locator(".flms-panel[data-tab='students']");
+    await pick(tab, 'select.courses', 'E2E Course');
+    await pick(tab, 'select.classes', 'E2E Recorded Class');
+    await tab.locator('.add-student').click();
+
+    const modal = page.locator('#add-student-modal');
+    await modal.locator('#existing-student-search').fill('flms-e2e');
+    await modal.locator('.flms-combo.student li', { hasText: 'flms-e2e-student' }).first().click();
+    await modal.locator('.next').click();
+
+    await expect(modal.locator('.move-notice')).toContainText('is already in E2E Paced Class');
+    await expect(modal.locator('.add-hint')).toBeHidden();
+    await expect(modal.locator('.next')).toHaveText('Move student');
+
+    await modal.locator('.next').click();
+    await expect(modal).toBeHidden();
+    await expect(page.locator('body')).toContainText('Student moved');
+
+    await pick(tab, 'select.classes', 'E2E Recorded Class');
+    await tab.locator('.search-students').click();
+    await expect(tab.locator('.result-count')).toHaveText('1 student');
+
+    await pick(tab, 'select.classes', 'E2E Paced Class');
+    await tab.locator('.search-students').click();
+    await expect(tab.locator('.result-count')).toHaveText('0 students');
   });
 });

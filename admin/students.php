@@ -124,9 +124,10 @@ $flms_months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
   </div>
 
   <div class="flms-dialog-body step-2" data-step="2" hidden>
+    <div class="move-notice mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-700" hidden></div>
     <label class="flms-label" for="comment">Comment <span class="font-normal text-slate-500">(optional)</span></label>
     <textarea id="comment" class="flms-textarea" rows="4" placeholder="A note about this enrollment"></textarea>
-    <p class="flms-hint">The student is enrolled without a payment.</p>
+    <p class="flms-hint add-hint">The student is enrolled without a payment.</p>
   </div>
 
   <div class="flms-dialog-foot">

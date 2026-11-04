@@ -88,6 +88,7 @@ class StudentsTab {
       i.classList.remove('is-invalid');
     });
     this.modal.querySelector('.next').disabled = false;
+    this.setPendingMove(null);
     this.state.set('step', 1);
   };
 
@@ -101,8 +102,13 @@ class StudentsTab {
     e.preventDefault();
     const step = this.state.get('step');
     if (!this.validateStep(step)) return;
-    if (step === this.LAST_STEP) this.submitAddStudent();
-    else this.state.set('step', step + 1);
+    if (step === this.LAST_STEP) {
+      if (this.alreadyInClass) return notifications.show('The student is already in this class', 'error');
+      this.submitAddStudent();
+    } else {
+      this.state.set('step', step + 1);
+      if (step + 1 === this.LAST_STEP) this.checkCurrentClass();
+    }
   };
 
   validateStep(step) {
@@ -147,7 +153,68 @@ class StudentsTab {
     userData.method = 'manual';
 
     this.modal.querySelector('.next').disabled = true;
-    this.addStudentToClass(this.courseSelect.value(), userData, 0);
+    if (this.pendingMove) this.moveStudentClass(this.courseSelect.value(), userData);
+    else this.addStudentToClass(this.courseSelect.value(), userData, 0);
+  }
+
+  /**
+   * A student already in another class of this course can't be added again.
+   * Checked on entering step 2, which then offers to move them instead.
+   */
+  async checkCurrentClass() {
+    this.setPendingMove(null);
+    if (!this.state.get('existing')) return;
+    const studentId = this.modal.querySelector('.flms-combo.student').getAttribute('data-id');
+    const next = this.modal.querySelector('.next');
+    next.disabled = true;
+    try {
+      const classes = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'get_classes',
+        course_id: this.courseSelect.value(),
+        student_id: studentId
+      });
+      this.setPendingMove((classes || []).find(c => c.attending) || null);
+    } catch (e) {
+      // the add itself reports any problem
+    } finally {
+      next.disabled = false;
+    }
+  }
+
+  setPendingMove(current) {
+    const notice = this.modal.querySelector('.move-notice');
+    const next = this.modal.querySelector('.next');
+    const name = this.modal.querySelector('.flms-combo.student input').value || 'The student';
+    const same = current && String(current.id) === String(this.classSelect.value());
+    this.pendingMove = current && !same ? current : null;
+
+    notice.hidden = !current;
+    if (same) notice.textContent = `${name} is already in this class.`;
+    else if (current) notice.textContent = `${name} is already in ${current.title}. Move them to this class instead? Their progress is kept.`;
+    this.modal.querySelector('.add-hint').hidden = !!current;
+    next.textContent = this.pendingMove ? 'Move student' : 'Add student';
+    this.alreadyInClass = !!same;
+  }
+
+  async moveStudentClass(courseId, userData) {
+    const next = this.modal.querySelector('.next');
+    next.disabled = true;
+    try {
+      const res = await JSUtils.fetch(__futurelms.ajax_url, {
+        action: 'move_student_class',
+        student_id: userData.id,
+        course_id: courseId,
+        class_id: userData.class_id,
+        comment: userData.comment
+      });
+      if (!res?.success) throw new Error(res?.data?.message || 'server error');
+      this.modal.close();
+      notifications.show('Student moved', 'success');
+      this.fetchStudents();
+    } catch (err) {
+      next.disabled = false;
+      notifications.show(`Could not move the student: ${err.message}`, 'error');
+    }
   }
 
   addStudentToClass(courseId, userData, sum) {
@@ -166,6 +233,10 @@ class StudentsTab {
       this.modal.close();
       notifications.show('Student added', 'success');
       this.fetchStudents();
+    }).catch(err => {
+      // e.g. the student is already in another class of this course
+      this.modal.querySelector('.next').disabled = false;
+      notifications.show(`Could not add the student: ${err?.message || 'server error'}`, 'error');
     });
   }
 

@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 3.1.5
+ * Version: 3.2.0
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -221,6 +221,7 @@ class FutureLMS {
     add_action("wp_ajax_get_students", [$this, "get_students"]);
     add_action("wp_ajax_get_student_progress_detail", [$this, "get_student_progress_detail"]);
     add_action("wp_ajax_remove_class", [$this, "remove_student_from_class"]);
+    add_action("wp_ajax_move_student_class", [$this, "move_student_class"]);
     add_action("wp_ajax_set_lesson_open_at", [$this, "set_lesson_open_at"]);
     add_action("wp_ajax_set_class_pacing", [$this, "set_class_pacing"]);
     add_action("wp_ajax_send_email", [$this, "sendEmail"]);
@@ -591,6 +592,37 @@ class FutureLMS {
 
   public function show_admin_page() {
     require_once __DIR__ . DIRECTORY_SEPARATOR . 'admin/admin.php';
+  }
+
+  /** Moves a student between two classes of the same course. Not a sale: no payment, no CRM events. */
+  public function move_student_class() {
+    $this->guard_admin();
+
+    $courseId = intval($_REQUEST["course_id"]);
+    $studentId = intval($_REQUEST["student_id"]);
+    $toClassId = intval($_REQUEST["class_id"]);
+
+    $student = new Student($studentId);
+    $current = $student->get_class($courseId);
+    if (!$current) {
+      wp_send_json_error(['message' => 'The student is not in this course']);
+    }
+    $fromClassId = intval($current["id"]);
+    if ($fromClassId === $toClassId) {
+      wp_send_json_error(['message' => 'The student is already in this class']);
+    }
+    $target = get_post($toClassId);
+    if (!$target || $target->post_type !== 'class' || intval(get_post_meta($toClassId, 'course', true)) !== $courseId) {
+      wp_send_json_error(['message' => 'That class is not part of this course']);
+    }
+
+    $student->subscribe_to_class($fromClassId, false);
+    $student->subscribe_to_class($toClassId, true);
+
+    $comment = sanitize_textarea_field(wp_unslash($_REQUEST["comment"] ?? ''));
+    self::log("move_student_class: student $studentId moved from class $fromClassId to $toClassId by user " . get_current_user_id() . ($comment !== '' ? " | $comment" : ''));
+
+    wp_send_json_success();
   }
 
   public function remove_student_from_class() {

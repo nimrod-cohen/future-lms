@@ -3,6 +3,7 @@
  * E2E fixtures, run through wp-cli on the local site:
  *   wp eval-file wp-fixtures.php setup     -> prints JSON (ids + login cookies)
  *   wp eval-file wp-fixtures.php teardown
+ *   wp eval-file wp-fixtures.php second-class <course> -> another class in that course
  *
  * Everything it creates is tagged (_flms_e2e post meta, flms-e2e-* users) and
  * teardown removes exactly that, so the site's real data is never touched.
@@ -66,6 +67,17 @@ function flms_e2e_cookies($userId) {
     ['name' => LOGGED_IN_COOKIE, 'value' => wp_generate_auth_cookie($userId, $exp, 'logged_in', $token)],
     ['name' => AUTH_COOKIE, 'value' => wp_generate_auth_cookie($userId, $exp, 'auth', $token)],
   ];
+}
+
+if ($cmd === 'second-class') {
+  $id = flms_e2e_post('class', 'E2E Recorded Class', [
+    'course' => intval($args[1]),
+    'start_date' => '2026-12-01T20:00',
+    'paced' => '0',
+    'lessons' => '[]',
+  ]);
+  echo json_encode(['class' => $id]);
+  return;
 }
 
 flms_e2e_teardown($users); // start clean even if a previous run died
