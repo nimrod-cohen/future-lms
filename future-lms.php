@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 3.3.0
+ * Version: 3.4.0
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -90,6 +90,9 @@ class FutureLMS {
   private function register_hooks() {
     // Create a student user, returns user ID
     add_filter('future-lms/create_student', function ($userId, $email, $name, $phone) {
+      $email = self::strip_invisible($email);
+      $name = self::strip_invisible($name);
+      $phone = self::strip_invisible($phone);
       $student = Student::create($email, '', $email);
       $newId = $student->get_id();
       if (!empty($name)) {
@@ -175,6 +178,20 @@ class FutureLMS {
   public static function TABLE_PREFIX() {
     global $wpdb;
     return $wpdb->prefix . 'flms_';
+  }
+
+  /**
+   * Remove invisible formatting characters (RTL/LTR marks, bidi embeddings,
+   * zero-width spaces, BOM) and trim. They come along when an email or phone
+   * is pasted from WhatsApp, a CRM or an RTL document, and make the value
+   * look the same while matching nothing.
+   */
+  public static function strip_invisible($value) {
+    if (!is_string($value)) {
+      return $value;
+    }
+    $clean = preg_replace('/[\x{00AD}\x{061C}\x{180E}\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{2066}-\x{2069}\x{FEFF}]/u', '', $value);
+    return trim($clean ?? $value);
   }
 
   public static function version() {
@@ -678,7 +695,7 @@ class FutureLMS {
     try {
       $courseId = intval($_REQUEST["course_id"]);
       $classId = intval($_REQUEST["class_id"]);
-      $search = trim($_REQUEST["search"]);
+      $search = self::strip_invisible($_REQUEST["search"] ?? '');
       $month = intval($_REQUEST["month"]);
       $year = intval($_REQUEST["year"]);
 
@@ -1296,7 +1313,7 @@ class FutureLMS {
     $this->guard_admin();
 
     try {
-      $search = isset($_REQUEST['search']) ? $_REQUEST['search'] : false;
+      $search = isset($_REQUEST['search']) ? self::strip_invisible($_REQUEST['search']) : false;
       $courseId = $_REQUEST['course_id'];
 
       $result = Course::get_classes($courseId, $search);
@@ -1322,7 +1339,7 @@ class FutureLMS {
   public function search_students() {
     $this->guard_admin();
 
-    $search = $_REQUEST['search'];
+    $search = self::strip_invisible($_REQUEST['search'] ?? '');
 
     if (empty($search)) {
       wp_send_json(["success" => true, "results" => []]);
