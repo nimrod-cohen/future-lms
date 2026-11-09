@@ -67,7 +67,7 @@ body.school {
     .school-sidebar {
       height: 100%;
       max-height: 100vh;
-      overflow: scroll;
+      overflow: auto;
 
       .sidebar-header {
         top: 0;
@@ -454,7 +454,7 @@ body.school {
            and collapses to 0 when it isn't, so the materials layout stays
            identical for non-sequential courses. */
         grid-template-rows: 58px auto 1fr;
-        overflow: scroll;
+        overflow: auto;
 
         .current-lesson-title {
           display: none;
@@ -566,7 +566,7 @@ body.school {
           padding: 0.8rem;
           line-height: 1.4rem;
           height: 100%;
-          overflow: scroll;
+          overflow: auto;
 
           pre {
             line-height: 1.4rem;
@@ -1257,7 +1257,7 @@ body.school {
           top: 0;
           height: 100vh;
           left: 0;
-          overflow: scroll;
+          overflow: auto;
           background: white;
         }
 
@@ -1937,4 +1937,17 @@ body.school .quiz-view .quiz-actions .quiz-reset {
 body.school .quiz-view .quiz-actions .quiz-reset:hover {
   background: #1a1a1a;
   color: #fff;
+}
+
+/* Hide scrollbars across the school (lobby + classes); scrolling still works
+   by wheel, touch and keyboard. Windows/Linux otherwise draw permanent bars. */
+html:has(> body.school),
+body.school,
+body.school * {
+  scrollbar-width: none;
+}
+html:has(> body.school)::-webkit-scrollbar,
+body.school::-webkit-scrollbar,
+body.school *::-webkit-scrollbar {
+  display: none;
 }
