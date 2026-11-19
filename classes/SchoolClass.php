@@ -32,8 +32,12 @@ use FutureLMS\classes\BaseObject;
             $search = 1;
             $where .= " AND (%d = %d AND %d = %d) ";
         }
+        // Month and year filter independently: a year alone is a whole year.
         if (!empty($month)) {
-            $where .= " AND ( month(cs.registration_date) = " . $month . " AND year(cs.registration_date) = " . $year . ")";
+            $where .= " AND month(cs.registration_date) = " . intval($month);
+        }
+        if (!empty($year)) {
+            $where .= " AND year(cs.registration_date) = " . intval($year);
         }
 
         $sql = "select u.id, u.user_email, u.display_name, IFNULL(um.meta_value,'') as phone, cs.registration_date, cs.class_id, classes.post_title as class_name, courses.id as course_id, courses.post_title as course_name

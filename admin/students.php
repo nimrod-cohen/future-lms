@@ -39,6 +39,7 @@ $flms_months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
           <?php endforeach; ?>
         </select>
         <select class="flms-select reg-year" aria-label="Year joined">
+          <option value="">Any year</option>
           <?php for ($y = $flms_year; $y >= 2018; $y--) : ?>
             <option value="<?php echo $y; ?>"><?php echo $y; ?></option>
           <?php endfor; ?>

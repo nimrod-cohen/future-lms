@@ -297,7 +297,7 @@ class StudentsTab {
 
   fetchStudents = async () => {
     const month = this.tab.querySelector('.reg-month').value;
-    const year = month ? this.tab.querySelector('.reg-year').value : '';
+    const year = this.tab.querySelector('.reg-year').value;
     const button = this.tab.querySelector('.search-students');
 
     button.disabled = true;
