@@ -13,6 +13,14 @@ cd assets-src && npm ci && npm run build
 - **Icons:** write `<i data-lucide="name">` in PHP or `COMMON.icon('name')` in JS. Only the icons the code names are bundled, and an unknown name fails the build. Re-run `npm run build` after adding one.
 - **Version:** bump the plugin version when you change these files. It is the browsers' cache-buster.
 
+## Students' stylesheet
+
+`assets-src/school.css` is the source for the lobby and classroom styles, written with CSS nesting. Edit that file, never `front/school.css`: the latter is the built output, flattened so browsers without nesting support (Chrome 109 on Windows 7/8, Firefox 115) can read it. It is committed like the admin outputs.
+
+```bash
+cd assets-src && npm ci && npm run build:school
+```
+
 ## Tests
 
 Two suites live in `tests/`. Each has its own dependencies, apart from the plugin's `vendor/` (which ships to production). `.gitattributes` keeps `tests/` out of release zips.

@@ -1,15 +1,17 @@
 {
   "name": "future-lms-assets",
   "private": true,
-  "description": "Builds the admin stylesheet (Tailwind) and the Lucide icon subset. Outputs are committed; nothing here ships.",
+  "description": "Builds the admin stylesheet (Tailwind), the Lucide icon subset and the students' stylesheet (flattened for old browsers). Outputs are committed; nothing here ships.",
   "scripts": {
-    "build": "npm run build:css && npm run build:icons",
+    "build": "npm run build:css && npm run build:icons && npm run build:school",
     "build:css": "tailwindcss -i ./admin.css -o ../admin/css/admin.css --minify",
     "build:icons": "node build-icons.js",
+    "build:school": "lightningcss ./school.css --targets \"chrome 109, firefox 115, safari 15.4\" -o ../front/school.css",
     "watch": "tailwindcss -i ./admin.css -o ../admin/css/admin.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
+    "lightningcss-cli": "1.33.0",
     "lucide": "1.55.0",
     "tailwindcss": "4.3.3"
   }
