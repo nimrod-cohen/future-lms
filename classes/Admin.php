@@ -267,6 +267,11 @@ class Admin {
       $presentationId = isset($_POST["presentation"]) ? intval($_POST["presentation"]) : 0;
 
       $isNewLesson = empty($lessonId);
+
+      // Pasted images become media-library files; sanitizing would break them.
+      $content = EmbeddedImages::store($content, $lessonId);
+      $homework = EmbeddedImages::store($homework, $lessonId);
+      $additional_files = EmbeddedImages::store($additional_files, $lessonId);
       
       if ($isNewLesson) {
         // Create new lesson
@@ -608,12 +613,15 @@ class Admin {
       $name = $_POST["name"];
       $tags = $_POST["tags"];
       $default_class = $_POST["default_class"];
+      // $_POST arrives slashed (and wp_insert/update_post expect it that way),
+      // which hides the quotes around src from the image matcher.
+      $courseContent = wp_slash(EmbeddedImages::store(wp_unslash($_POST["post_content"] ?? ''), intval($courseId)));
 
       if (empty($courseId)) {
         //create new course, a course is a wp_post with post_type = course
         $courseId = wp_insert_post([
           'post_title' => $name,
-          'post_content' => wp_kses_post($_POST["post_content"] ?? ''),
+          'post_content' => wp_kses_post($courseContent),
           'post_status' => 'draft',
           'post_type' => 'course'
         ]);
@@ -621,7 +629,7 @@ class Admin {
         wp_update_post([
           'ID' => $courseId,
           'post_title' => $name,
-          'post_content' => wp_kses_post($_POST["post_content"] ?? '')
+          'post_content' => wp_kses_post($courseContent)
         ]);
       }
 

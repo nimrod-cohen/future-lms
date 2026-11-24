@@ -165,7 +165,7 @@ add_action('save_post_lesson', function($post_id) {
         if (isset($_POST[$field])) {
           if(in_array($field, ['homework', 'additional_files'])) {
               // For WYSIWYG fields, sanitize with wp_kses_post
-              update_post_meta($post_id, $field, wp_kses_post($_POST[$field]));
+              update_post_meta($post_id, $field, wp_kses_post(wp_slash(\FutureLMS\classes\EmbeddedImages::store(wp_unslash($_POST[$field]), intval($post_id)))));
           } else {
             update_post_meta($post_id, $field, $_POST[$field]);
           }
