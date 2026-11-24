@@ -3,7 +3,7 @@
  * Plugin Name: Future LMS
  * Plugin URI: https://valueinvesting.co.il/
  * Description: Custom plugin for value investing school
- * Version: 3.6.0
+ * Version: 3.6.1
  * Author: nimrod-cohen
  * Author URI: https://google.com/?q=who+is+the+dude
  * Tested up to: 6.8.1
@@ -521,6 +521,9 @@ class FutureLMS {
     wp_localize_script('future-lms_school_script', 'school_info', [
       'ajax_url' => admin_url('admin-ajax.php'),
       'theme_url' => plugin_dir_url(__FILE__),
+      // The "disconnect" button on the server-error dialog: a real logout that
+      // ends on the login page.
+      'logout_url' => wp_logout_url(home_url('/login')),
       // The sidebar builds <img> URLs in JS, so those assets miss the ?ver=
       // that wp_enqueue_* adds to scripts and styles. Hand the version over so
       // an icon redraw actually reaches people instead of sitting behind the

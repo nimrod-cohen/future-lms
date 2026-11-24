@@ -12,7 +12,9 @@ const callServer = async params => {
       type: remodaler.types.ALERT,
       confirmText: 'התנתק',
       confirm: () => {
-        document.location.href = '/login';
+        // /login alone sends a signed-in student straight back into the site,
+        // still signed in. Go through the real logout, which lands on /login.
+        document.location.href = window.school_info.logout_url || '/login';
       }
     });
   }
